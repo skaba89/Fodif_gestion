@@ -1,44 +1,12 @@
-import Link from "next/link";
-import styles from "../portal.module.css";
-
-const dossiers = [
-  { numero: "FODIP-2026-001845", programme: "Transformation locale", montant: "450 M GNF", statut: "ANALYSE", date: "28/08/2026" },
-  { numero: "FODIP-2026-001102", programme: "Modernisation PME", montant: "180 M GNF", statut: "CLOTURE", date: "12/03/2026" },
-];
-
+'use client';
+import { useEffect, useState } from 'react';
+import { clientApi } from '../../../lib/client-api';
+import styles from '../portal.module.css';
+type Application = { id: string; numeroDossier: string; programmeNom?: string; montantDemande: string | number; dateSoumission?: string; statut: string; createdAt: string };
 export default function TrackingPage() {
-  return (
-    <main className={styles.main}>
-      <p className={styles.eyebrow}>Mes dossiers</p>
-      <h1 className={styles.title}>Suivi de mes demandes</h1>
-      <p className={styles.lead}>Consultez le statut, les prochaines actions et l'historique de traitement de chaque dossier.</p>
-
-      <section className={`${styles.card} ${styles.tableCard} ${styles.section}`}>
-        <table className={styles.table}>
-          <thead><tr><th>Dossier</th><th>Programme</th><th>Montant</th><th>Soumis le</th><th>Statut</th></tr></thead>
-          <tbody>
-            {dossiers.map((dossier) => (
-              <tr key={dossier.numero}><td><strong>{dossier.numero}</strong></td><td>{dossier.programme}</td><td>{dossier.montant}</td><td>{dossier.date}</td><td><span className={styles.pill}>{dossier.statut}</span></td></tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section className={styles.hero}>
-        <div className={`${styles.card} ${styles.timeline}`}>
-          <div className={styles.sectionHeader}><div><h2>FODIP-2026-001845</h2><p>Historique du dossier actif</p></div></div>
-          <div className={styles.timelineItem}><strong>Dossier créé</strong><span>26 août 2026 · Brouillon initial</span></div>
-          <div className={styles.timelineItem}><strong>Dossier soumis</strong><span>28 août 2026 · Réception confirmée</span></div>
-          <div className={styles.timelineItem}><strong>Vérification administrative terminée</strong><span>30 août 2026 · Pièces principales conformes</span></div>
-          <div className={styles.timelineItem}><strong>Analyse en cours</strong><span>1 septembre 2026 · Étude financière et impact</span></div>
-        </div>
-        <aside className={`${styles.card} ${styles.quick}`}>
-          <p className={styles.eyebrow}>Prochaine étape</p>
-          <strong>Analyse</strong>
-          <small>Le dossier est actuellement étudié. Aucune action n'est requise pour le moment.</small>
-          <div className={styles.buttonRow}><Link className={styles.secondary} href="/entrepreneur/demande">Ouvrir le brouillon</Link></div>
-        </aside>
-      </section>
-    </main>
-  );
+  const [dossiers, setDossiers] = useState<Application[]>([]); const [message, setMessage] = useState('');
+  async function load() { try { setDossiers(await clientApi<Application[]>('/api/pme/dossiers')); } catch (e) { setMessage(e instanceof Error ? e.message : 'Chargement impossible'); } }
+  useEffect(() => { load(); }, []);
+  async function submit(id: string) { setMessage(''); try { await clientApi(`/api/pme/dossiers/${id}/submit`, { method: 'POST' }); setMessage('Dossier soumis avec succès.'); await load(); } catch (e) { setMessage(e instanceof Error ? e.message : 'Soumission impossible'); } }
+  return <main className={styles.main}><p className={styles.eyebrow}>Mes dossiers</p><h1 className={styles.title}>Suivi de mes demandes</h1><p className={styles.lead}>Cette liste est filtrée côté backend sur l’entreprise portée par votre session.</p>{message && <div className={styles.notice}>{message}</div>}<section className={`${styles.card} ${styles.tableCard} ${styles.section}`}><table className={styles.table}><thead><tr><th>Dossier</th><th>Programme</th><th>Montant</th><th>Date</th><th>Statut</th><th>Action</th></tr></thead><tbody>{dossiers.map((d) => <tr key={d.id}><td><strong>{d.numeroDossier}</strong></td><td>{d.programmeNom ?? '—'}</td><td>{Number(d.montantDemande).toLocaleString('fr-FR')} GNF</td><td>{new Date(d.dateSoumission ?? d.createdAt).toLocaleDateString('fr-FR')}</td><td><span className={styles.pill}>{d.statut}</span></td><td>{d.statut === 'BROUILLON' ? <button className={styles.primary} type="button" onClick={() => submit(d.id)}>Soumettre</button> : '—'}</td></tr>)}</tbody></table>{dossiers.length === 0 && <p>Aucun dossier pour le moment.</p>}</section></main>;
 }
