@@ -1,5 +1,11 @@
-import { DefaultAzureCredential } from '@azure/identity';
-import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
+import {
+  CreateBucketCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -10,50 +16,78 @@ export interface StoredDocument {
 
 @Injectable()
 export class DocumentStorageService {
-  private readonly container: ContainerClient | null;
+  private readonly client: S3Client | null;
+  private readonly bucket: string;
+  private bucketReady: Promise<void> | null = null;
 
   constructor(config: ConfigService) {
-    const connectionString = config.get<string>('AZURE_STORAGE_CONNECTION_STRING');
-    const account = config.get<string>('AZURE_STORAGE_ACCOUNT');
-    const containerName = config.get<string>('AZURE_STORAGE_CONTAINER') ?? 'fodip-documents';
-
-    let client: BlobServiceClient | null = null;
-    if (connectionString) {
-      client = BlobServiceClient.fromConnectionString(connectionString);
-    } else if (account && account !== 'CHANGE_ME') {
-      client = new BlobServiceClient(`https://${account}.blob.core.windows.net`, new DefaultAzureCredential());
-    }
-    this.container = client?.getContainerClient(containerName) ?? null;
+    const endpoint = config.get<string>('STORAGE_ENDPOINT');
+    const accessKeyId = config.get<string>('STORAGE_ACCESS_KEY');
+    const secretAccessKey = config.get<string>('STORAGE_SECRET_KEY');
+    this.bucket = config.get<string>('STORAGE_BUCKET') ?? 'fodip-documents';
+    this.client = endpoint && accessKeyId && secretAccessKey
+      ? new S3Client({
+          endpoint,
+          region: config.get<string>('STORAGE_REGION') ?? 'us-east-1',
+          forcePathStyle: true,
+          credentials: { accessKeyId, secretAccessKey },
+        })
+      : null;
   }
 
   async upload(key: string, buffer: Buffer, contentType: string, checksum: string): Promise<void> {
-    const container = this.requireContainer();
-    await container.createIfNotExists();
-    await container.getBlockBlobClient(key).uploadData(buffer, {
-      blobHTTPHeaders: { blobContentType: contentType },
-      metadata: { checksumSha256: checksum },
-    });
+    const client = this.requireClient();
+    await this.ensureBucket();
+    await client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      Metadata: { checksumSha256: checksum },
+    }));
   }
 
   async download(key: string): Promise<StoredDocument> {
-    const response = await this.requireContainer().getBlobClient(key).download();
-    if (!response.readableStreamBody) throw new ServiceUnavailableException('Document content is unavailable');
-    const chunks: Buffer[] = [];
-    for await (const chunk of response.readableStreamBody) chunks.push(Buffer.from(chunk));
+    const response = await this.requireClient().send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    if (!response.Body) throw new ServiceUnavailableException('Document content is unavailable');
     return {
-      buffer: Buffer.concat(chunks),
-      contentType: response.contentType ?? 'application/octet-stream',
+      buffer: Buffer.from(await response.Body.transformToByteArray()),
+      contentType: response.ContentType ?? 'application/octet-stream',
     };
   }
 
   async delete(key: string): Promise<void> {
-    await this.requireContainer().deleteBlob(key, { deleteSnapshots: 'include' });
+    await this.requireClient().send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
-  private requireContainer(): ContainerClient {
-    if (!this.container) {
-      throw new ServiceUnavailableException('Azure document storage is not configured');
+  private requireClient(): S3Client {
+    if (!this.client) {
+      throw new ServiceUnavailableException('S3-compatible document storage is not configured');
     }
-    return this.container;
+    return this.client;
+  }
+
+  private ensureBucket(): Promise<void> {
+    if (!this.bucketReady) this.bucketReady = this.initializeBucket();
+    return this.bucketReady;
+  }
+
+  private async initializeBucket(): Promise<void> {
+    const client = this.requireClient();
+    try {
+      await client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    } catch (error) {
+      const statusCode = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+      if (statusCode !== 404) {
+        this.bucketReady = null;
+        throw error;
+      }
+      try {
+        await client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+      } catch (error) {
+        this.bucketReady = null;
+        throw error;
+      }
+    }
   }
 }

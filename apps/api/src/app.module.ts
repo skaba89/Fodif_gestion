@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ApplicationsModule } from './applications/applications.module';
+import { AgentApplicationsModule } from './agent-applications/agent-applications.module';
 import { AuthModule } from './auth/auth.module';
 import { CompaniesModule } from './companies/companies.module';
 import { AuthorizationGuard } from './common/guards/authorization.guard';
@@ -18,6 +19,7 @@ import { ProgramsModule } from './programs/programs.module';
     AuthModule,
     CompaniesModule,
     ApplicationsModule,
+    AgentApplicationsModule,
     DocumentsModule,
     ProgramsModule,
   ],

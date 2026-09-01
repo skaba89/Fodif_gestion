@@ -1,6 +1,6 @@
 # Étape 8 — Gestion documentaire sécurisée
 
-Cette étape relie les dossiers PME à un stockage Azure Blob privé sans exposer de clé ni d’URL publique au navigateur.
+Cette étape relie les dossiers PME à un stockage objet privé sans exposer de clé ni d’URL publique au navigateur.
 
 ## Parcours livré
 
@@ -9,7 +9,7 @@ Cette étape relie les dossiers PME à un stockage Azure Blob privé sans expose
 3. NestJS contrôle le rôle, la permission, l’entreprise et le statut du dossier.
 4. Le serveur vérifie la taille, le MIME déclaré et la signature binaire du fichier.
 5. Le serveur calcule le SHA-256 et génère une clé de stockage sans nom fourni par l’utilisateur.
-6. Azure Blob reçoit le fichier dans un conteneur privé.
+6. MinIO reçoit le fichier dans un bucket privé via l’API S3.
 7. PostgreSQL reçoit les métadonnées et une trace d’audit.
 8. Tout téléchargement est autorisé par l’API et son intégrité est recalculée avant restitution.
 
@@ -26,15 +26,15 @@ Les types métier admis sont `RCCM`, `NIF`, `BUSINESS_PLAN`, `ETATS_FINANCIERS`,
 
 Une PME ne fournit jamais un `entreprise_id`. Celui-ci provient exclusivement du JWT enrichi par le backend. Chaque requête SQL de lecture vérifie la relation entre le document, le dossier et cette entreprise.
 
-La clé Blob suit le format :
+La clé objet suit le format :
 
 ```text
 companies/{entrepriseId}/applications/{dossierId}/{documentId}.{extension}
 ```
 
-Le nom d’origine n’est jamais utilisé comme clé Blob. Les séquences de chemin et caractères de contrôle sont supprimés avant conservation du libellé en base.
+Le nom d’origine n’est jamais utilisé comme clé objet. Les séquences de chemin et caractères de contrôle sont supprimés avant conservation du libellé en base.
 
-En production, `DefaultAzureCredential` utilise l’identité managée du service. Une chaîne de connexion est acceptée uniquement pour Azurite en développement local.
+Le fournisseur actuel est MinIO afin que la plateforme fonctionne intégralement sous Docker. L’API métier dépend d’un contrat S3 compatible, ce qui évite d’enfermer le projet dans un fournisseur cloud.
 
 ## Vérification agent
 
@@ -52,7 +52,7 @@ Les décisions possibles sont `VALIDE`, `REJETE` et `A_COMPLETER`. Un commentair
 - rejet des fichiers vides et trop volumineux ;
 - contrôle d’appartenance et de statut du dossier ;
 - test de génération de clé et de neutralisation du nom ;
-- suppression compensatoire du Blob si PostgreSQL échoue ;
+- suppression compensatoire de l’objet si PostgreSQL échoue ;
 - détection d’une altération par checksum ;
 - authentification obligatoire sur upload et téléchargement ;
 - validation additive de la migration SQL ;
@@ -60,4 +60,4 @@ Les décisions possibles sont `VALIDE`, `REJETE` et `A_COMPLETER`. Un commentair
 
 ## Limite assumée
 
-Cette livraison effectue une validation de format et d’intégrité, mais ne remplace pas un antivirus. Avant la production, Microsoft Defender for Storage ou un scanner asynchrone équivalent devra placer les fichiers en quarantaine jusqu’au résultat d’analyse.
+Cette livraison effectue une validation de format et d’intégrité, mais ne remplace pas un antivirus. Avant la production, ClamAV ou un scanner asynchrone équivalent devra placer les fichiers en quarantaine jusqu’au résultat d’analyse.

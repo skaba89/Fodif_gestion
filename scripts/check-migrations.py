@@ -4,7 +4,7 @@ import sys
 
 forbidden = [r"\bDROP\s+TABLE\b", r"\bTRUNCATE\b", r"\bCREATE\s+OR\s+REPLACE\s+TABLE\b"]
 errors = []
-files = sorted(Path('database').glob('*.sql'))
+files = sorted(Path('database').rglob('*.sql'))
 if not files:
     errors.append('No SQL migrations found')
 

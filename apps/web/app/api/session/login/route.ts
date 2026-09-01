@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   });
   if (backend.ok && text) {
     const payload = JSON.parse(text);
-    if (payload.accessToken) response.cookies.set(ACCESS_COOKIE, payload.accessToken, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 15 * 60 });
+    if (payload.accessToken) response.cookies.set(ACCESS_COOKIE, payload.accessToken, { httpOnly: true, sameSite: 'lax', secure: process.env.COOKIE_SECURE === 'true', path: '/', maxAge: 15 * 60 });
   }
   return response;
 }

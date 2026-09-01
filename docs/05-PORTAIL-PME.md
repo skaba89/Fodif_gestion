@@ -37,7 +37,7 @@ Assistant en cinq étapes :
 4. documents ;
 5. vérification avant soumission.
 
-Le prototype affiche une checklist documentaire mais ne téléverse aucun fichier réel. Le branchement Azure Blob sera réalisé côté backend.
+Le prototype initial affichait une checklist documentaire. Depuis l’étape 8, le téléversement réel utilise MinIO via une API S3 compatible.
 
 ### Suivi
 - liste des dossiers ;
