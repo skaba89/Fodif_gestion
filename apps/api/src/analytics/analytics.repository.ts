@@ -140,7 +140,7 @@ export class AnalyticsRepository {
         values,
       ),
       this.db.query(
-        `SELECT id, nom FROM regions WHERE actif = TRUE ORDER BY nom ASC`,
+        `SELECT id, nom FROM regions ORDER BY nom ASC`,
       ),
       this.db.query(
         `SELECT id, nom FROM programmes_fodip WHERE statut = 'ACTIVE' ORDER BY nom ASC`,
