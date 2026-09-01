@@ -53,6 +53,10 @@ describe('FODIP API', () => {
     await request(app.getHttpServer()).post(`/api/v1/committee/applications/${dossierId}/decision`).expect(401);
   });
 
+  it('Direction analytics route is protected by default', async () => {
+    await request(app.getHttpServer()).get('/api/v1/analytics/dashboard').expect(401);
+  });
+
   it('POST /api/v1/auth/login validates the payload before database access', async () => {
     await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: 'not-an-email', password: '' }).expect(400);
   });
