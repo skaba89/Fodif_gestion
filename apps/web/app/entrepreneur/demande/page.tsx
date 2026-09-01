@@ -1,57 +1,12 @@
-import Link from "next/link";
-import styles from "../portal.module.css";
-
+'use client';
+import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { clientApi } from '../../../lib/client-api';
+import styles from '../portal.module.css';
+type Program = { id: string; nom: string; description?: string; montantMin?: string; montantMax?: string };
 export default function FundingApplicationPage() {
-  return (
-    <main className={styles.main}>
-      <p className={styles.eyebrow}>Nouvelle demande</p>
-      <h1 className={styles.title}>Demande de financement</h1>
-      <p className={styles.lead}>Un parcours guidé pour constituer un dossier complet avant transmission aux équipes FODIP.</p>
-
-      <div className={styles.wizard}>
-        <aside className={`${styles.card} ${styles.wizardSteps}`}>
-          <div className={`${styles.wizardStep} ${styles.wizardStepActive}`}>1. Programme & besoin</div>
-          <div className={styles.wizardStep}>2. Projet & budget</div>
-          <div className={styles.wizardStep}>3. Impact attendu</div>
-          <div className={styles.wizardStep}>4. Documents</div>
-          <div className={styles.wizardStep}>5. Vérification</div>
-        </aside>
-
-        <section className={`${styles.card} ${styles.formCard}`}>
-          <div className={styles.formGrid}>
-            <div className={`${styles.field} ${styles.fieldFull}`}>
-              <label>Programme sollicité</label>
-              <select defaultValue="TRANSFORMATION_LOCALE">
-                <option value="TRANSFORMATION_LOCALE">Transformation locale</option>
-                <option value="JEUNES">Entrepreneuriat jeunes</option>
-                <option value="MODERNISATION">Modernisation PME</option>
-              </select>
-            </div>
-            <div className={styles.field}><label>Montant demandé (GNF)</label><input type="number" defaultValue="450000000" /></div>
-            <div className={styles.field}><label>Apport personnel (GNF)</label><input type="number" defaultValue="75000000" /></div>
-            <div className={`${styles.field} ${styles.fieldFull}`}><label>Objet du financement</label><input defaultValue="Acquisition d'une ligne de conditionnement et fonds de roulement" /></div>
-            <div className={`${styles.field} ${styles.fieldFull}`}><label>Description du projet</label><textarea defaultValue="Augmenter la capacité de transformation locale, réduire les pertes post-récolte et ouvrir deux nouveaux circuits de distribution." /></div>
-            <div className={styles.field}><label>Emplois directs prévus</label><input type="number" defaultValue="12" /></div>
-            <div className={styles.field}><label>Durée souhaitée (mois)</label><input type="number" defaultValue="36" /></div>
-          </div>
-
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}><div><h2>Pièces justificatives</h2><p>Checklist de démonstration avant branchement du stockage documentaire.</p></div></div>
-            <div className={styles.docList}>
-              <div className={styles.doc}><div><strong>RCCM</strong><span>Document légal de l'entreprise</span></div><span className={`${styles.status} ${styles.statusOk}`}>Reçu</span></div>
-              <div className={styles.doc}><div><strong>NIF</strong><span>Numéro d'identification fiscale</span></div><span className={`${styles.status} ${styles.statusOk}`}>Reçu</span></div>
-              <div className={styles.doc}><div><strong>Business plan</strong><span>PDF, 10 Mo maximum</span></div><button className={styles.secondary} type="button">Ajouter</button></div>
-              <div className={styles.doc}><div><strong>États financiers</strong><span>Dernier exercice disponible</span></div><button className={styles.secondary} type="button">Ajouter</button></div>
-            </div>
-          </section>
-
-          <div className={styles.notice}>Les valeurs de cet écran sont fictives. La soumission réelle sera activée après connexion du backend, de l'authentification et du stockage documentaire.</div>
-          <div className={styles.buttonRow}>
-            <button className={styles.primary} type="button">Enregistrer le brouillon</button>
-            <Link className={styles.secondary} href="/entrepreneur/suivi">Voir le suivi</Link>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
+  const router = useRouter(); const [programs, setPrograms] = useState<Program[]>([]); const [programmeId, setProgrammeId] = useState(''); const [montant, setMontant] = useState(''); const [apport, setApport] = useState('0'); const [objet, setObjet] = useState(''); const [description, setDescription] = useState(''); const [emplois, setEmplois] = useState('0'); const [message, setMessage] = useState('');
+  useEffect(() => { clientApi<Program[]>('/api/programmes').then((items) => { setPrograms(items); if (items[0]) setProgrammeId(items[0].id); }).catch((e) => setMessage(e.message)); }, []);
+  async function save(event: FormEvent) { event.preventDefault(); setMessage(''); try { await clientApi('/api/pme/dossiers', { method: 'POST', body: JSON.stringify({ programmeId, montantDemande: Number(montant), apportPersonnel: Number(apport || 0), objetFinancement: objet, descriptionProjet: description || undefined, nombreEmploisPrevus: Number(emplois || 0) }) }); router.push('/entrepreneur/suivi'); router.refresh(); } catch (e) { setMessage(e instanceof Error ? e.message : 'Création impossible'); } }
+  return <main className={styles.main}><p className={styles.eyebrow}>Nouvelle demande</p><h1 className={styles.title}>Demande de financement</h1><p className={styles.lead}>Le brouillon est enregistré dans PostgreSQL pour votre entreprise authentifiée.</p><form className={`${styles.card} ${styles.formCard} ${styles.section}`} onSubmit={save}><div className={styles.formGrid}><div className={`${styles.field} ${styles.fieldFull}`}><label>Programme</label><select required value={programmeId} onChange={(e) => setProgrammeId(e.target.value)}><option value="">Sélectionner</option>{programs.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}</select></div><div className={styles.field}><label>Montant demandé (GNF)</label><input required type="number" min="1" value={montant} onChange={(e) => setMontant(e.target.value)} /></div><div className={styles.field}><label>Apport personnel (GNF)</label><input type="number" min="0" value={apport} onChange={(e) => setApport(e.target.value)} /></div><div className={`${styles.field} ${styles.fieldFull}`}><label>Objet du financement</label><input required value={objet} onChange={(e) => setObjet(e.target.value)} /></div><div className={`${styles.field} ${styles.fieldFull}`}><label>Description du projet</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} /></div><div className={styles.field}><label>Emplois directs prévus</label><input type="number" min="0" value={emplois} onChange={(e) => setEmplois(e.target.value)} /></div></div><div className={styles.notice}>Le dépôt documentaire sécurisé sera branché à l’étape suivante. Le brouillon métier, lui, est déjà persistant.</div>{message && <div className={styles.notice}>{message}</div>}<div className={styles.buttonRow}><button className={styles.primary}>Enregistrer le brouillon</button></div></form></main>;
 }

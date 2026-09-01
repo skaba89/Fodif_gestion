@@ -24,11 +24,16 @@ export class AuthService {
       throw new ForbiddenException('MFA_REQUIRED');
     }
 
+    if (user.roles.includes('PME') && !user.entrepriseId) {
+      throw new ForbiddenException('PME_ENTERPRISE_SCOPE_REQUIRED');
+    }
+
     const payload = {
       sub: user.id,
       email: user.email,
       roles: user.roles,
       permissions: user.permissions,
+      entrepriseId: user.entrepriseId,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -43,6 +48,7 @@ export class AuthService {
         email: user.email,
         nom: user.nom,
         prenom: user.prenom,
+        entrepriseId: user.entrepriseId,
         roles: user.roles,
         permissions: user.permissions,
       },

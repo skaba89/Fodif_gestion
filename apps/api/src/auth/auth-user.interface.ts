@@ -3,4 +3,5 @@ export interface AuthenticatedUser {
   email: string;
   roles: string[];
   permissions: string[];
+  entrepriseId?: string | null;
 }

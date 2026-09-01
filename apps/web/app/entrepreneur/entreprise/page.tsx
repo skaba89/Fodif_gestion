@@ -1,34 +1,13 @@
-import Link from "next/link";
-import styles from "../portal.module.css";
-
+'use client';
+import { FormEvent, useEffect, useState } from 'react';
+import { clientApi } from '../../../lib/client-api';
+import styles from '../portal.module.css';
+type Company = { codeFodip: string; raisonSociale: string; nomCommercial?: string; rccm?: string; nif?: string; formeJuridique?: string; dateCreation?: string; descriptionActivite?: string; nombreEmployes: number; telephone?: string; email?: string; };
 export default function CompanyProfilePage() {
-  return (
-    <main className={styles.main}>
-      <p className={styles.eyebrow}>Mon entreprise</p>
-      <h1 className={styles.title}>Fiche entreprise</h1>
-      <p className={styles.lead}>Les informations ci-dessous alimenteront automatiquement vos futures demandes de financement.</p>
-
-      <section className={`${styles.card} ${styles.formCard} ${styles.section}`}>
-        <div className={styles.formGrid}>
-          <div className={styles.field}><label>Raison sociale</label><input defaultValue="Agro Kindia SARL" /></div>
-          <div className={styles.field}><label>Nom commercial</label><input defaultValue="Agro Kindia" /></div>
-          <div className={styles.field}><label>RCCM</label><input defaultValue="GN.KAL.2024.B.00123" /></div>
-          <div className={styles.field}><label>NIF</label><input defaultValue="123456789" /></div>
-          <div className={styles.field}><label>Forme juridique</label><select defaultValue="SARL"><option>SARL</option><option>SA</option><option>Entreprise individuelle</option><option>Coopérative</option></select></div>
-          <div className={styles.field}><label>Date de création</label><input type="date" defaultValue="2024-02-12" /></div>
-          <div className={styles.field}><label>Secteur</label><select defaultValue="Agro-industrie"><option>Agro-industrie</option><option>Industrie</option><option>Services</option><option>Technologie</option></select></div>
-          <div className={styles.field}><label>Nombre d'employés</label><input type="number" defaultValue="18" /></div>
-          <div className={styles.field}><label>Région</label><select defaultValue="Kindia"><option>Kindia</option><option>Conakry</option><option>Boké</option><option>Kankan</option><option>Labé</option><option>Mamou</option><option>Faranah</option><option>Nzérékoré</option></select></div>
-          <div className={styles.field}><label>Préfecture</label><input defaultValue="Kindia" /></div>
-          <div className={styles.field}><label>Téléphone</label><input defaultValue="+224 620 00 00 00" /></div>
-          <div className={styles.field}><label>Email</label><input type="email" defaultValue="contact@example.gn" /></div>
-          <div className={`${styles.field} ${styles.fieldFull}`}><label>Description de l'activité</label><textarea defaultValue="Transformation et conditionnement de produits agricoles locaux destinés au marché guinéen." /></div>
-        </div>
-        <div className={styles.buttonRow}>
-          <button className={styles.primary} type="button">Enregistrer les modifications</button>
-          <Link className={styles.secondary} href="/entrepreneur">Retour au tableau de bord</Link>
-        </div>
-      </section>
-    </main>
-  );
+  const [form, setForm] = useState<Company | null>(null); const [message, setMessage] = useState('');
+  useEffect(() => { clientApi<Company>('/api/pme/entreprise').then(setForm).catch((e) => setMessage(e.message)); }, []);
+  function change<K extends keyof Company>(key: K, value: Company[K]) { setForm((current) => current ? { ...current, [key]: value } : current); }
+  async function save(event: FormEvent) { event.preventDefault(); if (!form) return; setMessage(''); try { const updated = await clientApi<Company>('/api/pme/entreprise', { method: 'PATCH', body: JSON.stringify({ raisonSociale: form.raisonSociale, nomCommercial: form.nomCommercial || undefined, rccm: form.rccm || undefined, nif: form.nif || undefined, formeJuridique: form.formeJuridique || undefined, dateCreation: form.dateCreation || undefined, descriptionActivite: form.descriptionActivite || undefined, nombreEmployes: Number(form.nombreEmployes || 0), telephone: form.telephone || undefined, email: form.email || undefined }) }); setForm(updated); setMessage('Modifications enregistrées.'); } catch (e) { setMessage(e instanceof Error ? e.message : 'Enregistrement impossible'); } }
+  if (!form) return <main className={styles.main}><h1 className={styles.title}>Fiche entreprise</h1><p>{message || 'Chargement…'}</p></main>;
+  return <main className={styles.main}><p className={styles.eyebrow}>Mon entreprise · {form.codeFodip}</p><h1 className={styles.title}>Fiche entreprise</h1><p className={styles.lead}>Ces informations proviennent désormais de PostgreSQL et sont limitées à votre entreprise.</p><form className={`${styles.card} ${styles.formCard} ${styles.section}`} onSubmit={save}><div className={styles.formGrid}><div className={styles.field}><label>Raison sociale</label><input required value={form.raisonSociale ?? ''} onChange={(e) => change('raisonSociale', e.target.value)} /></div><div className={styles.field}><label>Nom commercial</label><input value={form.nomCommercial ?? ''} onChange={(e) => change('nomCommercial', e.target.value)} /></div><div className={styles.field}><label>RCCM</label><input value={form.rccm ?? ''} onChange={(e) => change('rccm', e.target.value)} /></div><div className={styles.field}><label>NIF</label><input value={form.nif ?? ''} onChange={(e) => change('nif', e.target.value)} /></div><div className={styles.field}><label>Forme juridique</label><input value={form.formeJuridique ?? ''} onChange={(e) => change('formeJuridique', e.target.value)} /></div><div className={styles.field}><label>Date de création</label><input type="date" value={(form.dateCreation ?? '').slice(0, 10)} onChange={(e) => change('dateCreation', e.target.value)} /></div><div className={styles.field}><label>Nombre d'employés</label><input type="number" min="0" value={form.nombreEmployes ?? 0} onChange={(e) => change('nombreEmployes', Number(e.target.value))} /></div><div className={styles.field}><label>Téléphone</label><input value={form.telephone ?? ''} onChange={(e) => change('telephone', e.target.value)} /></div><div className={`${styles.field} ${styles.fieldFull}`}><label>Email</label><input type="email" value={form.email ?? ''} onChange={(e) => change('email', e.target.value)} /></div><div className={`${styles.field} ${styles.fieldFull}`}><label>Description de l'activité</label><textarea value={form.descriptionActivite ?? ''} onChange={(e) => change('descriptionActivite', e.target.value)} /></div></div>{message && <div className={styles.notice}>{message}</div>}<div className={styles.buttonRow}><button className={styles.primary}>Enregistrer les modifications</button></div></form></main>;
 }
