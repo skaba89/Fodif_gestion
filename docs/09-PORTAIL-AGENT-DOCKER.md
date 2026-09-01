@@ -61,7 +61,7 @@ Le code utilise le protocole S3 compatible afin de conserver une séparation net
 
 ## Données de démonstration
 
-Le seed Docker crée une PME, un programme, deux dossiers et deux utilisateurs locaux. Il est isolé dans `database/seeds` et n’est pas exécuté par les migrations standard hors Docker Compose.
+Le seed Docker crée une PME, un programme, trois dossiers et les profils locaux PME, Agent et Comité. Il est isolé dans `database/seeds` et n’est pas exécuté par les migrations standard hors Docker Compose.
 
 Le mot de passe de démonstration est public par conception et ne doit jamais être réutilisé dans un environnement hébergé.
 
@@ -80,6 +80,7 @@ Avant chaque push :
 GitHub Actions exécute en plus :
 
 - `docker compose config` ;
-- `docker compose build api web`.
+- le démarrage de tous les services avec `docker compose up --build` ;
+- un smoke test HTTP couvrant PostgreSQL, les workflows et le cycle documentaire MinIO.
 
 Le moteur Docker n’étant pas disponible dans l’environnement local Codex actuel, la construction réelle des images est obligatoirement validée par la CI avant fusion.

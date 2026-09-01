@@ -32,6 +32,9 @@ export class AgentApplicationsService {
     if (!canReviewApplication(user, dossier, dto.statut)) {
       throw new ForbiddenException('Invalid transition or application not assigned to this agent');
     }
+    if (dto.statut === 'PRET_COMITE' && !(await this.applications.isCommitteeReady(id))) {
+      throw new ConflictException('A complete score is required before committee submission');
+    }
     const updated = await this.applications.transition(id, user.sub, dossier.statut, dto.statut, dto.commentaire.trim());
     if (!updated) throw new ConflictException('Application changed during review');
     return this.get(id);

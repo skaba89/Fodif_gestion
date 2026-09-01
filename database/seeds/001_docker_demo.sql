@@ -43,11 +43,42 @@ VALUES (
 )
 ON CONFLICT (code) DO NOTHING;
 
+INSERT INTO modeles_scoring (id, code, nom, version, actif)
+VALUES (
+    '70000000-0000-4000-8000-000000000001', 'SCORING-PME',
+    'Scoring PME FODIP', 1, TRUE
+)
+ON CONFLICT (code, version) DO UPDATE
+SET nom = EXCLUDED.nom,
+    actif = TRUE;
+
+INSERT INTO criteres_scoring (
+    id, modele_id, code, libelle, categorie, poids, score_max, ordre_affichage, actif
+)
+VALUES
+    ('71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001',
+     'GOUVERNANCE', 'Gouvernance et capacité de gestion', 'ENTREPRISE', 20, 100, 1, TRUE),
+    ('71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001',
+     'FINANCE', 'Solidité financière et capacité de remboursement', 'FINANCE', 30, 100, 2, TRUE),
+    ('71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000001',
+     'VIABILITE', 'Viabilité technique et commerciale du projet', 'PROJET', 30, 100, 3, TRUE),
+    ('71000000-0000-4000-8000-000000000004', '70000000-0000-4000-8000-000000000001',
+     'IMPACT', 'Impact attendu sur l’emploi et l’économie locale', 'IMPACT', 20, 100, 4, TRUE)
+ON CONFLICT (modele_id, code) DO UPDATE
+SET libelle = EXCLUDED.libelle,
+    categorie = EXCLUDED.categorie,
+    poids = EXCLUDED.poids,
+    score_max = EXCLUDED.score_max,
+    ordre_affichage = EXCLUDED.ordre_affichage,
+    actif = TRUE;
+
 INSERT INTO utilisateurs (id, email, nom, prenom, password_hash, actif, mfa_required)
 VALUES
     ('50000000-0000-4000-8000-000000000001', 'agent@fodip.local', 'DIALLO', 'Mamadou',
      '$2b$12$/CmLG274z4XT2vEiOHGvB.x7.88nXoS.0mLc5ytOTaaiEQpFiZuoK', TRUE, FALSE),
     ('50000000-0000-4000-8000-000000000002', 'pme@fodip.local', 'CAMARA', 'Aminata',
+     '$2b$12$/CmLG274z4XT2vEiOHGvB.x7.88nXoS.0mLc5ytOTaaiEQpFiZuoK', TRUE, FALSE),
+    ('50000000-0000-4000-8000-000000000003', 'comite@fodip.local', 'BANGOURA', 'Mariama',
      '$2b$12$/CmLG274z4XT2vEiOHGvB.x7.88nXoS.0mLc5ytOTaaiEQpFiZuoK', TRUE, FALSE)
 ON CONFLICT (email) DO UPDATE
 SET password_hash = EXCLUDED.password_hash,
@@ -59,6 +90,10 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO utilisateur_roles (utilisateur_id, role_id)
 SELECT '50000000-0000-4000-8000-000000000002', id FROM roles WHERE code = 'PME'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO utilisateur_roles (utilisateur_id, role_id)
+SELECT '50000000-0000-4000-8000-000000000003', id FROM roles WHERE code = 'COMITE_FINANCEMENT'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO utilisateur_entreprises (utilisateur_id, entreprise_id, relation, principal)

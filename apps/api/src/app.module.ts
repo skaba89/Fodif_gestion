@@ -5,12 +5,14 @@ import { ApplicationsModule } from './applications/applications.module';
 import { AgentApplicationsModule } from './agent-applications/agent-applications.module';
 import { AuthModule } from './auth/auth.module';
 import { CompaniesModule } from './companies/companies.module';
+import { CommitteeModule } from './committee/committee.module';
 import { AuthorizationGuard } from './common/guards/authorization.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { DatabaseModule } from './database/database.module';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthController } from './health/health.controller';
 import { ProgramsModule } from './programs/programs.module';
+import { ScoringModule } from './scoring/scoring.module';
 
 @Module({
   imports: [
@@ -18,10 +20,12 @@ import { ProgramsModule } from './programs/programs.module';
     DatabaseModule,
     AuthModule,
     CompaniesModule,
+    CommitteeModule,
     ApplicationsModule,
     AgentApplicationsModule,
     DocumentsModule,
     ProgramsModule,
+    ScoringModule,
   ],
   controllers: [HealthController],
   providers: [

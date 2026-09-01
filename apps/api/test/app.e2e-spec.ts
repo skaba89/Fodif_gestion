@@ -45,6 +45,14 @@ describe('FODIP API', () => {
     await request(app.getHttpServer()).post(`/api/v1/agent/applications/${dossierId}/claim`).expect(401);
   });
 
+  it('scoring and committee routes are protected by default', async () => {
+    const dossierId = '11111111-1111-4111-8111-111111111111';
+    await request(app.getHttpServer()).get(`/api/v1/scoring/applications/${dossierId}`).expect(401);
+    await request(app.getHttpServer()).put(`/api/v1/scoring/applications/${dossierId}`).expect(401);
+    await request(app.getHttpServer()).get('/api/v1/committee/applications').expect(401);
+    await request(app.getHttpServer()).post(`/api/v1/committee/applications/${dossierId}/decision`).expect(401);
+  });
+
   it('POST /api/v1/auth/login validates the payload before database access', async () => {
     await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: 'not-an-email', password: '' }).expect(400);
   });
