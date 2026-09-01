@@ -20,4 +20,4 @@ COPY --from=build /app/apps/web/package.json ./apps/web/package.json
 COPY --chown=node:node --from=build /app/apps/web/.next ./apps/web/.next
 USER node
 EXPOSE 3000
-CMD ["node_modules/.bin/next", "start", "apps/web", "-p", "3000"]
+CMD ["node", "apps/web/node_modules/next/dist/bin/next", "start", "apps/web", "-p", "3000"]
