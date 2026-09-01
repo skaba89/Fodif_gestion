@@ -10,10 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  web-build:
-    name: Web build
+  quality:
+    name: Pre-push rules, API tests and builds
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -32,6 +32,15 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
+
+      - name: Pre-push invariant tests
+        run: pnpm test:prepush
+
+      - name: API e2e tests
+        run: pnpm --filter @fodip/api test
+
+      - name: Build API
+        run: pnpm --filter @fodip/api build
 
       - name: Build web
         run: pnpm --filter @fodip/web build
