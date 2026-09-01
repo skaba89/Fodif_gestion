@@ -2,7 +2,7 @@
 
 Plateforme numérique de gestion, de financement, de suivi et de pilotage des PME accompagnées par le FODIP en Guinée.
 
-> Statut : cadrage et socle d'architecture — MVP en préparation.
+> Statut : MVP en développement — portail PME, API sécurisée et gestion documentaire disponibles.
 
 ## Vision
 
@@ -101,6 +101,7 @@ Fodif_gestion/
 - `docs/01-MVP.md` — périmètre fonctionnel du MVP
 - `docs/02-DATA-MODEL.md` — modèle de données cible
 - `docs/03-ARCHITECTURE.md` — architecture technique cible
+- `docs/08-GESTION-DOCUMENTAIRE.md` — stockage, sécurité, intégrité et audit des documents
 
 ## Sécurité
 
@@ -111,13 +112,15 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 1 — Périmètre MVP
 - [x] Étape 2 — Modèle de données
 - [x] Étape 3 — Architecture technique
-- [ ] Étape 4 — UX/UI
-- [ ] Étape 5 — Backend/API
-- [ ] Étape 6 — Frontend
-- [ ] Étape 7 — Data Platform & dashboards
-- [ ] Étape 8 — Sécurité et audit
-- [ ] Étape 9 — Tests et CI/CD
-- [ ] Étape 10 — Déploiement et dossier de présentation
+- [x] Étape 4 — UX/UI et cockpit DG
+- [x] Étape 5 — Portail PME
+- [x] Étape 6 — Backend, authentification et RBAC
+- [x] Étape 7 — Portail PME connecté à PostgreSQL
+- [x] Étape 8 — Gestion documentaire sécurisée
+- [ ] Étape 9 — Portail Agent et instruction 360°
+- [ ] Étape 10 — Workflow, scoring et comité
+- [ ] Étape 11 — Data Platform et dashboards
+- [ ] Étape 12 — Déploiement et dossier de présentation
 
 ## Licence
 

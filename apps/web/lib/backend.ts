@@ -16,12 +16,19 @@ export async function proxyWithSession(path: string, init: RequestInit = {}): Pr
 
   const headers = new Headers(init.headers);
   headers.set('authorization', `Bearer ${token}`);
-  if (init.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
+  if (typeof init.body === 'string' && !headers.has('content-type')) headers.set('content-type', 'application/json');
 
   const response = await fetch(backendApiUrl(path), { ...init, headers, cache: 'no-store' });
-  const body = await response.text();
-  return new NextResponse(body || null, {
+  const body = await response.arrayBuffer();
+  const responseHeaders: Record<string, string> = {
+    'content-type': response.headers.get('content-type') ?? 'application/json',
+  };
+  const disposition = response.headers.get('content-disposition');
+  const cacheControl = response.headers.get('cache-control');
+  if (disposition) responseHeaders['content-disposition'] = disposition;
+  if (cacheControl) responseHeaders['cache-control'] = cacheControl;
+  return new NextResponse(body.byteLength > 0 ? body : null, {
     status: response.status,
-    headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' },
+    headers: responseHeaders,
   });
 }

@@ -12,6 +12,8 @@
     "test:prepush": "node --check src/security-policy.js && node --test test/security-policy.test.cjs"
   },
   "dependencies": {
+    "@azure/identity": "4.11.1",
+    "@azure/storage-blob": "12.28.0",
     "@nestjs/common": "11.1.28",
     "@nestjs/config": "4.0.2",
     "@nestjs/core": "11.1.28",
@@ -26,10 +28,12 @@
     "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.5",
     "@nestjs/cli": "11.0.10",
     "@nestjs/testing": "11.1.28",
     "@types/express": "5.0.3",
     "@types/jest": "29.5.14",
+    "@types/multer": "2.0.0",
     "@types/node": "24.3.0",
     "@types/pg": "8.15.5",
     "@types/supertest": "6.0.3",
@@ -38,6 +42,7 @@
     "supertest": "7.1.4",
     "ts-jest": "29.2.5",
     "ts-node": "10.9.2",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.68.0"
   }
 }
