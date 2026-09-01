@@ -116,4 +116,22 @@ curl --fail --silent \
   "http://localhost:4000/api/v1/documents/$document_id/download" \
   --output /dev/null
 
-echo "Docker smoke test passed: web, API, auth, PostgreSQL, scoring, committee decision and MinIO document round-trip."
+direction_login=$(curl --fail --silent \
+  --request POST \
+  --header 'content-type: application/json' \
+  --data '{"email":"direction@fodip.local","password":"FodipDemo2026!"}' \
+  http://localhost:4000/api/v1/auth/login)
+
+direction_token=$(LOGIN_RESPONSE="$direction_login" python -c \
+  'import json, os; print(json.loads(os.environ["LOGIN_RESPONSE"])["accessToken"])')
+
+dashboard_response=$(curl --fail --silent \
+  --header "authorization: Bearer $direction_token" \
+  http://localhost:4000/api/v1/analytics/dashboard)
+
+DASHBOARD_RESPONSE="$dashboard_response" python -c \
+  'import json, os; body=json.loads(os.environ["DASHBOARD_RESPONSE"]); assert body["kpis"]["pmeEnregistrees"] >= 4; assert body["kpis"]["montantDecaisse"] >= 400000000; assert len(body["pipeline"]) >= 3; assert len(body["regions"]) >= 4; assert body["freshness"]["source"] == "PostgreSQL analytics"'
+
+curl --fail --silent http://localhost:3000/direction/connexion --output /dev/null
+
+echo "Docker smoke test passed: web, API, auth, PostgreSQL analytics, scoring, committee decision and MinIO document round-trip."

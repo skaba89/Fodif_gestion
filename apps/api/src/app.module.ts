@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ApplicationsModule } from './applications/applications.module';
 import { AgentApplicationsModule } from './agent-applications/agent-applications.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { CompaniesModule } from './companies/companies.module';
 import { CommitteeModule } from './committee/committee.module';
@@ -23,6 +24,7 @@ import { ScoringModule } from './scoring/scoring.module';
     CommitteeModule,
     ApplicationsModule,
     AgentApplicationsModule,
+    AnalyticsModule,
     DocumentsModule,
     ProgramsModule,
     ScoringModule,

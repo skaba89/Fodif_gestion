@@ -49,7 +49,9 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:-fodip_local_dev}
     volumes:
       - ./database/seeds:/seeds:ro
-    command: ["psql", "--set", "ON_ERROR_STOP=1", "--file", "/seeds/001_docker_demo.sql"]
+    command: >-
+      sh -ec 'for file in /seeds/[0-9][0-9][0-9]_*.sql;
+      do echo "Applying $$file"; psql --set ON_ERROR_STOP=1 --file "$$file"; done'
     restart: "no"
 
   minio:
