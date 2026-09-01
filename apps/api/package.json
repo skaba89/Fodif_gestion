@@ -1,0 +1,43 @@
+{
+  "name": "@fodip/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "start:prod": "node dist/main.js",
+    "lint": "eslint \"{src,test}/**/*.{ts,js,cjs}\"",
+    "test": "jest --runInBand",
+    "test:prepush": "node --check src/security-policy.js && node --test test/security-policy.test.cjs"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.1.28",
+    "@nestjs/config": "4.0.2",
+    "@nestjs/core": "11.1.28",
+    "@nestjs/jwt": "11.0.2",
+    "@nestjs/platform-express": "11.1.28",
+    "@nestjs/swagger": "11.4.7",
+    "bcryptjs": "3.0.2",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.14.2",
+    "pg": "8.16.3",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "11.0.10",
+    "@nestjs/testing": "11.1.28",
+    "@types/express": "5.0.3",
+    "@types/jest": "29.5.14",
+    "@types/node": "24.3.0",
+    "@types/pg": "8.15.5",
+    "@types/supertest": "6.0.3",
+    "eslint": "9.39.5",
+    "jest": "29.7.0",
+    "supertest": "7.1.4",
+    "ts-jest": "29.2.5",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.2"
+  }
+}
