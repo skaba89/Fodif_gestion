@@ -2,7 +2,7 @@
 
 Plateforme numérique de gestion, de financement, de suivi et de pilotage des PME accompagnées par le FODIP en Guinée.
 
-> Statut : MVP en développement — portail PME, API sécurisée et gestion documentaire disponibles.
+> Statut : MVP en développement — parcours PME, instruction Agent, scoring et Comité disponibles sur Docker.
 
 ## Vision
 
@@ -118,6 +118,7 @@ Comptes locaux de démonstration :
 ```text
 Agent : agent@fodip.local
 PME   : pme@fodip.local
+Comité: comite@fodip.local
 Mot de passe commun : FodipDemo2026!
 ```
 
@@ -136,6 +137,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/03-ARCHITECTURE.md` — architecture technique cible
 - `docs/08-GESTION-DOCUMENTAIRE.md` — stockage, sécurité, intégrité et audit des documents
 - `docs/09-PORTAIL-AGENT-DOCKER.md` — instruction 360° et exécution Docker autonome
+- `docs/10-SCORING-COMITE.md` — scoring versionné et décision humaine auditée
 
 ## Sécurité
 
@@ -152,7 +154,7 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 7 — Portail PME connecté à PostgreSQL
 - [x] Étape 8 — Gestion documentaire sécurisée
 - [x] Étape 9 — Portail Agent, instruction 360° et Docker
-- [ ] Étape 10 — Workflow, scoring et comité
+- [x] Étape 10 — Workflow, scoring et comité
 - [ ] Étape 11 — Data Platform et dashboards
 - [ ] Étape 12 — Déploiement et dossier de présentation
 

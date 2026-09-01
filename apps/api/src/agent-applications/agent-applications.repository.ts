@@ -177,4 +177,20 @@ export class AgentApplicationsRepository {
     );
     return result.rows[0] ?? null;
   }
+
+  async isCommitteeReady(id: string) {
+    const result = await this.db.query<{ ready: boolean }>(
+      `SELECT EXISTS (
+        SELECT 1
+        FROM scores_dossier s
+        JOIN modeles_scoring m ON m.id = s.modele_id AND m.actif = TRUE
+        WHERE s.dossier_id = $1
+          AND (SELECT COUNT(*) FROM scores_details sd WHERE sd.score_dossier_id = s.id) =
+              (SELECT COUNT(*) FROM criteres_scoring c WHERE c.modele_id = m.id AND c.actif = TRUE)
+          AND (SELECT COUNT(*) FROM criteres_scoring c WHERE c.modele_id = m.id AND c.actif = TRUE) > 0
+      ) AS ready`,
+      [id],
+    );
+    return result.rows[0]?.ready === true;
+  }
 }

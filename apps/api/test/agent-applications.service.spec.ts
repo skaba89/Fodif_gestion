@@ -16,6 +16,7 @@ describe('AgentApplicationsService', () => {
     const repository = {
       findById: jest.fn().mockResolvedValue({ id: 'd1', statut: 'EN_INSTRUCTION', agentResponsableId: 'agent-b' }),
       transition: jest.fn(),
+      isCommitteeReady: jest.fn().mockResolvedValue(true),
     };
     const service = new AgentApplicationsService(repository as never);
     await expect(service.review(agent, 'd1', { statut: 'PRET_COMITE', commentaire: 'Analyse terminée' }))
@@ -28,9 +29,23 @@ describe('AgentApplicationsService', () => {
     const repository = {
       findById: jest.fn().mockResolvedValueOnce(dossier).mockResolvedValueOnce({ ...dossier, statut: 'PRET_COMITE' }),
       transition: jest.fn().mockResolvedValue({ id: 'd1' }),
+      isCommitteeReady: jest.fn().mockResolvedValue(true),
     };
     const service = new AgentApplicationsService(repository as never);
     await service.review(agent, 'd1', { statut: 'PRET_COMITE', commentaire: ' Analyse terminée ' });
     expect(repository.transition).toHaveBeenCalledWith('d1', 'agent-a', 'EN_INSTRUCTION', 'PRET_COMITE', 'Analyse terminée');
+  });
+
+  it('blocks committee submission until scoring is complete', async () => {
+    const dossier = { id: 'd1', statut: 'EN_INSTRUCTION', agentResponsableId: 'agent-a' };
+    const repository = {
+      findById: jest.fn().mockResolvedValue(dossier),
+      isCommitteeReady: jest.fn().mockResolvedValue(false),
+      transition: jest.fn(),
+    };
+    const service = new AgentApplicationsService(repository as never);
+    await expect(service.review(agent, 'd1', { statut: 'PRET_COMITE', commentaire: 'Analyse terminée' }))
+      .rejects.toBeInstanceOf(ConflictException);
+    expect(repository.transition).not.toHaveBeenCalled();
   });
 });
