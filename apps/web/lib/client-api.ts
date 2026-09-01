@@ -5,7 +5,7 @@ export async function clientApi<T>(url: string, init: RequestInit = {}): Promise
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== 'undefined') window.location.assign('/entrepreneur/connexion');
+    if (response.status === 401 && typeof window !== 'undefined') window.location.replace('/entrepreneur/connexion');
     throw new Error(data?.message ?? 'Une erreur est survenue');
   }
   return data as T;

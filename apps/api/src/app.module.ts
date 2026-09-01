@@ -7,6 +7,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { AuthorizationGuard } from './common/guards/authorization.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { DatabaseModule } from './database/database.module';
+import { DocumentsModule } from './documents/documents.module';
 import { HealthController } from './health/health.controller';
 import { ProgramsModule } from './programs/programs.module';
 
@@ -17,6 +18,7 @@ import { ProgramsModule } from './programs/programs.module';
     AuthModule,
     CompaniesModule,
     ApplicationsModule,
+    DocumentsModule,
     ProgramsModule,
   ],
   controllers: [HealthController],

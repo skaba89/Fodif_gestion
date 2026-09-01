@@ -36,6 +36,9 @@ jobs:
       - name: Pre-push invariant tests
         run: pnpm test:prepush
 
+      - name: Static analysis
+        run: pnpm lint
+
       - name: API e2e tests
         run: pnpm --filter @fodip/api test
 
