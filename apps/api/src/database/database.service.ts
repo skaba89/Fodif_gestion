@@ -8,13 +8,16 @@ export class DatabaseService implements OnModuleDestroy {
 
   constructor(config: ConfigService) {
     const connectionString = config.get<string>('DATABASE_URL');
+    const sslSetting = config.get<string>('DATABASE_SSL');
+    const automaticSsl = connectionString ? this.shouldUseSsl(connectionString) : false;
+    const useSsl = sslSetting === 'true' || (sslSetting !== 'false' && automaticSsl);
     this.pool = connectionString
       ? new Pool({
           connectionString,
           max: 10,
           idleTimeoutMillis: 30_000,
           connectionTimeoutMillis: 5_000,
-          ssl: this.shouldUseSsl(connectionString) ? { rejectUnauthorized: true } : undefined,
+          ssl: useSsl ? { rejectUnauthorized: true } : undefined,
         })
       : null;
   }

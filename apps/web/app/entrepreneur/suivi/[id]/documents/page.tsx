@@ -72,7 +72,7 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
         <div className={styles.field}><label>Type de document</label><select value={typeDocument} onChange={(event) => setTypeDocument(event.target.value)}>{documentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         <div className={styles.field}><label>Fichier</label><input type="file" accept="application/pdf,image/jpeg,image/png" required onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div>
       </div>
-      <div className={styles.notice}>Le nom Blob est généré côté serveur. Le fichier n’est jamais rendu public et reste inaccessible aux autres PME.</div>
+      <div className={styles.notice}>La clé de stockage est générée côté serveur. Le fichier n’est jamais rendu public et reste inaccessible aux autres PME.</div>
       {message && <div className={styles.notice} role="status">{message}</div>}
       <div className={styles.buttonRow}><button className={styles.primary} disabled={submitting}>{submitting ? 'Envoi sécurisé…' : 'Envoyer le document'}</button></div>
     </form>

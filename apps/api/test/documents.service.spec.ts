@@ -29,7 +29,7 @@ describe('DocumentsService security', () => {
     expect(storage.upload).not.toHaveBeenCalled();
   });
 
-  it('uses a server-generated scoped key and cleans Blob when metadata persistence fails', async () => {
+  it('uses a server-generated scoped key and cleans object storage when metadata persistence fails', async () => {
     const repository = {
       findOwnedApplication: jest.fn().mockResolvedValue({ entrepriseId: pme.entrepriseId, statut: 'BROUILLON' }),
       create: jest.fn().mockRejectedValue(new Error('database failure')),
@@ -45,7 +45,7 @@ describe('DocumentsService security', () => {
     expect(storage.delete).toHaveBeenCalledWith(key);
   });
 
-  it('detects a modified Blob before returning it', async () => {
+  it('detects a modified stored object before returning it', async () => {
     const repository = {
       findOwnedById: jest.fn().mockResolvedValue({ storageKey: 'private/key', checksumSha256: 'invalid', nomFichier: 'rccm.pdf' }),
     };

@@ -34,7 +34,7 @@ API Gateway
 NestJS
     |
     +--> PostgreSQL
-    +--> Azure Blob Storage
+    +--> MinIO / stockage S3 compatible
     +--> Redis
     +--> Event Bus
     |
@@ -96,16 +96,50 @@ Fodif_gestion/
 └── README.md
 ```
 
+## Démarrage local avec Docker
+
+Prérequis : Docker Engine avec Docker Compose v2.
+
+```bash
+docker compose up --build
+```
+
+Le démarrage crée automatiquement PostgreSQL, applique les migrations, charge un jeu de démonstration local, lance MinIO, l’API NestJS et le frontend Next.js.
+
+| Service | Adresse |
+|---|---|
+| Application | http://localhost:3000 |
+| API / Swagger | http://localhost:4000/api/docs |
+| MinIO Console | http://localhost:9001 |
+| PostgreSQL | localhost:5432 |
+
+Comptes locaux de démonstration :
+
+```text
+Agent : agent@fodip.local
+PME   : pme@fodip.local
+Mot de passe commun : FodipDemo2026!
+```
+
+Ces comptes et secrets sont exclusivement destinés au poste local. Pour arrêter la plateforme :
+
+```bash
+docker compose down
+```
+
+L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
+
 ## Documentation
 
 - `docs/01-MVP.md` — périmètre fonctionnel du MVP
 - `docs/02-DATA-MODEL.md` — modèle de données cible
 - `docs/03-ARCHITECTURE.md` — architecture technique cible
 - `docs/08-GESTION-DOCUMENTAIRE.md` — stockage, sécurité, intégrité et audit des documents
+- `docs/09-PORTAIL-AGENT-DOCKER.md` — instruction 360° et exécution Docker autonome
 
 ## Sécurité
 
-Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune donnée personnelle réelle et aucun secret d'infrastructure. Les secrets seront externalisés via un gestionnaire de secrets tel qu'Azure Key Vault.
+Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune donnée personnelle réelle et aucun secret d'infrastructure. Les valeurs incluses dans Docker Compose sont strictement réservées à la démonstration locale et doivent être remplacées dans tout environnement hébergé.
 
 ## Roadmap
 
@@ -117,7 +151,7 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 6 — Backend, authentification et RBAC
 - [x] Étape 7 — Portail PME connecté à PostgreSQL
 - [x] Étape 8 — Gestion documentaire sécurisée
-- [ ] Étape 9 — Portail Agent et instruction 360°
+- [x] Étape 9 — Portail Agent, instruction 360° et Docker
 - [ ] Étape 10 — Workflow, scoring et comité
 - [ ] Étape 11 — Data Platform et dashboards
 - [ ] Étape 12 — Déploiement et dossier de présentation

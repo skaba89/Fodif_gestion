@@ -15,7 +15,7 @@ Backend NestJS + TypeScript du MVP transactionnel.
 - validation stricte des DTO
 - tests pré-push sans dépendances externes pour les politiques de sécurité
 - tests e2e exécutés par la CI
-- stockage documentaire Azure Blob privé via identité managée
+- stockage documentaire privé MinIO via l’API S3 compatible
 - contrôle de signature PDF/JPEG/PNG, limite 10 Mo et checksum SHA-256
 - isolation documentaire par entreprise et audit des accès
 

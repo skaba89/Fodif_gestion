@@ -15,7 +15,7 @@ API Gateway / WAF
 NestJS
     │
     ├── PostgreSQL
-    ├── Azure Blob Storage
+    ├── MinIO / stockage S3 compatible
     ├── Redis
     └── Event Bus
           │
@@ -128,7 +128,7 @@ Modèle GOLD initial :
 
 ## Documents
 
-Les fichiers sont stockés hors PostgreSQL, dans Azure Blob Storage ou un stockage objet compatible.
+Les fichiers sont stockés hors PostgreSQL dans un stockage objet S3 compatible. Le déploiement Docker actuel utilise MinIO.
 
 PostgreSQL ne conserve que :
 
@@ -147,7 +147,7 @@ PostgreSQL ne conserve que :
 - MFA pour les comptes sensibles ;
 - chiffrement en transit et au repos ;
 - secrets externalisés ;
-- Azure Key Vault cible ;
+- gestionnaire de secrets externe à choisir avant hébergement ;
 - aucune clé dans le dépôt ;
 - audit des opérations critiques ;
 - rate limiting et protections API ;
@@ -182,7 +182,7 @@ APPLICATION_APPROVED
    └── synchronisation data
 ```
 
-Azure Service Bus ou une solution équivalente pourra assurer le transport des événements.
+RabbitMQ, NATS ou une solution équivalente pourra assurer le transport des événements.
 
 ## Environnements
 

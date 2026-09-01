@@ -6,12 +6,12 @@ Composants envisagés :
 
 - hébergement web/API conteneurisé ;
 - PostgreSQL managé ;
-- Azure Blob Storage ;
-- Azure Key Vault ;
+- stockage objet S3 compatible (MinIO pour le déploiement Docker actuel) ;
+- gestionnaire de secrets externe à définir pour les environnements hébergés ;
 - Redis ;
-- Azure Service Bus ;
+- RabbitMQ ou NATS pour les traitements asynchrones futurs ;
 - WAF / API Gateway ;
 - Snowflake pour la Data Platform ;
-- CI/CD GitHub Actions ou Azure DevOps selon la cible retenue.
+- CI/CD GitHub Actions.
 
 Aucun état Terraform, secret ou fichier `.env` réel ne doit être versionné.

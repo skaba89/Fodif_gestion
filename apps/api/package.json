@@ -12,8 +12,7 @@
     "test:prepush": "node --check src/security-policy.js && node --test test/security-policy.test.cjs"
   },
   "dependencies": {
-    "@azure/identity": "4.11.1",
-    "@azure/storage-blob": "12.28.0",
+    "@aws-sdk/client-s3": "3.1123.0",
     "@nestjs/common": "11.1.28",
     "@nestjs/config": "4.0.2",
     "@nestjs/core": "11.1.28",
