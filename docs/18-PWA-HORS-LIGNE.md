@@ -78,3 +78,22 @@ directement dans ce dépôt.
   uniquement si `fetch()` échoue), c'est le plafond honnête de ce qui est vérifiable dans ce bac à
   sable — un test manuel sur un vrai appareil (mode avion) reste la confirmation finale à faire une
   fois déployé.
+
+## Un vrai bug que seule la CI a pu attraper
+
+La CI de la PR initiale (`.github/workflows/ci.yml`, qui construit et lance les vraies images
+Docker via `docker compose up`) a échoué sur les trois tests de `apps/web/e2e/pwa.spec.ts` -
+`/sw.js` et `/manifest.webmanifest` répondaient 404 dans le conteneur réel. `apps/web/Dockerfile`
+ne copiait jamais `apps/web/public/` dans l'étage `runtime` : contrairement à `.next/`, Next.js lit
+`public/` directement sur le disque à chaque requête plutôt que de l'intégrer à la sortie de
+compilation, donc son absence dans l'image ne casse rien à la construction - seulement au runtime,
+et seulement dans le conteneur. Le pipeline de vérification locale sans Docker de ce dépôt (voir
+plus haut) démarre toujours depuis l'arborescence source complète, `public/` déjà présent sur
+disque : structurellement incapable de reproduire ce genre d'écart entre « ce qui existe dans le
+dépôt » et « ce que l'étage `runtime` du Dockerfile copie réellement ». Corrigé par une ligne
+`COPY` supplémentaire, reproduit directement (renommer temporairement `apps/web/public/`, lancer
+`next start`, confirmer le 404, remettre en place, confirmer le 200) plutôt que supposé, et un
+garde-fou ajouté à `scripts/check-docker.py` : si `apps/web/public/` contient des fichiers,
+`apps/web/Dockerfile` doit contenir une ligne `COPY` les référençant, sous peine d'échouer la
+vérification pré-push - pour que ce type de régression ne puisse plus se glisser silencieusement
+une seconde fois.
