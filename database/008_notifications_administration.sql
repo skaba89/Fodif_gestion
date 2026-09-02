@@ -137,31 +137,39 @@ CREATE TRIGGER trg_dossier_notifications
 AFTER INSERT OR UPDATE OF statut ON dossiers_financement
 FOR EACH ROW EXECUTE FUNCTION dossier_notification_trigger();
 
-CREATE OR REPLACE FUNCTION financing_notification_trigger() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION disbursement_notification_trigger() RETURNS TRIGGER AS $$
 DECLARE
     target_enterprise UUID;
-    financing_number VARCHAR;
 BEGIN
-    SELECT entreprise_id, numero_financement
-    INTO target_enterprise, financing_number
+    SELECT entreprise_id
+    INTO target_enterprise
     FROM financements WHERE id = NEW.financement_id;
 
-    IF TG_TABLE_NAME = 'decaissements' AND NEW.statut = 'EFFECTUE'
-       AND (TG_OP = 'INSERT' OR OLD.statut IS DISTINCT FROM NEW.statut) THEN
+    IF NEW.statut = 'EFFECTUE' AND (TG_OP = 'INSERT' OR OLD.statut IS DISTINCT FROM NEW.statut) THEN
         PERFORM notify_enterprise_users(
             target_enterprise, 'DECAISSEMENT_EFFECTUE', 'Décaissement effectué',
             'Un décaissement de ' || TO_CHAR(NEW.montant, 'FM999G999G999G999G990') || ' GNF a été effectué.',
             '/entrepreneur/suivi', 'DECAISSEMENT', NEW.id,
             'DECAISSEMENT:' || NEW.id || ':EFFECTUE'
         );
-    ELSIF TG_TABLE_NAME = 'remboursements' THEN
-        PERFORM notify_enterprise_users(
-            target_enterprise, 'REMBOURSEMENT_ENREGISTRE', 'Remboursement enregistré',
-            'Votre paiement de ' || TO_CHAR(NEW.montant_paye, 'FM999G999G999G999G990') || ' GNF a été enregistré.',
-            '/entrepreneur/suivi', 'REMBOURSEMENT', NEW.id,
-            'REMBOURSEMENT:' || NEW.id
-        );
     END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION repayment_notification_trigger() RETURNS TRIGGER AS $$
+DECLARE
+    target_enterprise UUID;
+BEGIN
+    SELECT entreprise_id INTO target_enterprise
+    FROM financements WHERE id = NEW.financement_id;
+
+    PERFORM notify_enterprise_users(
+        target_enterprise, 'REMBOURSEMENT_ENREGISTRE', 'Remboursement enregistré',
+        'Votre paiement de ' || TO_CHAR(NEW.montant_paye, 'FM999G999G999G999G990') || ' GNF a été enregistré.',
+        '/entrepreneur/suivi', 'REMBOURSEMENT', NEW.id,
+        'REMBOURSEMENT:' || NEW.id
+    );
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -169,10 +177,9 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_disbursement_notifications ON decaissements;
 CREATE TRIGGER trg_disbursement_notifications
 AFTER INSERT OR UPDATE OF statut ON decaissements
-FOR EACH ROW EXECUTE FUNCTION financing_notification_trigger();
+FOR EACH ROW EXECUTE FUNCTION disbursement_notification_trigger();
 
 DROP TRIGGER IF EXISTS trg_repayment_notifications ON remboursements;
 CREATE TRIGGER trg_repayment_notifications
 AFTER INSERT ON remboursements
-FOR EACH ROW EXECUTE FUNCTION financing_notification_trigger();
-
+FOR EACH ROW EXECUTE FUNCTION repayment_notification_trigger();
