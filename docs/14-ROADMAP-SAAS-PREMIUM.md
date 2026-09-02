@@ -17,7 +17,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | A3 | Page d'accueil : remplacement de la redirection brute vers `/direction/tableau-de-bord` par un sélecteur de portail explicite | **Fait** (cette itération) |
 | A4 | Bascule thème clair/sombre manuelle persistée (au-delà du `prefers-color-scheme` automatique livré en A1) | **Fait** (cette itération) |
 | A5 | Bibliothèque de composants documentée (Storybook ou équivalent léger) pour garder la cohérence à mesure que l'équipe grandit | À faire |
-| A6 | Accessibilité WCAG 2.1 AA : audit contrastes, navigation clavier complète, lecteurs d'écran sur les tableaux et formulaires complexes (scoring, décision comité) | **Partiel** (cette itération) — association programmatique des étiquettes de formulaire corrigée sur tout le dépôt ; contrastes, navigation clavier et tests lecteur d'écran restent à faire |
+| A6 | Accessibilité WCAG 2.1 AA : audit contrastes, navigation clavier complète, lecteurs d'écran sur les tableaux et formulaires complexes (scoring, décision comité) | **Fait** (cette itération) — étiquettes de formulaire, contrastes, navigation clavier (liens d'évitement) et scan automatisé WCAG 2.1 A/AA en e2e ; reste un point : aucun test avec un lecteur d'écran réel (NVDA/JAWS/VoiceOver), aucun n'étant disponible dans cet environnement |
 
 ## Axe B — Conformité & sécurité de niveau étatique
 
@@ -280,3 +280,37 @@ Détails B6, partiel (`database/012_data_rights.sql`, `apps/api/src/data-rights/
   deux modules n'exporte son repository — même choix que pour `PartnerRepository` à l'axe D1) ;
 - reste à faire pour clore complètement B6 : la décision juridique sur les durées de rétention par
   catégorie de donnée, puis la purge automatique planifiée qui en découle.
+
+Détails A6, suite et clôture (`apps/web/app/globals.css`, `apps/web/e2e/accessibility.spec.ts`) :
+
+- **contrastes** : calcul programmatique (luminance relative WCAG, formule officielle) de chaque
+  paire texte/fond des jetons de conception, clair et sombre. La quasi-totalité passait déjà AA
+  (4.5:1) - le travail d'A1/A2 était soigné - mais deux échecs réels sont ressortis : `.hero-summary
+  small` en clair (4.23:1, opacité de blanc relevée de 0.58 à 0.68) et surtout `--warning` en mode
+  sombre (3.11:1 seulement) - ce jeton n'était tout simplement jamais redéfini pour le sombre et
+  restait donc sur sa valeur claire (un brun-doré sourd) au lieu de reprendre `--accent-300` comme
+  `--gold` le fait déjà ; corrigé en ajoutant cette redéfinition dans les deux blocs de thème sombre
+  (`prefers-color-scheme` et `data-theme="dark"`). `--accent-700` (le `--warning` du mode clair) est
+  aussi légèrement assombri (`#8a6a12` → `#7c5e11`) pour sortir de la limite (4.46:1 → 5.34:1) plutôt
+  que de rester au ras du seuil. Aucune couleur de texte codée en dur en dehors de `globals.css` :
+  tous les fichiers `*.module.css` consomment les jetons partagés, donc ces trois correctifs
+  s'appliquent uniformément aux sept portails ;
+- **navigation clavier** : aucun `tabIndex` positif, aucun gestionnaire `onClick` sur un élément non
+  interactif (`<div>`), aucune modale dans tout le dépôt web - l'ordre de tabulation suit donc déjà
+  l'ordre du DOM et aucun piège clavier n'existe. Ce qui manquait réellement (WCAG 2.4.1 « Bypass
+  Blocks ») : un lien d'évitement pour sauter l'en-tête et la navigation répétés sur chaque page et
+  atterrir directement dans le contenu. Ajouté (`.skip-link` dans `globals.css`, hors écran jusqu'au
+  focus) comme tout premier élément des huit points d'entrée du produit (les six `layout.tsx` de
+  portail, `/notifications`, `/mes-donnees`, et le tableau de bord Direction à structure propre) ;
+- **lecteurs d'écran** : aucun lecteur d'écran réel (NVDA, JAWS, VoiceOver) n'est disponible dans cet
+  environnement d'exécution pour une vérification humaine - même limite que pour Docker (docs
+  précédentes de ce document). À la place, `apps/web/e2e/accessibility.spec.ts` intègre
+  `@axe-core/playwright` et fait tourner un scan WCAG 2.1 A/AA complet (étiquettes, rôles ARIA,
+  landmarks, structure de titres, contrastes recalculés dans le navigateur réel) sur la page
+  d'accueil, les pages de connexion PME et administration, le portail PME après connexion en clair
+  et en sombre, et `/mes-donnees` (axe B6) - une régression future sur n'importe laquelle de ces
+  pages est donc détectée automatiquement, pas seulement au moment de cet audit ponctuel ;
+- vérifié : `pnpm lint`, `npx tsc --noEmit`, `pnpm --filter @fodip/web build`, `npx playwright test
+  --list` (les 5 nouveaux tests sont découverts). Comme pour les précédents specs Playwright, leur
+  exécution réelle nécessite la pile Docker complète, indisponible ici (`dockerd` ne démarre pas
+  dans ce bac à sable) - confirmée par la CI.

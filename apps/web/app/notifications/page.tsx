@@ -47,11 +47,11 @@ export default function NotificationsPage() {
     await load();
   }
 
-  return <div className={portal.shell}><header className={portal.header}>
+  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
     <Link href={returnPath} className={portal.brand}><span className={portal.mark}>FD</span><span className={portal.brandText}><strong>FODIP DIGITAL</strong><span>Centre de notifications</span></span></Link>
     <nav className={portal.nav}><Link href={returnPath}>Retour au portail</Link></nav>
     <ThemeToggle buttonClassName={portal.themeToggle} />
-  </header><main className={portal.main}>
+  </header><main id="main-content" tabIndex={-1} className={portal.main}>
     <p className={portal.eyebrow}>Activité personnelle</p><h1 className={portal.title}>Notifications</h1>
     <p className={portal.lead}>{unread} notification{unread === 1 ? '' : 's'} non lue{unread === 1 ? '' : 's'}. Les événements sont enregistrés atomiquement avec les opérations métier.</p>
     <div className={portal.buttonRow}>
