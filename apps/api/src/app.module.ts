@@ -17,6 +17,7 @@ import { DatabaseModule } from './database/database.module';
 import { DataRightsModule } from './data-rights/data-rights.module';
 import { DocumentsModule } from './documents/documents.module';
 import { FinancingsModule } from './financings/financings.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { HealthController } from './health/health.controller';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PartnerModule } from './partner/partner.module';
@@ -41,6 +42,7 @@ import { ScoringModule } from './scoring/scoring.module';
     DataRightsModule,
     DocumentsModule,
     FinancingsModule,
+    MetricsModule,
     NotificationsModule,
     PartnerModule,
     ProgramsModule,

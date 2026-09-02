@@ -128,6 +128,42 @@ services:
     ports:
       - "${WEB_PORT:-3000}:3000"
 
+  # Axe C4 (docs/14-ROADMAP-SAAS-PREMIUM.md) - an operations dashboard reading the metrics axe C3b
+  # already exposes (apps/api/src/metrics/, GET /api/v1/metrics). Both behind the "observability"
+  # profile: excluded from a plain `docker compose up` (so CI, which never passes --profile, is
+  # completely unaffected - no extra images to pull, no extra containers to wait on) and started
+  # on request with `docker compose --profile observability up`.
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    profiles: ["observability"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    restart: unless-stopped
+    profiles: ["observability"]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-fodip_local_admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/files:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   minio_data:
+  prometheus_data:
+  grafana_data:

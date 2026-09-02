@@ -42,8 +42,8 @@ séparément, pour permettre un avancement continu sans big-bang.
 | C2a | Tests e2e web (Playwright) : connexion, rejet de rôle, déconnexion, et le parcours TOTP complet (enrôlement puis vérification) — jusqu'ici jamais exercé de bout en bout dans un navigateur réel | **Fait** (cette itération) |
 | C2b | Tests e2e web : dépôt de dossier PME, instruction agent, décision comité | **Fait** (cette itération) |
 | C3a | Traces OpenTelemetry (HTTP, routes Express, requêtes PostgreSQL) et logs structurés JSON en production, corrélés par `traceId`/`spanId` — même schéma que B3 : `OTEL_SERVICE_NAME` existait déjà dans `.env.example` sans jamais être câblé | **Fait** (cette itération) |
-| C3b | Métriques applicatives (latence, débit, taux d'erreur) — a un chevauchement naturel avec C4 (nécessite un consommateur : dashboard ou backend de métriques cible) | À faire |
-| C4 | Tableau de bord d'exploitation (latence, taux d'erreur, santé des files d'attente) — **nécessite un backend d'observabilité cible (Grafana/Datadog/...)** | À faire — décision requise |
+| C3b | Métriques applicatives (latence, débit, taux d'erreur) — a un chevauchement naturel avec C4 (nécessite un consommateur : dashboard ou backend de métriques cible) | **Fait** (cette itération) |
+| C4 | Tableau de bord d'exploitation (latence, taux d'erreur, santé des files d'attente) — **nécessite un backend d'observabilité cible (Grafana/Datadog/...)** | **Fait** (cette itération) — Prometheus + Grafana auto-hébergés (`docs/17-METRIQUES-OBSERVABILITE.md`) |
 | C5 | Pagination et limites de charge sur les listes à fort volume (dossiers, notifications, audit) à mesure que le nombre de PME grandit | **Fait** (cette itération) |
 | C6 | Sauvegardes PostgreSQL automatisées et testées (restauration), plan de reprise après sinistre | **Partiel** (cette itération) — mécanisme de sauvegarde/restauration construit et testé en continu par la CI (`docs/16-SAUVEGARDES-RESTAURATION.md`) ; planification, réplication hors site et objectifs RPO/RTO restent liés à la décision d'hébergement (B7b) |
 
@@ -412,3 +412,35 @@ Détails C6, partiel (`scripts/backup-postgres.sh`, `scripts/restore-postgres.sh
   pour les précédents scripts dépendant de Docker, leur exécution réelle contre une vraie base
   n'a pas pu être vérifiée dans ce bac à sable (aucun démon Docker disponible) - la CI, qui exécute
   désormais `test-backup-restore.sh` à chaque run, en apportera la première confirmation réelle.
+
+Détails C3b/C4 (`apps/api/src/metrics/`, `monitoring/`, `docs/17-METRIQUES-OBSERVABILITE.md`) :
+
+- C4 posait « nécessite un backend d'observabilité cible (Grafana/Datadog/...) » comme un choix
+  ouvert. Tranché dans le même esprit que B4 (Keycloak) plutôt que laissé en attente : Prometheus
+  + Grafana auto-hébergés, ajoutés à `docker-compose.yml` derrière un profil `observability` -
+  absents d'un `docker compose up` normal (donc de la CI, qui n'active jamais de profil : zéro
+  image supplémentaire à tirer, zéro conteneur supplémentaire à attendre pour les PR qui n'ont rien
+  à voir avec l'observabilité), démarrés uniquement sur demande
+  (`docker compose --profile observability up`) ;
+- `GET /api/v1/metrics` (axe C3b, `prom-client`) expose un histogramme unique,
+  `fodip_api_http_request_duration_seconds`, étiqueté méthode/route/code de statut - la route est
+  le motif associé par Nest (`request.route.path`, ex. `/api/v1/administration/users/:id`), jamais
+  l'URL brute, pour ne pas créer une série par UUID (ou, pour une requête qui n'a jamais matché de
+  route du tout, une série par URL invalide envoyée par un client cassé ou un scan) ; enregistré
+  par un middleware plutôt qu'un intercepteur - lire `response.statusCode` dans le callback
+  `'finish'` de la réponse plutôt que dans la branche d'erreur d'un intercepteur RxJS, qui
+  s'exécute avant que le filtre d'exceptions global ait fixé le code de statut réel ;
+- vérifié directement plutôt que déduit du code, PostgreSQL et Prometheus étant tous deux
+  installables sans Docker dans cet environnement : l'API réelle (compilée, lancée en local contre
+  un vrai PostgreSQL migré et seedé) a servi un format d'exposition validé par `promtool check
+  metrics` (le lint officiel de Prometheus) pour la métrique propre à ce dépôt ; un vrai binaire
+  `prometheus` a scruté cette API avec succès (`"health": "up"`) ; les trois requêtes PromQL du
+  tableau de bord (débit par route, latence p95, taux d'erreur) ont été exécutées contre ce
+  Prometheus réel et retournent les valeurs attendues. Seul le rendu du tableau de bord dans
+  Grafana lui-même n'a pas pu être vérifié directement (paquet hors politique réseau de cet
+  environnement) - le JSON suit le schéma Grafana standard et référence ces mêmes requêtes déjà
+  confirmées ;
+- 112 tests API (`metrics.service.spec.ts`, `metrics.middleware.spec.ts`, plus une assertion dans
+  `app.e2e-spec.ts` confirmant `/metrics` public et servant un vrai scrape - la même famille de
+  test que celle qui protège déjà `/health`) ; `pnpm lint`, `npx tsc --noEmit`,
+  `docker compose config --quiet`, `python3 scripts/check-docker.py` tous verts.

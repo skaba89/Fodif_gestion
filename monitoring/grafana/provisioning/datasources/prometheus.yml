@@ -1,0 +1,12 @@
+# FODIP Digital 2030 - Axe C4. Auto-provisions the Prometheus datasource on Grafana startup, so
+# opening Grafana never requires a manual "add datasource" click - "prometheus" here is the
+# Docker Compose service name (see docker-compose.yml).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
