@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ApplicationsModule } from './applications/applications.module';
+import { AdministrationModule } from './administration/administration.module';
 import { AgentApplicationsModule } from './agent-applications/agent-applications.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
@@ -13,6 +14,7 @@ import { DatabaseModule } from './database/database.module';
 import { DocumentsModule } from './documents/documents.module';
 import { FinancingsModule } from './financings/financings.module';
 import { HealthController } from './health/health.controller';
+import { NotificationsModule } from './notifications/notifications.module';
 import { ProgramsModule } from './programs/programs.module';
 import { ScoringModule } from './scoring/scoring.module';
 
@@ -20,6 +22,7 @@ import { ScoringModule } from './scoring/scoring.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, cache: true }),
     DatabaseModule,
+    AdministrationModule,
     AuthModule,
     CompaniesModule,
     CommitteeModule,
@@ -28,6 +31,7 @@ import { ScoringModule } from './scoring/scoring.module';
     AnalyticsModule,
     DocumentsModule,
     FinancingsModule,
+    NotificationsModule,
     ProgramsModule,
     ScoringModule,
   ],

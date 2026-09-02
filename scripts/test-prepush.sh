@@ -7,7 +7,8 @@ node --check apps/api/src/agent-policy.js
 node --check apps/api/src/scoring-policy.js
 node --check apps/api/src/committee-policy.js
 node --check apps/api/src/finance-policy.js
-node --test apps/api/test/security-policy.test.cjs apps/api/test/pme-policy.test.cjs apps/api/test/document-policy.test.cjs apps/api/test/agent-policy.test.cjs apps/api/test/scoring-policy.test.cjs apps/api/test/committee-policy.test.cjs apps/api/test/finance-policy.test.cjs
+node --check apps/api/src/admin-policy.js
+node --test apps/api/test/security-policy.test.cjs apps/api/test/pme-policy.test.cjs apps/api/test/document-policy.test.cjs apps/api/test/agent-policy.test.cjs apps/api/test/scoring-policy.test.cjs apps/api/test/committee-policy.test.cjs apps/api/test/finance-policy.test.cjs apps/api/test/admin-policy.test.cjs
 python scripts/check-migrations.py
 python scripts/check-docker.py
 bash -n scripts/docker-smoke.sh

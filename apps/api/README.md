@@ -18,6 +18,9 @@ Backend NestJS + TypeScript du MVP transactionnel.
 - stockage documentaire privé MinIO via l’API S3 compatible
 - contrôle de signature PDF/JPEG/PNG, limite 10 Mo et checksum SHA-256
 - isolation documentaire par entreprise et audit des accès
+- notifications persistantes générées par les événements métier PostgreSQL
+- administration des utilisateurs, rôles et périmètres PME réservée au super-administrateur
+- protection de son propre compte et du dernier super-administrateur actif
 
 ## Commandes
 

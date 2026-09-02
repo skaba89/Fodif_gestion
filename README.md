@@ -120,6 +120,7 @@ Agent : agent@fodip.local
 PME   : pme@fodip.local
 Comité: comite@fodip.local
 Direction: direction@fodip.local
+Super admin: admin@fodip.local
 Mot de passe commun : FodipDemo2026!
 ```
 
@@ -141,6 +142,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/10-SCORING-COMITE.md` — scoring versionné et décision humaine auditée
 - `docs/11-DATA-DASHBOARD.md` — vues analytiques PostgreSQL, définitions KPI et cockpit Direction
 - `docs/12-CYCLE-FINANCIER.md` — financements, décaissements, échéances, remboursements, impact et audit
+- `docs/13-NOTIFICATIONS-ADMINISTRATION.md` — notifications métier, utilisateurs, rôles et protections administratives
 
 ## Sécurité
 
@@ -160,7 +162,8 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 10 — Workflow, scoring et comité
 - [x] Étape 11 — Data Platform et dashboards Docker/PostgreSQL
 - [x] Étape 12 — Cycle financier opérationnel
-- [ ] Étape 13 — Notifications, administration et dossier de déploiement
+- [x] Étape 13 — Notifications et administration
+- [ ] Étape 14 — MFA complet et dossier de déploiement
 
 ## Licence
 
