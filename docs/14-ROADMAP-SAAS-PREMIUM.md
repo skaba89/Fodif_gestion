@@ -32,6 +32,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | B7a | Dossier de déploiement d'un environnement de **test** (Render/Netlify + Neon/Supabase), en attendant le choix de l'hébergeur institutionnel définitif — `docs/15-DEPLOIEMENT-TEST.md` | **Fait** (cette itération) |
 | B7b | Séparation réelle DEV / REC / PPD / PROD sur l'hébergeur institutionnel définitif (actuellement un seul `docker-compose.yml` de démonstration locale + l'environnement de test B7a) — **nécessite le choix d'un hébergeur/cloud cible** | À faire — décision requise |
 | B8 | Revue de sécurité externe / test d'intrusion avant mise en production | À faire, en fin de parcours |
+| B9 | Rendre fonctionnels tous les rôles prévus dans `docs/01-MVP.md` — `AUDITEUR` avait des permissions RBAC en base depuis le début (`audit.read`, `financing.read`, `impact.read`) mais aucune route API ne les vérifiait ni aucun portail web ne les exploitait ; `PARTENAIRE_BANCAIRE` reste sans surface API (voir axe D1) | **AUDITEUR fait** (cette itération) — `PARTENAIRE_BANCAIRE` renvoie à D1 |
 
 ## Axe C — Fiabilité & observabilité SaaS
 
@@ -66,7 +67,7 @@ Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.servic
 - Chaque phase marquée « décision requise » bloque sur un choix qui n'appartient pas à
   l'équipe technique seule (fournisseur SSO, hébergeur cible, outil d'observabilité) : à trancher
   avec la Direction avant implémentation plutôt que de figer un choix par défaut.
-- Les phases sans dépendance externe (A1-A3, A5-A6, B6, B7a, C1-C3a) peuvent démarrer sans
+- Les phases sans dépendance externe (A1-A3, A5-A6, B6, B7a, B9, C1-C3a) peuvent démarrer sans
   attendre ces décisions.
 - Chaque phase livrée suit la même discipline que le reste du dépôt : tests, `pnpm lint`,
   `pnpm test:prepush`, build API et web verts avant fusion.
@@ -122,3 +123,31 @@ Détails C5 (`apps/api/src/common/dto/pagination-query.dto.ts`, `apps/web/app/_s
 - les indicateurs agrégés (montants, compteurs par statut) affichés au-dessus de chaque tableau
   paginé sont désormais explicitement annotés « (page) » quand ils ne portent que sur la page
   affichée plutôt que sur l'ensemble filtré, pour ne pas laisser croire à un total global inexact.
+
+Détails B9 (`apps/api/src/audit/`, `apps/web/app/auditeur/`) :
+
+- diagnostic : `AuthorizationGuard` (`common/guards/authorization.guard.ts`) applique le contrôle
+  de rôle et le contrôle de permission en ET — un compte `AUDITEUR` échouait donc systématiquement
+  au contrôle de rôle des contrôleurs `financings`/`committee`/`agent-applications` avant même que
+  ses permissions RBAC (`audit.read`, `financing.read`, `impact.read`, présentes en base depuis
+  le tout premier commit RBAC) ne soient évaluées. Le rôle existait, était sélectionnable en
+  administration et pouvait s'authentifier, mais n'avait accès à strictement aucune donnée ;
+- `GET /audit/logs` (nouveau module `audit/`) expose enfin `audit_logs` en lecture, paginé
+  (même motif que l'axe C5 : `LIMIT`/`OFFSET` + `COUNT(*) OVER()`), filtrable par `entityType`
+  (liste fermée alignée sur les valeurs réellement écrites par chaque module) et `action` ;
+- `AUDITEUR` ajouté à la liste de rôles autorisés de `FinancingsController` (lecture seule : les
+  permissions `*.manage` requises par les routes de mutation restent absentes de son profil RBAC,
+  donc ces routes lui restent fermées, sans changement de code supplémentaire) ;
+- nouveau portail web `apps/web/app/auditeur/` (connexion + tableau de bord en lecture seule,
+  réutilisant le composant `Pagination` de l'axe C5) et compte de démonstration
+  `auditeur@fodip.local` (`database/seeds/002_analytics_demo.sql`) ; SSO (axe B4) étendu à ce
+  cinquième portail (`OIDC_PORTALS`) pour rester cohérent avec les quatre autres portails
+  institutionnels ;
+- `PARTENAIRE_BANCAIRE` reste hors périmètre de cette itération et renvoie explicitement à l'axe
+  D1 : contrairement à `AUDITEUR`, son cas ne se limite pas à un contrôle de rôle manquant — il
+  n'existe aujourd'hui aucun modèle de données reliant un partenaire bancaire à un sous-ensemble
+  de dossiers/financements (`docs/03-ARCHITECTURE.md` décrit l'intention — une « Partner API »
+  authentifiée, scopée et versionnée, les partenaires n'accédant jamais aux bases directement —
+  mais aucune table `partenaires`/liaison n'existe). Inventer ce schéma sans validation métier
+  serait risqué pour une intégration bancaire externe ; à traiter comme son propre chantier D1
+  plutôt que comme un simple oubli de garde d'accès.

@@ -40,8 +40,8 @@ Détails d'implémentation (`auth/mfa/mfa.service.ts`) :
 ## SSO institutionnel (OpenID Connect)
 
 Optionnel, désactivé par défaut. Permet aux agents publics (portails `agent`, `comite`,
-`direction`, `administration` — pas le portail PME/entrepreneur) de se connecter via un
-fournisseur d'identité institutionnel (Keycloak ou tout autre IdP compatible OpenID Connect)
+`direction`, `administration`, `auditeur` — pas le portail PME/entrepreneur) de se connecter via
+un fournisseur d'identité institutionnel (Keycloak ou tout autre IdP compatible OpenID Connect)
 plutôt que par mot de passe. Voir `docs/14-ROADMAP-SAAS-PREMIUM.md` (axe B4) pour le contexte de
 décision.
 
@@ -67,6 +67,32 @@ décision.
   (`security-policy.js#deriveSecret`, distincte de celle des jetons de défi MFA et des tokens
   d'accès), échangé côté serveur par `POST /auth/oidc/exchange` — analogue à un
   `authorization_code` OAuth, jamais à une session utilisable directement.
+
+## Portail Auditeur (supervision en lecture seule)
+
+Le rôle `AUDITEUR` existe dans `roles`/`role_permissions` depuis `database/002_auth_rbac.sql`
+(permissions `audit.read`, `financing.read`, `impact.read`) mais n'avait jamais de portail ni de
+route API qui les vérifie réellement — les décorateurs `@RequireRoles` des contrôleurs
+concernés ne l'incluaient pas, ce qui bloquait tout compte `AUDITEUR` avant même la vérification
+de permission (`AuthorizationGuard` applique les deux contrôles en ET, voir
+`common/guards/authorization.guard.ts`).
+
+- `GET /audit/logs` (nouveau, `audit/`) : lecture paginée de `audit_logs` — table alimentée
+  depuis `001_initial_schema.sql` par chaque module (administration, instruction agent, décision
+  comité, scoring, documents, opérations de financement) mais jamais exposée en lecture
+  auparavant. Filtrable par `entityType`/`action`, gardé par `@RequireRoles('AUDITEUR',
+  'SUPER_ADMIN')` + `@RequirePermissions('audit.read')`.
+- `GET /financings` et `GET /financings/:id` : `AUDITEUR` ajouté à la liste de rôles autorisés au
+  niveau du contrôleur ; les routes de mutation (`financing.manage`, `disbursement.manage`,
+  `repayment.manage`, `impact.manage`) restent fermées puisque `AUDITEUR` ne détient aucune de
+  ces permissions dans `database/007_financing_operations.sql` — même principe que `ANALYSTE`,
+  déjà dans cette liste et déjà limité en lecture seule de la même façon.
+- portail web dédié (`apps/web/app/auditeur/`) : connexion (avec SSO le cas échéant, voir
+  ci-dessus) puis tableau de bord en lecture seule montrant le portefeuille de financements et le
+  journal d'audit, tous deux paginés (`_shared/Pagination.tsx`, axe C5) — aucune action de
+  création, modification ou décaissement n'y est proposée.
+- compte de démonstration local : `auditeur@fodip.local` (`database/seeds/002_analytics_demo.sql`,
+  voir le README pour le mot de passe commun de démonstration).
 
 ## Protections API transverses
 

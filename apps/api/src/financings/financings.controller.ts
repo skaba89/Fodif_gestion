@@ -16,7 +16,10 @@ interface AuthenticatedRequest extends Request { user: AuthenticatedUser }
 
 @ApiTags('financings')
 @ApiBearerAuth()
-@RequireRoles('DIRECTION_FODIP', 'ANALYSTE', 'SUPER_ADMIN')
+// AUDITEUR has read-only financing/impact permissions (database/002_auth_rbac.sql) but no
+// financing.manage/disbursement.manage/repayment.manage/impact.manage - the mutating handlers
+// below stay closed to it on their own @RequirePermissions, same as ANALYSTE today.
+@RequireRoles('DIRECTION_FODIP', 'ANALYSTE', 'AUDITEUR', 'SUPER_ADMIN')
 @Controller('financings')
 export class FinancingsController {
   constructor(private readonly financings: FinancingsService) {}

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import styles from '../entrepreneur/portal.module.css';
 
 type Step = 'credentials' | 'setup' | 'verify';
-type OidcPortal = 'agent' | 'comite' | 'direction' | 'administration';
+type OidcPortal = 'agent' | 'comite' | 'direction' | 'administration' | 'auditeur';
 
 interface SessionResponse {
   message?: string;

@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as client from 'openid-client';
 import { deriveSecret, resolveJwtSecret } from '../../security-policy';
 
-export const OIDC_PORTALS = ['agent', 'comite', 'direction', 'administration'] as const;
+export const OIDC_PORTALS = ['agent', 'comite', 'direction', 'administration', 'auditeur'] as const;
 export type OidcPortal = (typeof OIDC_PORTALS)[number];
 
 export function isOidcPortal(value: unknown): value is OidcPortal {
@@ -21,6 +21,7 @@ const LOGIN_PATH: Record<OidcPortal, string> = {
   comite: '/comite/connexion',
   direction: '/direction/connexion',
   administration: '/administration/connexion',
+  auditeur: '/auditeur/connexion',
 };
 
 export const OIDC_FLOW_COOKIE = 'fodip_oidc_flow';

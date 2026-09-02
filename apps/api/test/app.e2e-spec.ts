@@ -38,6 +38,10 @@ describe('FODIP API', () => {
     await request(app.getHttpServer()).get(`/api/v1/documents/${documentId}/download`).expect(401);
   });
 
+  it('the AUDITEUR oversight endpoint is protected by default (axe B9)', async () => {
+    await request(app.getHttpServer()).get('/api/v1/audit/logs').expect(401);
+  });
+
   it('agent dossier routes are protected by default', async () => {
     const dossierId = '11111111-1111-4111-8111-111111111111';
     await request(app.getHttpServer()).get('/api/v1/agent/applications').expect(401);
