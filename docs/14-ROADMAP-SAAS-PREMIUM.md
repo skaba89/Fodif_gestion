@@ -27,7 +27,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | B2 | Rate limiting, `helmet`, filtre d'exceptions global (pas de fuite d'erreur interne), MFA TOTP fonctionnel | **Fait** (PR #12) |
 | B3 | MFA imposé (non simplement proposé) pour les rôles sensibles — le code prévoyait déjà `admin-policy.js#requiresMfa`/`PRIVILEGED_ROLES` (`SUPER_ADMIN`, `DIRECTION_FODIP`, `AGENT_FODIP`, `ANALYSTE`, `COMITE_FINANCEMENT`, `AUDITEUR`) mais la fonction n'était jamais appelée | **Fait** (cette itération) |
 | B4 | SSO/OpenID Connect pour les agents publics. Décision prise : Keycloak — open source, auto-hébergeable, sans dépendance à un fournisseur cloud, standard OpenID Connect (n'importe quel autre IdP compatible OIDC fonctionnera aussi côté API sans changement) | **Fait** (cette itération) |
-| B5 | Chiffrement au repos des données personnelles sensibles (au-delà du hachage des mots de passe et du chiffrement du secret MFA déjà en place) — **nécessite un gestionnaire de secrets/KMS en production** | À faire — décision d'infrastructure requise |
+| B5 | Chiffrement au repos des données personnelles sensibles (au-delà du hachage des mots de passe et du chiffrement du secret MFA déjà en place) — **nécessite un gestionnaire de secrets/KMS en production** | **Partiel** (cette itération) — mécanisme et premier champ (téléphone) chiffrés ; la garde de la clé en production (sauvegarde, rotation, KMS) reste liée à la décision d'hébergement (B7b) |
 | B6 | Politique de rétention et purge des données, export/suppression sur demande (droits des personnes) | **Partiel** (cette itération) — export et effacement sur demande faits ; purge automatique par durée de rétention en attente d'une décision juridique |
 | B7a | Dossier de déploiement d'un environnement de **test** (Render/Netlify + Neon/Supabase), en attendant le choix de l'hébergeur institutionnel définitif — `docs/15-DEPLOIEMENT-TEST.md` | **Fait** (cette itération) |
 | B7b | Séparation réelle DEV / REC / PPD / PROD sur l'hébergeur institutionnel définitif (actuellement un seul `docker-compose.yml` de démonstration locale + l'environnement de test B7a) — **nécessite le choix d'un hébergeur/cloud cible** | À faire — décision requise |
@@ -334,3 +334,47 @@ Détails A5 (`apps/web/app/design-system/`) :
   depuis le pied de page de l'accueil, et elle-même couverte par le scan `@axe-core/playwright`
   ajouté à l'axe A6 - une régression d'accessibilité sur la page de référence du design system
   serait particulièrement ironique à laisser passer.
+
+Détails B5, partiel (`apps/api/src/security-policy.js`, `database/013_pii_encryption.sql`) :
+
+- B5 recouvre en réalité deux choses : le **mécanisme** de chiffrement au repos, et la **garde de
+  la clé** en production (sauvegarde, rotation, éventuellement un vrai KMS/HSM). La seconde n'a de
+  sens qu'une fois l'hébergement choisi (axe B7b) - matériel dédié, coffre-fort applicatif d'un
+  fournisseur cloud, etc. sont des options radicalement différentes selon la cible. Cette itération
+  construit uniquement le mécanisme, en réutilisant ce qui existait déjà plutôt qu'en inventant une
+  nouvelle brique : `AdministrationRepository`/`DataRightsRepository` dérivent leur clé de
+  chiffrement du même `JWT_SECRET` déjà validé, via un contexte HMAC dédié
+  (`deriveSecret(jwtSecret, 'fodip-pii-telephone-encryption-v1')`) - exactement le pattern déjà en
+  production pour le secret TOTP MFA (`MfaService`, axe B2) plutôt qu'un nouveau secret à
+  provisionner et sauvegarder séparément ;
+- premier champ couvert : `utilisateurs.telephone`, chiffré en AES-256-GCM
+  (`security-policy.js#encryptWithKey`, déjà testé unitairement pour le secret MFA). Choisi parce
+  que c'est le seul champ de donnée personnelle d'une personne physique avec un chemin d'écriture
+  réellement exercé par l'application (`AdministrationRepository#create` - il n'existe même pas de
+  chemin de mise à jour du téléphone) et jamais utilisé dans une recherche/égalité SQL (vérifié :
+  seul `utilisateurs.email`/`nom`/`prenom` sont recherchés par `ILIKE`, jamais `telephone`) - le
+  chiffrer ne casse donc aucune fonctionnalité existante ;
+- délibérément laissés de côté cette itération : `entreprises.telephone`/`email`/`adresse` (donnée
+  de contact d'une personne morale, pas d'une personne physique) ; `entreprise_dirigeants.telephone`/
+  `email` (donnée personnelle réelle, mais actuellement en lecture seule côté API - aucune route
+  ne les crée ni ne les modifie, donc rien à chiffrer sur écriture aujourd'hui ; à reprendre le jour
+  où un flux de création/modification des dirigeants existera) ; `utilisateurs.email`/`nom`/`prenom`
+  (recherchés par `ILIKE` dans `administration.repository.ts#listUsers`, et `email` sert de clé de
+  connexion - les chiffrer casserait la recherche admin et l'authentification, qui reposent toutes
+  deux sur une égalité/correspondance SQL en clair) ;
+- migration additive (`ALTER TABLE utilisateurs ALTER COLUMN telephone TYPE VARCHAR(255)` - un
+  élargissement, jamais destructif) : un ciphertext AES-256-GCM (IV 12 octets + tag
+  d'authentification 16 octets + texte chiffré, encodé en base64) est toujours plus long que le
+  numéro de téléphone en clair qu'il remplace, et aurait dépassé l'ancien `VARCHAR(50)` ;
+- vérifié : deux nouvelles suites de tests unitaires directement sur les repositories
+  (`apps/api/test/administration.repository.spec.ts`, `data-rights.repository.spec.ts`) - une
+  première dans ce dépôt, où chaque repository n'était jusqu'ici exercé que via la suite e2e
+  Docker, justifiée ici parce que ces deux-là contiennent désormais une vraie logique applicative
+  (chiffrer avant l'INSERT, déchiffrer après le SELECT) qui vaut la peine d'être isolée de la base
+  de données. Complété par `apps/web/e2e/pii-encryption.spec.ts`, qui crée un compte avec un
+  numéro de téléphone via l'API réelle et vérifie qu'il ressort identique - le seul test qui
+  exerce l'aller-retour contre un vrai PostgreSQL (une erreur de calcul de longueur de colonne
+  tronquerait silencieusement le ciphertext dans un mock, pas ici). `pnpm lint`, `npx tsc --noEmit`,
+  build api+web, `python3 scripts/check-migrations.py` (16 migrations validées), 106 tests API,
+  `npx playwright test --list` (12 tests découverts) tous verts ; exécution réelle des specs
+  Playwright laissée à la CI comme pour les précédentes (aucun démon Docker dans ce bac à sable).
