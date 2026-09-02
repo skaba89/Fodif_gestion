@@ -43,7 +43,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | C3a | Traces OpenTelemetry (HTTP, routes Express, requêtes PostgreSQL) et logs structurés JSON en production, corrélés par `traceId`/`spanId` — même schéma que B3 : `OTEL_SERVICE_NAME` existait déjà dans `.env.example` sans jamais être câblé | **Fait** (cette itération) |
 | C3b | Métriques applicatives (latence, débit, taux d'erreur) — a un chevauchement naturel avec C4 (nécessite un consommateur : dashboard ou backend de métriques cible) | À faire |
 | C4 | Tableau de bord d'exploitation (latence, taux d'erreur, santé des files d'attente) — **nécessite un backend d'observabilité cible (Grafana/Datadog/...)** | À faire — décision requise |
-| C5 | Pagination et limites de charge sur les listes à fort volume (dossiers, notifications, audit) à mesure que le nombre de PME grandit | À faire |
+| C5 | Pagination et limites de charge sur les listes à fort volume (dossiers, notifications, audit) à mesure que le nombre de PME grandit | **Fait** (cette itération) |
 | C6 | Sauvegardes PostgreSQL automatisées et testées (restauration), plan de reprise après sinistre | À faire — décision d'infrastructure requise |
 
 Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.service.ts`) :
@@ -66,7 +66,7 @@ Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.servic
 - Chaque phase marquée « décision requise » bloque sur un choix qui n'appartient pas à
   l'équipe technique seule (fournisseur SSO, hébergeur cible, outil d'observabilité) : à trancher
   avec la Direction avant implémentation plutôt que de figer un choix par défaut.
-- Les phases sans dépendance externe (A1-A3, A5-A6, B6, B7a, C1-C3a, C5) peuvent démarrer sans
+- Les phases sans dépendance externe (A1-A3, A5-A6, B6, B7a, C1-C3a) peuvent démarrer sans
   attendre ces décisions.
 - Chaque phase livrée suit la même discipline que le reste du dépôt : tests, `pnpm lint`,
   `pnpm test:prepush`, build API et web verts avant fusion.
@@ -98,3 +98,27 @@ Détails B4 (`apps/api/src/auth/oidc/`, `apps/web/app/api/session/oidc/`) :
   (Keycloak ou autre) n'était disponible dans cet environnement d'exécution : le round-trip complet
   navigateur → IdP → callback n'a donc pas été exercé en conditions réelles et devra l'être avant
   mise en production.
+
+Détails C5 (`apps/api/src/common/dto/pagination-query.dto.ts`, `apps/web/app/_shared/Pagination.tsx`) :
+
+- `dossiers_financement` (files d'instruction agent et de décision comité) et `financements`
+  (portefeuille Direction) sont les listes qui grandissent réellement avec le nombre de PME au
+  fil des années — désormais paginées côté base (`LIMIT`/`OFFSET` + `COUNT(*) OVER()` pour
+  obtenir le total en une seule requête, même motif SQL que la pagination agent déjà livrée
+  précédemment) plutôt que de charger l'intégralité de la table à chaque affichage ;
+- `page`/`limite` partagés via `PaginationQueryDto` (`limite` plafonnée à 100) pour éviter qu'un
+  appelant ne force un scan non borné en demandant une page géante ;
+- corrige au passage un bug latent sur `/agent/dossiers` : l'API paginait déjà (livré avec
+  l'instruction agent), mais la page ne proposait aucun contrôle pour naviguer au-delà de la
+  page 1 — un agent ne pouvait donc jamais voir un dossier au-delà des 25 premiers pour un
+  statut donné. Le nouveau composant `Pagination` partagé corrige ce cas et est réutilisé sur les
+  trois pages (agent, comité, direction) ;
+- les listes qui restent non paginées (notifications — déjà bornées à 100 résultats côté requête ;
+  dossiers PME d'une seule entreprise ; utilisateurs internes en administration) sont des
+  ensembles naturellement bornés par construction (un compte, un portefeuille PME, l'effectif
+  interne), pas des historiques croissant avec le volume de PME — hors périmètre de cette phase ;
+  aucun endpoint de consultation des `audit_logs` n'existe encore côté API (table écrite mais
+  jamais exposée en lecture), donc rien à paginer de ce côté pour l'instant ;
+- les indicateurs agrégés (montants, compteurs par statut) affichés au-dessus de chaque tableau
+  paginé sont désormais explicitement annotés « (page) » quand ils ne portent que sur la page
+  affichée plutôt que sur l'ensemble filtré, pour ne pas laisser croire à un total global inexact.

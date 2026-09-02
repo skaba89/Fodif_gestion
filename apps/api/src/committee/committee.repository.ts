@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { QueryResultRow } from 'pg';
 import { CommitteeDecisionDto } from './dto/committee-decision.dto';
+import { ListCommitteeApplicationsDto } from './dto/list-committee-applications.dto';
 import { DatabaseService } from '../database/database.service';
 
 interface CommitteeApplicationRow extends QueryResultRow {
@@ -13,12 +14,14 @@ interface CommitteeApplicationRow extends QueryResultRow {
 export class CommitteeRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  async list() {
+  async list(query: ListCommitteeApplicationsDto) {
+    const offset = (query.page - 1) * query.limite;
     const result = await this.db.query(
       `SELECT d.id, d.numero_dossier AS "numeroDossier", d.montant_demande AS "montantDemande",
         d.statut, d.date_soumission AS "dateSoumission", e.raison_sociale AS "raisonSociale",
         e.code_fodip AS "codeFodip", p.nom AS "programmeNom",
-        s.score_total AS "scoreTotal", s.niveau_risque AS "niveauRisque", s.recommandation
+        s.score_total AS "scoreTotal", s.niveau_risque AS "niveauRisque", s.recommandation,
+        COUNT(*) OVER()::INT AS "total"
        FROM dossiers_financement d
        JOIN entreprises e ON e.id = d.entreprise_id
        LEFT JOIN programmes_fodip p ON p.id = d.programme_id
@@ -27,9 +30,13 @@ export class CommitteeRepository {
          FROM scores_dossier WHERE dossier_id = d.id ORDER BY updated_at DESC, calcule_at DESC LIMIT 1
        ) s ON TRUE
        WHERE d.statut = 'PRET_COMITE'
-       ORDER BY d.updated_at ASC`,
+       ORDER BY d.updated_at ASC
+       LIMIT $1 OFFSET $2`,
+      [query.limite, offset],
     );
-    return { items: result.rows, total: result.rowCount };
+    const total = Number(result.rows[0]?.total ?? 0);
+    const items = result.rows.map(({ total: _total, ...item }) => item);
+    return { items, total, page: query.page, limite: query.limite };
   }
 
   async findById(id: string) {

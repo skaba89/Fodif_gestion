@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AuthenticatedUser } from '../auth/auth-user.interface';
@@ -7,6 +7,7 @@ import { RequireRoles } from '../common/decorators/roles.decorator';
 import { CreateFinancingDto } from './dto/create-financing.dto';
 import { CreateRepaymentDto } from './dto/create-repayment.dto';
 import { ExecuteDisbursementDto } from './dto/execute-disbursement.dto';
+import { ListFinancingsDto } from './dto/list-financings.dto';
 import { PlanDisbursementDto } from './dto/plan-disbursement.dto';
 import { SaveImpactDto } from './dto/save-impact.dto';
 import { FinancingsService } from './financings.service';
@@ -22,7 +23,7 @@ export class FinancingsController {
 
   @Get()
   @RequirePermissions('financing.read')
-  list() { return this.financings.list(); }
+  list(@Query() query: ListFinancingsDto) { return this.financings.list(query); }
 
   @Get('eligible-applications')
   @RequirePermissions('financing.manage')

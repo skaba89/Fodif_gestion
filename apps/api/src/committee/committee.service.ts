@@ -3,13 +3,14 @@ import { AuthenticatedUser } from '../auth/auth-user.interface';
 import { validateCommitteeDecision } from '../committee-policy';
 import { CommitteeRepository } from './committee.repository';
 import { CommitteeDecisionDto } from './dto/committee-decision.dto';
+import { ListCommitteeApplicationsDto } from './dto/list-committee-applications.dto';
 
 @Injectable()
 export class CommitteeService {
   constructor(private readonly committee: CommitteeRepository) {}
 
-  list() {
-    return this.committee.list();
+  list(query: ListCommitteeApplicationsDto) {
+    return this.committee.list(query);
   }
 
   async get(id: string) {
