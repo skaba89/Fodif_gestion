@@ -10,9 +10,9 @@ import * as OTPAuth from 'otpauth';
 const DEMO_PASSWORD = 'FodipDemo2026!';
 const TEST_PASSWORD = 'MfaE2E!Test2026';
 
-function codeFor(secret: string): string {
+function codeFor(secret: string, timestamp?: number): string {
   const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30, algorithm: 'SHA1' });
-  return totp.generate();
+  return totp.generate({ timestamp });
 }
 
 async function createMfaEnrolledUser(baseURL: string): Promise<{ id: string; email: string; admin: APIRequestContext }> {
@@ -63,7 +63,10 @@ test.describe('TOTP multi-factor authentication', () => {
       await expect(page.getByText('Saisissez le code à 6 chiffres')).toBeVisible();
       await expect(page.locator('code')).toHaveCount(0);
 
-      await page.getByLabel('Code à 6 chiffres').fill(codeFor(secret));
+      // A code is single-use (mfa_last_used_step): the enrollment code above already consumed
+      // its 30s time-step, so reusing it here would be correctly rejected as a replay. Force a
+      // code from the next step instead of waiting out a real 30s window in CI.
+      await page.getByLabel('Code à 6 chiffres').fill(codeFor(secret, Date.now() + 30_000));
       await page.getByRole('button', { name: 'Se connecter' }).click();
 
       await expect(page).toHaveURL(/\/comite\/dossiers$/);
