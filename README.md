@@ -163,8 +163,9 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 11 — Data Platform et dashboards Docker/PostgreSQL
 - [x] Étape 12 — Cycle financier opérationnel
 - [x] Étape 13 — Notifications et administration
-- [ ] Étape 14 — MFA complet et dossier de déploiement
+- [x] Étape 14a — MFA (TOTP) pour les comptes `mfa_required`
+- [ ] Étape 14b — dossier de déploiement
 
 ## Licence
 
-À définir avant diffusion ou exploitation institutionnelle.
+Logiciel propriétaire — tous droits réservés. Voir [`LICENSE`](./LICENSE).

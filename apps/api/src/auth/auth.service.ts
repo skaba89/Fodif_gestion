@@ -1,14 +1,16 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcryptjs';
 import { UsersRepository } from '../users/users.repository';
 import { LoginDto } from './dto/login.dto';
+import { MfaService } from './mfa/mfa.service';
+import { SessionTokenService } from './session-token.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly users: UsersRepository,
-    private readonly jwtService: JwtService,
+    private readonly mfa: MfaService,
+    private readonly sessions: SessionTokenService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -20,38 +22,16 @@ export class AuthService {
     const validPassword = await compare(dto.password, user.passwordHash);
     if (!validPassword) throw new UnauthorizedException('Invalid credentials');
 
-    if (user.mfaRequired) {
-      throw new ForbiddenException('MFA_REQUIRED');
-    }
-
     if (user.roles.includes('PME') && !user.entrepriseId) {
       throw new ForbiddenException('PME_ENTERPRISE_SCOPE_REQUIRED');
     }
 
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      roles: user.roles,
-      permissions: user.permissions,
-      entrepriseId: user.entrepriseId,
-    };
+    if (user.mfaRequired) {
+      // Neither branch issues a real access token yet: the caller must complete enrollment
+      // (POST /auth/mfa/confirm) or verification (POST /auth/mfa/verify) first.
+      return this.mfa.beginChallenge(user);
+    }
 
-    const accessToken = await this.jwtService.signAsync(payload);
-    await this.users.updateLastLogin(user.id);
-
-    return {
-      tokenType: 'Bearer',
-      accessToken,
-      expiresIn: '15m',
-      user: {
-        id: user.id,
-        email: user.email,
-        nom: user.nom,
-        prenom: user.prenom,
-        entrepriseId: user.entrepriseId,
-        roles: user.roles,
-        permissions: user.permissions,
-      },
-    };
+    return this.sessions.issue(user);
   }
 }

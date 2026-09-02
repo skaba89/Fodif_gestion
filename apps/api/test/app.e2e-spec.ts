@@ -78,4 +78,13 @@ describe('FODIP API', () => {
   it('POST /api/v1/auth/login validates the payload before database access', async () => {
     await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: 'not-an-email', password: '' }).expect(400);
   });
+
+  it('MFA challenge routes stay public but reject malformed payloads', async () => {
+    await request(app.getHttpServer()).post('/api/v1/auth/mfa/confirm').send({ mfaChallenge: 'x', code: 'not-digits' }).expect(400);
+    await request(app.getHttpServer()).post('/api/v1/auth/mfa/verify').send({ mfaChallenge: 'x', code: 'not-digits' }).expect(400);
+  });
+
+  it('MFA challenge routes reject a well-formed but invalid or expired challenge', async () => {
+    await request(app.getHttpServer()).post('/api/v1/auth/mfa/verify').send({ mfaChallenge: 'not-a-real-token', code: '123456' }).expect(401);
+  });
 });

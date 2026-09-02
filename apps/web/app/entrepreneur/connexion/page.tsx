@@ -1,9 +1,12 @@
-'use client';
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import styles from '../portal.module.css';
+import LoginForm from '../../_shared/LoginForm';
+
 export default function LoginPage() {
-  const router = useRouter(); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
-  async function submit(event: FormEvent) { event.preventDefault(); setLoading(true); setError(''); try { const response = await fetch('/api/session/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password }) }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data.message ?? 'Connexion impossible'); router.push('/entrepreneur'); router.refresh(); } catch (e) { setError(e instanceof Error ? e.message : 'Connexion impossible'); } finally { setLoading(false); } }
-  return <main className={styles.main}><p className={styles.eyebrow}>Accès sécurisé</p><h1 className={styles.title}>Connexion PME</h1><p className={styles.lead}>Connectez-vous pour accéder uniquement aux données de votre entreprise et à vos dossiers.</p><form className={`${styles.card} ${styles.formCard} ${styles.section}`} onSubmit={submit}><div className={styles.formGrid}><div className={`${styles.field} ${styles.fieldFull}`}><label>Email</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div><div className={`${styles.field} ${styles.fieldFull}`}><label>Mot de passe</label><input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div></div>{error && <div className={styles.notice}>{error}</div>}<div className={styles.buttonRow}><button className={styles.primary} disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</button></div></form></main>;
+  return (
+    <LoginForm
+      eyebrow="Accès sécurisé"
+      title="Connexion PME"
+      lead="Connectez-vous pour accéder uniquement aux données de votre entreprise et à vos dossiers."
+      redirectTo="/entrepreneur"
+    />
+  );
 }
