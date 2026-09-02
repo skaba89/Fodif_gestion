@@ -4,4 +4,5 @@ export interface AuthenticatedUser {
   roles: string[];
   permissions: string[];
   entrepriseId?: string | null;
+  partenaireBancaireId?: string | null;
 }

@@ -22,6 +22,7 @@ export class SessionTokenService {
       roles: user.roles,
       permissions: user.permissions,
       entrepriseId: user.entrepriseId,
+      partenaireBancaireId: user.partenaireBancaireId,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -37,6 +38,7 @@ export class SessionTokenService {
         nom: user.nom,
         prenom: user.prenom,
         entrepriseId: user.entrepriseId,
+        partenaireBancaireId: user.partenaireBancaireId,
         roles: user.roles,
         permissions: user.permissions,
       },

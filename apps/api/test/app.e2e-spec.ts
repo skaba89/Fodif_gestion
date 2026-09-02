@@ -42,6 +42,14 @@ describe('FODIP API', () => {
     await request(app.getHttpServer()).get('/api/v1/audit/logs').expect(401);
   });
 
+  it('partner bank endpoints are protected by default (axe D1)', async () => {
+    const financingId = '33333333-3333-4333-8333-333333333333';
+    await request(app.getHttpServer()).get('/api/v1/partner/financings').expect(401);
+    await request(app.getHttpServer()).get(`/api/v1/partner/financings/${financingId}`).expect(401);
+    await request(app.getHttpServer()).post(`/api/v1/partner/financings/${financingId}/disbursements`).expect(401);
+    await request(app.getHttpServer()).post(`/api/v1/partner/financings/${financingId}/repayments`).expect(401);
+  });
+
   it('agent dossier routes are protected by default', async () => {
     const dossierId = '11111111-1111-4111-8111-111111111111';
     await request(app.getHttpServer()).get('/api/v1/agent/applications').expect(401);

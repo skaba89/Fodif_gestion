@@ -32,7 +32,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | B7a | Dossier de déploiement d'un environnement de **test** (Render/Netlify + Neon/Supabase), en attendant le choix de l'hébergeur institutionnel définitif — `docs/15-DEPLOIEMENT-TEST.md` | **Fait** (cette itération) |
 | B7b | Séparation réelle DEV / REC / PPD / PROD sur l'hébergeur institutionnel définitif (actuellement un seul `docker-compose.yml` de démonstration locale + l'environnement de test B7a) — **nécessite le choix d'un hébergeur/cloud cible** | À faire — décision requise |
 | B8 | Revue de sécurité externe / test d'intrusion avant mise en production | À faire, en fin de parcours |
-| B9 | Rendre fonctionnels tous les rôles prévus dans `docs/01-MVP.md` — `AUDITEUR` avait des permissions RBAC en base depuis le début (`audit.read`, `financing.read`, `impact.read`) mais aucune route API ne les vérifiait ni aucun portail web ne les exploitait ; `PARTENAIRE_BANCAIRE` reste sans surface API (voir axe D1) | **AUDITEUR fait** (cette itération) — `PARTENAIRE_BANCAIRE` renvoie à D1 |
+| B9 | Rendre fonctionnels tous les rôles prévus dans `docs/01-MVP.md` — `AUDITEUR` avait des permissions RBAC en base depuis le début (`audit.read`, `financing.read`, `impact.read`) mais aucune route API ne les vérifiait ni aucun portail web ne les exploitait ; `PARTENAIRE_BANCAIRE` restait sans surface API (voir axe D1) | **Fait** (cette itération, en deux temps : AUDITEUR puis PARTENAIRE_BANCAIRE via D1) |
 
 ## Axe C — Fiabilité & observabilité SaaS
 
@@ -57,7 +57,7 @@ Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.servic
 
 | Phase | Contenu | Statut |
 |---|---|---|
-| D1 | API publique partenaires bancaires documentée (le rôle `PARTENAIRE_BANCAIRE` existe déjà en base) | À faire |
+| D1 | API partenaires bancaires (le rôle `PARTENAIRE_BANCAIRE` existe déjà en base). Décision de modèle prise avec la Direction : un partenaire voit l'union de deux périmètres — les financements où il est désigné banque correspondante, et les PME de son propre portefeuille client — et s'authentifie comme tout autre compte (pas de sous-système de clé API séparé) | **Fait** (cette itération) |
 | D2 | PWA installable et mode dégradé hors-ligne pour les agents en zone à connectivité limitée | À faire |
 | D3 | Internationalisation (le contenu est actuellement en français uniquement, cohérent avec le contexte national — à revisiter seulement si un besoin multilingue apparaît) | À évaluer |
 | D4 | Facturation / gestion multi-organisme si la plateforme est mutualisée au-delà du FODIP | À évaluer |
@@ -143,11 +143,43 @@ Détails B9 (`apps/api/src/audit/`, `apps/web/app/auditeur/`) :
   `auditeur@fodip.local` (`database/seeds/002_analytics_demo.sql`) ; SSO (axe B4) étendu à ce
   cinquième portail (`OIDC_PORTALS`) pour rester cohérent avec les quatre autres portails
   institutionnels ;
-- `PARTENAIRE_BANCAIRE` reste hors périmètre de cette itération et renvoie explicitement à l'axe
-  D1 : contrairement à `AUDITEUR`, son cas ne se limite pas à un contrôle de rôle manquant — il
-  n'existe aujourd'hui aucun modèle de données reliant un partenaire bancaire à un sous-ensemble
-  de dossiers/financements (`docs/03-ARCHITECTURE.md` décrit l'intention — une « Partner API »
-  authentifiée, scopée et versionnée, les partenaires n'accédant jamais aux bases directement —
-  mais aucune table `partenaires`/liaison n'existe). Inventer ce schéma sans validation métier
-  serait risqué pour une intégration bancaire externe ; à traiter comme son propre chantier D1
-  plutôt que comme un simple oubli de garde d'accès.
+- `PARTENAIRE_BANCAIRE`, contrairement à `AUDITEUR`, ne se limitait pas à un contrôle de rôle
+  manquant : aucun modèle de données ne reliait un partenaire bancaire à un sous-ensemble de
+  dossiers/financements. Plutôt que d'improviser ce schéma, la décision de modèle a été soumise à
+  la Direction avant implémentation — voir détails D1 ci-dessous.
+
+Détails D1 (`database/011_partner_banks.sql`, `apps/api/src/partner/`, `apps/web/app/partenaire/`) :
+
+- décision de modèle (validée avec la Direction) : le périmètre visible d'un partenaire est
+  l'union de deux mécanismes indépendants plutôt qu'un lien unique tout-ou-rien —
+  1. **banque correspondante** : un financement peut désigner une banque partenaire chargée
+     d'exécuter réellement ses décaissements/remboursements pour le compte du FODIP et de les
+     déclarer a posteriori (`financements.banque_partenaire_id`) — le FODIP garde la décision de
+     financement, la banque exécute et déclare ;
+  2. **portefeuille client** : un partenaire peut aussi voir les PME avec lesquelles il a déjà une
+     relation commerciale (`partenaire_entreprises`), indépendamment de qui exécute le paiement
+     sur l'un de leurs financements ;
+  - authentification : décision déléguée, choix retenu — même connexion email/mot de passe + JWT
+    que tous les autres comptes plutôt qu'un sous-système de clé API séparé (rotation, révocation,
+    audit dédiés) qui aurait constitué un chantier de sécurité à part entière ;
+- `GET /partner/financings`, `GET /partner/financings/:id`, `POST /partner/financings/:id/disbursements`,
+  `POST /partner/financings/:id/repayments` — chaque requête est scopée en base par le
+  `partenaire_bancaire_id` de l'appelant (jamais par un identifiant transmis par le client) ; un
+  financement hors périmètre renvoie 404, jamais 403, pour ne pas révéler son existence — même
+  principe d'anti-énumération que l'isolation PME (`applications`/`companies` controllers) ;
+- contrairement au flux Direction (planifier puis exécuter), un partenaire déclare un paiement
+  déjà effectué en une seule étape (`decaissements`/`remboursements` insérés directement en statut
+  `EFFECTUE`), validé par la même politique `finance-policy.js#validateAvailableAmount` que le
+  flux interne ; la vue détail d'un financement exposée à un partenaire omet volontairement
+  `impact` (reporting interne au FODIP) et `audit` (identités des agents FODIP) ;
+- `admin-policy.js#validateUserScope` exige désormais un `partenaireBancaireId` pour tout compte
+  `PARTENAIRE_BANCAIRE`, même principe que `PME_ENTERPRISE_SCOPE_REQUIRED` pour un compte PME ;
+  l'administration peut affecter une banque partenaire à un compte via un nouveau sélecteur
+  (`GET /administration/partner-banks`), mais les fiches `partenaires_bancaires` elles-mêmes sont
+  provisionnées par SQL, exactement comme les `entreprises` PME le sont déjà aujourd'hui (aucun
+  des deux n'a de flux de création en libre-service côté API) ;
+- nouveau portail web `apps/web/app/partenaire/` (connexion, portefeuille paginé, détail avec
+  formulaires de déclaration) — volontairement sans lien SSO (axe B4) : un partenaire bancaire est
+  un tiers externe, pas un agent public, donc hors du périmètre de l'IdP institutionnel ; compte
+  de démonstration `partenaire@fodip.local` exerçant les deux mécanismes de périmètre
+  (`database/seeds/003_partner_bank_demo.sql`).

@@ -5,9 +5,12 @@ import { DatabaseService } from '../database/database.service';
 
 type UserWrite = {
   email: string; nom: string; prenom?: string; telephone?: string; passwordHash: string;
-  roles: string[]; entrepriseId?: string; mfaRequired: boolean;
+  roles: string[]; entrepriseId?: string; partenaireBancaireId?: string; mfaRequired: boolean;
 };
-type UserUpdate = { actif?: boolean; mfaRequired?: boolean; roles?: string[]; entrepriseId?: string | null };
+type UserUpdate = {
+  actif?: boolean; mfaRequired?: boolean; roles?: string[];
+  entrepriseId?: string | null; partenaireBancaireId?: string | null;
+};
 
 @Injectable()
 export class AdministrationRepository {
@@ -19,7 +22,8 @@ export class AdministrationRepository {
         utilisateur.actif, utilisateur.mfa_required AS "mfaRequired",
         utilisateur.last_login_at AS "lastLoginAt", utilisateur.created_at AS "createdAt",
         COALESCE(ARRAY_AGG(DISTINCT role.code) FILTER (WHERE role.code IS NOT NULL), '{}') AS roles,
-        relation.entreprise_id AS "entrepriseId", entreprise.raison_sociale AS "raisonSociale"
+        relation.entreprise_id AS "entrepriseId", entreprise.raison_sociale AS "raisonSociale",
+        utilisateur.partenaire_bancaire_id AS "partenaireBancaireId", partenaire.raison_sociale AS "partenaireRaisonSociale"
        FROM utilisateurs utilisateur
        LEFT JOIN utilisateur_roles utilisateur_role ON utilisateur_role.utilisateur_id = utilisateur.id
        LEFT JOIN roles role ON role.id = utilisateur_role.role_id
@@ -28,13 +32,22 @@ export class AdministrationRepository {
          WHERE utilisateur_id = utilisateur.id ORDER BY principal DESC, created_at ASC LIMIT 1
        ) relation ON TRUE
        LEFT JOIN entreprises entreprise ON entreprise.id = relation.entreprise_id
+       LEFT JOIN partenaires_bancaires partenaire ON partenaire.id = utilisateur.partenaire_bancaire_id
        WHERE ($1::text IS NULL OR utilisateur.email ILIKE '%' || $1 || '%'
          OR utilisateur.nom ILIKE '%' || $1 || '%' OR COALESCE(utilisateur.prenom, '') ILIKE '%' || $1 || '%')
-       GROUP BY utilisateur.id, relation.entreprise_id, entreprise.raison_sociale
+       GROUP BY utilisateur.id, relation.entreprise_id, entreprise.raison_sociale, partenaire.raison_sociale
        ORDER BY utilisateur.created_at DESC`,
       [search?.trim() || null],
     );
     return { items: result.rows, total: result.rowCount };
+  }
+
+  async listPartnerBanks() {
+    const result = await this.db.query(
+      `SELECT id, code, raison_sociale AS "raisonSociale"
+       FROM partenaires_bancaires WHERE actif = TRUE ORDER BY raison_sociale`,
+    );
+    return { items: result.rows };
   }
 
   async listRoles() {
@@ -65,20 +78,24 @@ export class AdministrationRepository {
       if (input.entrepriseId && !(await this.enterpriseExists(client, input.entrepriseId))) {
         return { error: 'INVALID_ENTERPRISE' } as const;
       }
+      if (input.partenaireBancaireId && !(await this.partnerBankExists(client, input.partenaireBancaireId))) {
+        return { error: 'INVALID_PARTNER_BANK' } as const;
+      }
       // Accounts holding a privileged role (SUPER_ADMIN, DIRECTION_FODIP, ...) are always MFA-enrolled,
       // regardless of what the caller passed - an admin cannot opt a sensitive role out of it.
       const mfaRequired = input.mfaRequired || requiresMfa(input.roles);
       const inserted = await client.query<{ id: string }>(
-        `INSERT INTO utilisateurs (email, nom, prenom, telephone, password_hash, actif, mfa_required)
-         VALUES (LOWER($1), $2, $3, $4, $5, TRUE, $6) RETURNING id`,
+        `INSERT INTO utilisateurs (email, nom, prenom, telephone, password_hash, actif, mfa_required, partenaire_bancaire_id)
+         VALUES (LOWER($1), $2, $3, $4, $5, TRUE, $6, $7) RETURNING id`,
         [input.email.trim(), input.nom.trim(), input.prenom?.trim() || null, input.telephone?.trim() || null,
-          input.passwordHash, mfaRequired],
+          input.passwordHash, mfaRequired, input.partenaireBancaireId ?? null],
       );
       const id = inserted.rows[0].id;
       await this.replaceRoles(client, id, roleIds);
       await this.replaceEnterprise(client, id, input.entrepriseId ?? null);
       await this.audit(client, actorId, 'CREATE_USER', id, null, {
         email: input.email.trim().toLowerCase(), roles: input.roles, entrepriseId: input.entrepriseId ?? null,
+        partenaireBancaireId: input.partenaireBancaireId ?? null,
       });
       return { id };
     });
@@ -108,6 +125,9 @@ export class AdministrationRepository {
       if (input.entrepriseId && !(await this.enterpriseExists(client, input.entrepriseId))) {
         return { error: 'INVALID_ENTERPRISE' } as const;
       }
+      if (input.partenaireBancaireId && !(await this.partnerBankExists(client, input.partenaireBancaireId))) {
+        return { error: 'INVALID_PARTNER_BANK' } as const;
+      }
       const superAdmins = await client.query<{ total: number }>(
         `SELECT COUNT(DISTINCT utilisateur.id)::int AS total
          FROM utilisateurs utilisateur
@@ -128,15 +148,17 @@ export class AdministrationRepository {
 
       await client.query(
         `UPDATE utilisateurs SET actif = COALESCE($2, actif),
-          mfa_required = $3, updated_at = NOW() WHERE id = $1`,
-        [id, input.actif ?? null, mfaRequired],
+          mfa_required = $3,
+          partenaire_bancaire_id = CASE WHEN $4 THEN $5::uuid ELSE partenaire_bancaire_id END,
+          updated_at = NOW() WHERE id = $1`,
+        [id, input.actif ?? null, mfaRequired, input.partenaireBancaireId !== undefined, input.partenaireBancaireId ?? null],
       );
       if (input.roles) await this.replaceRoles(client, id, roleIds);
       if (input.entrepriseId !== undefined) await this.replaceEnterprise(client, id, input.entrepriseId);
       await this.audit(client, actorId, 'UPDATE_USER', id, target.rows[0], {
         actif: input.actif ?? target.rows[0].actif,
         mfaRequired,
-        roles: nextRoles, entrepriseId: input.entrepriseId,
+        roles: nextRoles, entrepriseId: input.entrepriseId, partenaireBancaireId: input.partenaireBancaireId,
       });
       return { id };
     });
@@ -151,6 +173,11 @@ export class AdministrationRepository {
 
   private async enterpriseExists(client: PoolClient, id: string) {
     const result = await client.query('SELECT id FROM entreprises WHERE id = $1 AND deleted_at IS NULL', [id]);
+    return Boolean(result.rows[0]);
+  }
+
+  private async partnerBankExists(client: PoolClient, id: string) {
+    const result = await client.query('SELECT id FROM partenaires_bancaires WHERE id = $1 AND actif = TRUE', [id]);
     return Boolean(result.rows[0]);
   }
 

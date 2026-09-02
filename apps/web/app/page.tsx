@@ -38,6 +38,12 @@ const portals = [
     title: 'Auditeur',
     description: 'Consultez en lecture seule le portefeuille de financements et le journal d’audit de la plateforme.',
   },
+  {
+    href: '/partenaire/connexion',
+    mark: 'PB',
+    title: 'Partenaire bancaire',
+    description: 'Consultez vos financements correspondants et déclarez vos décaissements et remboursements pour le compte du FODIP.',
+  },
 ];
 
 export default function HomePage() {

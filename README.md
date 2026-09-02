@@ -121,6 +121,7 @@ PME   : pme@fodip.local
 Comité: comite@fodip.local
 Direction: direction@fodip.local
 Auditeur: auditeur@fodip.local
+Partenaire bancaire: partenaire@fodip.local
 Super admin: admin@fodip.local
 Mot de passe commun : FodipDemo2026!
 ```

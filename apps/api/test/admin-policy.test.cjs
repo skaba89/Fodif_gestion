@@ -13,6 +13,11 @@ test('requires an enterprise scope for a PME account', () => {
   assert.equal(validateUserScope(['PME'], 'company-id'), null);
 });
 
+test('requires a partner bank scope for a PARTENAIRE_BANCAIRE account (axe D1)', () => {
+  assert.equal(validateUserScope(['PARTENAIRE_BANCAIRE'], null, null), 'PARTENAIRE_BANK_SCOPE_REQUIRED');
+  assert.equal(validateUserScope(['PARTENAIRE_BANCAIRE'], null, 'bank-id'), null);
+});
+
 test('identifies privileged roles requiring MFA', () => {
   assert.equal(requiresMfa(['DIRECTION_FODIP']), true);
   assert.equal(requiresMfa(['PME']), false);
