@@ -1,15 +1,113 @@
+/*
+ * Design tokens (Étape 14 — docs/14-ROADMAP-SAAS-PREMIUM.md, axe A).
+ *
+ * The hue (forest green + gold) is deliberately kept: it already reads as a national/state
+ * identity across every portal and is preserved here, just deepened into a full scale and
+ * given a dark-mode counterpart. Component CSS across the app (globals.css, portal.module.css,
+ * agent.module.css, direction.module.css) should consume these variables rather than literal
+ * hex values, so a single palette change here re-themes the whole product, light and dark.
+ */
+
 :root {
-  --bg: #f4f7f5;
-  --surface: #ffffff;
-  --surface-soft: #eef4f0;
-  --ink: #14231b;
-  --muted: #66756c;
-  --line: #dfe7e2;
-  --green: #0f6b45;
-  --green-strong: #084e32;
-  --green-soft: #dcefe5;
-  --gold: #d5a52b;
-  --shadow: 0 12px 36px rgba(22, 54, 38, 0.08);
+  /* Primary (forest green) scale */
+  --primary-50: #eef6f1;
+  --primary-100: #dcefe5;
+  --primary-200: #b3ddc6;
+  --primary-300: #7cc4a0;
+  --primary-400: #3fa375;
+  --primary-500: #0f6b45;
+  --primary-600: #0c5a3a;
+  --primary-700: #084e32;
+  --primary-800: #073a26;
+  --primary-900: #062f20;
+
+  /* Accent (gold) scale */
+  --accent-100: #fbf0d3;
+  --accent-300: #f0c04a;
+  --accent-500: #e5b638;
+  --accent-600: #d5a52b;
+  --accent-700: #8a6a12;
+
+  /* Neutral scale */
+  --neutral-0: #ffffff;
+  --neutral-50: #f4f7f5;
+  --neutral-100: #eef4f0;
+  --neutral-200: #dfe7e2;
+  --neutral-300: #c7d2cb;
+  --neutral-500: #66756c;
+  --neutral-700: #3a4740;
+  --neutral-900: #14231b;
+
+  /* Semantic status colors */
+  --danger: #b5402c;
+  --danger-strong: #8b3525;
+  --danger-soft: #fdeee9;
+  --success: var(--primary-500);
+  --success-soft: var(--primary-100);
+  --info: #2563a8;
+  --info-soft: #e6f0fa;
+  --warning: var(--accent-700);
+  --warning-soft: var(--accent-100);
+
+  /* Semantic aliases used throughout the app */
+  --bg: var(--neutral-50);
+  --surface: var(--neutral-0);
+  --surface-soft: var(--primary-100);
+  --ink: var(--neutral-900);
+  --muted: var(--neutral-500);
+  --line: var(--neutral-200);
+  --green: var(--primary-500);
+  --green-strong: var(--primary-700);
+  --green-soft: var(--primary-100);
+  --gold: var(--accent-600);
+  --focus-ring: 0 0 0 3px rgba(15, 107, 69, 0.28);
+
+  /* Elevation */
+  --shadow-sm: 0 2px 8px rgba(20, 35, 27, 0.06);
+  --shadow-md: 0 8px 28px rgba(21, 52, 36, 0.08);
+  --shadow-lg: 0 12px 36px rgba(22, 54, 38, 0.12);
+  --shadow: var(--shadow-lg);
+
+  /* Shape & motion */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+
+  --font-sans: var(--font-public-sans, "Public Sans"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1712;
+    --surface: #101f18;
+    --surface-soft: #16281f;
+    --ink: #eef5f0;
+    --muted: #91a49a;
+    --line: #223328;
+    --green: var(--primary-400);
+    --green-strong: var(--primary-300);
+    --green-soft: #16281f;
+    --gold: var(--accent-300);
+    --danger: #e07a63;
+    --danger-strong: #f0a691;
+    --danger-soft: #2a1712;
+    --success-soft: #16281f;
+    --info: #7ab0e0;
+    --info-soft: #10202e;
+    --warning-soft: #2a2211;
+    --focus-ring: 0 0 0 3px rgba(124, 196, 160, 0.35);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+    --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.34);
+    --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.4);
+
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -24,16 +122,37 @@ body {
   margin: 0;
   color: var(--ink);
   background: var(--bg);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 button,
-a {
+a,
+input,
+select,
+textarea {
   font: inherit;
+  color: inherit;
 }
 
 button {
   cursor: pointer;
+}
+
+a {
+  color: var(--green);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+button:focus-visible,
+a:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .app-shell {
@@ -51,7 +170,7 @@ button {
   gap: 28px;
   padding: 28px 22px;
   color: #f5fbf7;
-  background: linear-gradient(180deg, #0a4a31 0%, #073722 100%);
+  background: linear-gradient(180deg, var(--primary-800) 0%, var(--primary-900) 100%);
 }
 
 .brand {
@@ -67,9 +186,9 @@ button {
   height: 42px;
   display: grid;
   place-items: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f0c04a, #d59618);
-  color: #173421;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-300), var(--accent-600));
+  color: var(--primary-800);
   font-weight: 900;
   letter-spacing: -0.03em;
 }
@@ -103,8 +222,8 @@ button {
   padding: 0 12px;
   color: rgba(255, 255, 255, 0.72);
   text-decoration: none;
-  border-radius: 10px;
-  transition: background 160ms ease, color 160ms ease;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
 }
 
 .nav-item:hover,
@@ -113,14 +232,18 @@ button {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.nav-item:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
 .nav-item.active {
-  box-shadow: inset 3px 0 0 #e4b638;
+  box-shadow: inset 3px 0 0 var(--accent-500);
 }
 
 .nav-dot {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: currentColor;
   opacity: 0.75;
 }
@@ -129,7 +252,7 @@ button {
   margin-top: auto;
   padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -140,7 +263,7 @@ button {
 }
 
 .environment {
-  color: #efc350;
+  color: var(--accent-500);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -221,20 +344,30 @@ h3 {
   min-height: 42px;
   padding: 0 16px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
   font-weight: 700;
   text-decoration: none;
+  transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+}
+
+.secondary-button:hover {
+  border-color: var(--green);
 }
 
 .profile-button {
   width: 42px;
   height: 42px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--green-strong);
   color: white;
   font-weight: 800;
+  transition: filter var(--duration-fast) var(--ease);
+}
+
+.profile-button:hover {
+  filter: brightness(1.08);
 }
 
 .hero-panel {
@@ -244,10 +377,10 @@ h3 {
   align-items: end;
   padding: clamp(26px, 4vw, 46px);
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: var(--radius-xl);
   background:
     radial-gradient(circle at 88% 0%, rgba(229, 187, 64, 0.25), transparent 30%),
-    linear-gradient(135deg, #0a5437 0%, #083d29 62%, #062f20 100%);
+    linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 62%, var(--primary-900) 100%);
   color: white;
   box-shadow: var(--shadow);
 }
@@ -255,7 +388,7 @@ h3 {
 .hero-kicker {
   display: inline-block;
   margin-bottom: 18px;
-  color: #f1c653;
+  color: var(--accent-300);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.15em;
@@ -271,7 +404,7 @@ h3 {
 .hero-summary {
   padding: 22px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
 }
@@ -309,13 +442,14 @@ h3 {
 .panel {
   border: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: 0 8px 28px rgba(21, 52, 36, 0.04);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--duration-fast) var(--ease);
 }
 
 .stat-card {
   min-height: 145px;
   padding: 20px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 .stat-card > span {
@@ -351,7 +485,7 @@ h3 {
 }
 
 .stat-card em.neutral {
-  color: #8a6a12;
+  color: var(--warning);
 }
 
 .dashboard-grid {
@@ -364,7 +498,7 @@ h3 {
 .panel {
   min-width: 0;
   padding: 22px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
 }
 
 .panel-heading {
@@ -381,6 +515,10 @@ h3 {
   color: var(--green);
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.text-button:hover {
+  text-decoration: underline;
 }
 
 .region-list {
@@ -404,20 +542,20 @@ h3 {
 .bar-track {
   height: 8px;
   overflow: hidden;
-  border-radius: 999px;
-  background: #e9efeb;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
 }
 
 .bar-value {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #0d7048, #34a16f);
+  background: linear-gradient(90deg, var(--primary-600), var(--primary-400));
 }
 
 .pipeline-total {
   margin-bottom: 18px;
   padding: 18px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: var(--surface-soft);
 }
 
@@ -448,7 +586,7 @@ h3 {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 0;
-  border-bottom: 1px solid #edf1ee;
+  border-bottom: 1px solid var(--line);
   font-size: 0.82rem;
 }
 
@@ -456,8 +594,8 @@ h3 {
   margin-top: 18px;
   padding: 15px;
   border-left: 3px solid var(--gold);
-  border-radius: 10px;
-  background: #fff9e9;
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
 }
 
 .attention-box strong,
@@ -466,12 +604,12 @@ h3 {
 }
 
 .attention-box strong {
-  color: #76590d;
+  color: var(--warning);
 }
 
 .attention-box span {
   margin-top: 3px;
-  color: #7e7150;
+  color: var(--muted);
   font-size: 0.78rem;
 }
 
@@ -493,7 +631,7 @@ th,
 td {
   padding: 13px 12px;
   text-align: left;
-  border-bottom: 1px solid #edf1ee;
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 
@@ -504,10 +642,18 @@ th {
   text-transform: uppercase;
 }
 
+tbody tr {
+  transition: background var(--duration-fast) var(--ease);
+}
+
+tbody tr:hover {
+  background: var(--surface-soft);
+}
+
 .status-pill {
   display: inline-flex;
   padding: 6px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--green-soft);
   color: var(--green-strong);
   font-size: 0.7rem;
@@ -515,7 +661,7 @@ th {
 }
 
 .impact-panel {
-  background: linear-gradient(180deg, #ffffff, #f8fbf9);
+  background: linear-gradient(180deg, var(--surface), var(--surface-soft));
 }
 
 .impact-metric strong {
@@ -602,7 +748,7 @@ th {
 
   .hero-panel {
     padding: 24px 20px;
-    border-radius: 18px;
+    border-radius: var(--radius-lg);
   }
 
   .stats-grid {

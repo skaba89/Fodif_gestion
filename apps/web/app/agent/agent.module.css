@@ -1,1 +1,213 @@
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:24px}.metric{padding:20px}.metric strong{display:block;font-size:1.8rem;color:#0f6b45}.metric span{display:block;margin-top:5px;color:#718078;font-size:.8rem}.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.filter{display:grid;gap:6px}.filter label{font-size:.72rem;font-weight:750;color:#526158}.filter input,.filter select{min-height:40px;padding:0 11px;border:1px solid #d7e0da;border-radius:9px;background:#fff}.detailGrid{display:grid;grid-template-columns:1.4fr .8fr;gap:18px;margin-top:24px}.panel{padding:22px}.panel h2{margin:0 0 16px;font-size:1.15rem}.facts{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.fact{padding-bottom:12px;border-bottom:1px solid #e5ebe7}.fact span,.fact strong{display:block}.fact span{font-size:.7rem;color:#718078;text-transform:uppercase;letter-spacing:.05em}.fact strong{margin-top:5px;font-size:.9rem}.review{display:grid;gap:12px}.review textarea,.review select{width:100%;padding:11px;border:1px solid #d7e0da;border-radius:9px;font:inherit}.scoreGrid{display:grid;gap:12px}.scoreCriterion{display:grid;grid-template-columns:minmax(220px,1.4fr) 110px minmax(220px,1fr);gap:12px;align-items:center;padding:14px;border:1px solid #e0e7e2;border-radius:12px}.scoreCriterion strong,.scoreCriterion span{display:block}.scoreCriterion span{margin-top:4px;color:#718078;font-size:.75rem}.scoreCriterion input,.scoreCriterion textarea{width:100%;padding:10px;border:1px solid #d7e0da;border-radius:9px;font:inherit}.scoreCriterion textarea{min-height:62px;resize:vertical}.history{display:grid;gap:12px}.historyItem{padding-left:14px;border-left:3px solid #d7e5dc}.historyItem strong,.historyItem span{display:block}.historyItem span{margin-top:4px;color:#718078;font-size:.78rem}@media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr)}.detailGrid{grid-template-columns:1fr}.scoreCriterion{grid-template-columns:1fr 100px}}@media(max-width:620px){.metrics,.facts{grid-template-columns:1fr}.filters{align-items:stretch;flex-direction:column}.filter input,.filter select{width:100%}.scoreCriterion{grid-template-columns:1fr}}
+/* Agent portal extras, layered on top of ../entrepreneur/portal.module.css. */
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.metric {
+  padding: 20px;
+}
+
+.metric strong {
+  display: block;
+  font-size: 1.8rem;
+  color: var(--green);
+}
+
+.metric span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.filter {
+  display: grid;
+  gap: 6px;
+}
+
+.filter label {
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.filter input,
+.filter select {
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.filter input:focus-visible,
+.filter select:focus-visible {
+  border-color: var(--green);
+  box-shadow: var(--focus-ring);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.panel {
+  padding: 22px;
+}
+
+.panel h2 {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.fact {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.fact span,
+.fact strong {
+  display: block;
+}
+
+.fact span {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fact strong {
+  margin-top: 5px;
+  font-size: 0.9rem;
+}
+
+.review {
+  display: grid;
+  gap: 12px;
+}
+
+.review textarea,
+.review select {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.scoreGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.scoreCriterion {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) 110px minmax(220px, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.scoreCriterion strong,
+.scoreCriterion span {
+  display: block;
+}
+
+.scoreCriterion span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.scoreCriterion input,
+.scoreCriterion textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.scoreCriterion textarea {
+  min-height: 62px;
+  resize: vertical;
+}
+
+.history {
+  display: grid;
+  gap: 12px;
+}
+
+.historyItem {
+  padding-left: 14px;
+  border-left: 3px solid var(--line);
+}
+
+.historyItem strong,
+.historyItem span {
+  display: block;
+}
+
+.historyItem span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .scoreCriterion {
+    grid-template-columns: 1fr 100px;
+  }
+}
+
+@media (max-width: 620px) {
+  .metrics,
+  .facts {
+    grid-template-columns: 1fr;
+  }
+
+  .filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter input,
+  .filter select {
+    width: 100%;
+  }
+
+  .scoreCriterion {
+    grid-template-columns: 1fr;
+  }
+}
