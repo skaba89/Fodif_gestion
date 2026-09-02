@@ -57,6 +57,9 @@ jobs:
       - name: Docker smoke test
         run: bash scripts/docker-smoke.sh
 
+      - name: Backup and restore smoke test (axe C6)
+        run: bash scripts/test-backup-restore.sh
+
       - name: Install Playwright browsers
         run: pnpm --filter @fodip/web exec playwright install --with-deps chromium
 

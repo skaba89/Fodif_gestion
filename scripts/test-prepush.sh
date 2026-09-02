@@ -12,4 +12,7 @@ node --test apps/api/test/security-policy.test.cjs apps/api/test/pme-policy.test
 python scripts/check-migrations.py
 python scripts/check-docker.py
 bash -n scripts/docker-smoke.sh
+bash -n scripts/backup-postgres.sh
+bash -n scripts/restore-postgres.sh
+bash -n scripts/test-backup-restore.sh
 pnpm -r lint
