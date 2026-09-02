@@ -25,7 +25,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 |---|---|---|
 | B1 | RBAC fin, JWT, hachage bcrypt, isolation multi-tenant PME testée en e2e | Fait (MVP initial) |
 | B2 | Rate limiting, `helmet`, filtre d'exceptions global (pas de fuite d'erreur interne), MFA TOTP fonctionnel | **Fait** (PR #12) |
-| B3 | MFA obligatoire par défaut pour les rôles `SUPER_ADMIN` et `DIRECTION_FODIP` (actuellement optionnel par utilisateur) | À faire |
+| B3 | MFA imposé (non simplement proposé) pour les rôles sensibles — le code prévoyait déjà `admin-policy.js#requiresMfa`/`PRIVILEGED_ROLES` (`SUPER_ADMIN`, `DIRECTION_FODIP`, `AGENT_FODIP`, `ANALYSTE`, `COMITE_FINANCEMENT`, `AUDITEUR`) mais la fonction n'était jamais appelée | **Fait** (cette itération) |
 | B4 | SSO/SAML ou OpenID Connect pour les agents publics (fédération avec un IdP gouvernemental) — **nécessite de choisir un fournisseur d'identité avant de démarrer** | À faire — décision requise |
 | B5 | Chiffrement au repos des données personnelles sensibles (au-delà du hachage des mots de passe et du chiffrement du secret MFA déjà en place) — **nécessite un gestionnaire de secrets/KMS en production** | À faire — décision d'infrastructure requise |
 | B6 | Politique de rétention et purge des données, export/suppression sur demande (droits des personnes) | À faire |
@@ -37,7 +37,8 @@ séparément, pour permettre un avancement continu sans big-bang.
 | Phase | Contenu | Statut |
 |---|---|---|
 | C1 | Tests unitaires et e2e API (Jest + Supertest), invariants anti-régression pré-push | Fait |
-| C2 | Tests e2e web (Playwright) sur les parcours critiques : connexion (y compris MFA), dépôt de dossier PME, instruction agent, décision comité | À faire |
+| C2a | Tests e2e web (Playwright) : connexion, rejet de rôle, déconnexion, et le parcours TOTP complet (enrôlement puis vérification) — jusqu'ici jamais exercé de bout en bout dans un navigateur réel | **Fait** (cette itération) |
+| C2b | Tests e2e web : dépôt de dossier PME, instruction agent, décision comité | À faire |
 | C3 | Instrumentation OpenTelemetry (déjà prévue dans `.env.example` via `OTEL_SERVICE_NAME`, non câblée) : traces, métriques, logs structurés | À faire |
 | C4 | Tableau de bord d'exploitation (latence, taux d'erreur, santé des files d'attente) — **nécessite un backend d'observabilité cible (Grafana/Datadog/...)** | À faire — décision requise |
 | C5 | Pagination et limites de charge sur les listes à fort volume (dossiers, notifications, audit) à mesure que le nombre de PME grandit | À faire |
@@ -57,7 +58,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 - Chaque phase marquée « décision requise » bloque sur un choix qui n'appartient pas à
   l'équipe technique seule (fournisseur SSO, hébergeur cible, outil d'observabilité) : à trancher
   avec la Direction avant implémentation plutôt que de figer un choix par défaut.
-- Les phases sans dépendance externe (A1-A3, A5-A6, B3, B6, C1-C3, C5) peuvent démarrer sans
+- Les phases sans dépendance externe (A1-A3, A5-A6, B6, C1-C3, C5) peuvent démarrer sans
   attendre ces décisions.
 - Chaque phase livrée suit la même discipline que le reste du dépôt : tests, `pnpm lint`,
   `pnpm test:prepush`, build API et web verts avant fusion.

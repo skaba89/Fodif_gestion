@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PoolClient } from 'pg';
-import { canDeactivateUser } from '../admin-policy';
+import { canDeactivateUser, requiresMfa } from '../admin-policy';
 import { DatabaseService } from '../database/database.service';
 
 type UserWrite = {
@@ -65,11 +65,14 @@ export class AdministrationRepository {
       if (input.entrepriseId && !(await this.enterpriseExists(client, input.entrepriseId))) {
         return { error: 'INVALID_ENTERPRISE' } as const;
       }
+      // Accounts holding a privileged role (SUPER_ADMIN, DIRECTION_FODIP, ...) are always MFA-enrolled,
+      // regardless of what the caller passed - an admin cannot opt a sensitive role out of it.
+      const mfaRequired = input.mfaRequired || requiresMfa(input.roles);
       const inserted = await client.query<{ id: string }>(
         `INSERT INTO utilisateurs (email, nom, prenom, telephone, password_hash, actif, mfa_required)
          VALUES (LOWER($1), $2, $3, $4, $5, TRUE, $6) RETURNING id`,
         [input.email.trim(), input.nom.trim(), input.prenom?.trim() || null, input.telephone?.trim() || null,
-          input.passwordHash, input.mfaRequired],
+          input.passwordHash, mfaRequired],
       );
       const id = inserted.rows[0].id;
       await this.replaceRoles(client, id, roleIds);
@@ -119,16 +122,20 @@ export class AdministrationRepository {
         return { error: 'PROTECTED_SUPER_ADMIN' } as const;
       }
 
+      // Accounts holding a privileged role are always MFA-enrolled: neither an explicit
+      // mfaRequired:false nor a role change away from the request can turn it off on its own.
+      const mfaRequired = (input.mfaRequired ?? target.rows[0].mfaRequired) || requiresMfa(nextRoles);
+
       await client.query(
         `UPDATE utilisateurs SET actif = COALESCE($2, actif),
-          mfa_required = COALESCE($3, mfa_required), updated_at = NOW() WHERE id = $1`,
-        [id, input.actif ?? null, input.mfaRequired ?? null],
+          mfa_required = $3, updated_at = NOW() WHERE id = $1`,
+        [id, input.actif ?? null, mfaRequired],
       );
       if (input.roles) await this.replaceRoles(client, id, roleIds);
       if (input.entrepriseId !== undefined) await this.replaceEnterprise(client, id, input.entrepriseId);
       await this.audit(client, actorId, 'UPDATE_USER', id, target.rows[0], {
         actif: input.actif ?? target.rows[0].actif,
-        mfaRequired: input.mfaRequired ?? target.rows[0].mfaRequired,
+        mfaRequired,
         roles: nextRoles, entrepriseId: input.entrepriseId,
       });
       return { id };

@@ -29,6 +29,8 @@ Il permet de :
 - marquer un compte comme soumis au MFA ;
 - consulter les permissions effectives de chaque rôle.
 
+Le MFA est **imposé, pas seulement proposé**, pour les rôles sensibles (`SUPER_ADMIN`, `DIRECTION_FODIP`, `AGENT_FODIP`, `ANALYSTE`, `COMITE_FINANCEMENT`, `AUDITEUR` — `admin-policy.js#PRIVILEGED_ROLES`) : à la création comme à la mise à jour d'un utilisateur, `mfa_required` est forcé à vrai dès qu'un de ces rôles est attribué, que l'administrateur l'ait demandé ou non, et un changement de rôle qui ne mentionne pas le champ ne peut pas le désactiver implicitement.
+
 Les opérations `CREATE_USER` et `UPDATE_USER` sont écrites dans `audit_logs`. Le mot de passe et son hash ne sont jamais inclus dans l’audit.
 
 ## Protections
