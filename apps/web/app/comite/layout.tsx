@@ -7,7 +7,7 @@ export default function CommitteeLayout({ children }: { children: React.ReactNod
   return <div className={styles.shell}>
     <header className={styles.header}>
       <Link href="/comite/dossiers" className={styles.brand}><span className={styles.mark}>FD</span><span className={styles.brandText}><strong>FODIP DIGITAL</strong><span>Comité de financement</span></span></Link>
-      <nav className={styles.nav} aria-label="Navigation Comité"><Link href="/comite/dossiers">Séance décisionnelle</Link><Link href="/notifications">Notifications</Link></nav>
+      <nav className={styles.nav} aria-label="Navigation Comité"><Link href="/comite/dossiers">Séance décisionnelle</Link><Link href="/notifications">Notifications</Link><Link href="/mes-donnees">Mes données</Link></nav>
       <div className={styles.headerActions}><ThemeToggle buttonClassName={styles.themeToggle} /><CommitteeAccountMenu /></div>
     </header>
     {children}

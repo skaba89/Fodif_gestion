@@ -10,6 +10,7 @@ type User = {
   id: string; email: string; nom: string; prenom?: string; actif: boolean; mfaRequired: boolean; roles: string[];
   entrepriseId?: string | null; raisonSociale?: string;
   partenaireBancaireId?: string | null; partenaireRaisonSociale?: string; lastLoginAt?: string | null;
+  anonymizedAt?: string | null;
 };
 
 const emptyForm = { email: '', nom: '', prenom: '', password: '', roles: ['AGENT_FODIP'], entrepriseId: '', partenaireBancaireId: '', mfaRequired: false };
@@ -62,6 +63,18 @@ export default function UsersAdministrationPage() {
     setMessage(`Compte ${user.email} mis à jour.`); await load();
   }
 
+  // Axe B6 (droits des personnes) : effacement sur demande. Irréversible - l'identité du compte
+  // est remplacée par un repère non identifiant et le compte est désactivé ; ses dossiers et son
+  // historique financier restent inchangés (voir database/012_data_rights.sql).
+  async function anonymize(user: User) {
+    if (!window.confirm(`Anonymiser le compte ${user.email} ? Cette action est irréversible : le nom, prénom, téléphone et email seront remplacés par un repère non identifiant et le compte sera désactivé.`)) return;
+    setMessage('');
+    const response = await fetch(`/api/data-rights/users/${user.id}/anonymize`, { method: 'POST' });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) return setMessage(body.message ?? 'Anonymisation impossible');
+    setMessage(`Compte ${user.email} anonymisé.`); await load();
+  }
+
   return <main className={portal.main}><p className={portal.eyebrow}>Super administration</p><h1 className={portal.title}>Utilisateurs et rôles</h1>
     <p className={portal.lead}>Créez les comptes, attribuez leurs rôles et périmètres, activez ou suspendez les accès. La désactivation de son propre compte et du dernier super-administrateur est interdite.</p>
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
@@ -78,7 +91,7 @@ export default function UsersAdministrationPage() {
     </section>
 
     <section className={`${portal.card} ${portal.tableCard} ${portal.section}`}><div className={portal.sectionHeader}><div><h2>Comptes existants</h2><p>{users.length} compte{users.length === 1 ? '' : 's'} dans le périmètre.</p></div><div className={portal.field}><label htmlFor="search">Recherche</label><input id="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nom ou email" /></div></div>
-      <div style={{ overflowX: 'auto' }}><table className={portal.table}><thead><tr><th>Utilisateur</th><th>Rôles</th><th>Entreprise PME</th><th>Banque partenaire</th><th>Actif</th><th>MFA exigé</th><th>Action</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}>
+      <div style={{ overflowX: 'auto' }}><table className={portal.table}><thead><tr><th>Utilisateur</th><th>Rôles</th><th>Entreprise PME</th><th>Banque partenaire</th><th>Actif</th><th>MFA exigé</th><th>Action</th><th>Droits des personnes</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}>
         <td><strong>{user.prenom} {user.nom}</strong><br />{user.email}</td>
         <td><select multiple value={user.roles} aria-label={`Rôles de ${user.email}`} onChange={(event) => patchLocal(user.id, { roles: Array.from(event.target.selectedOptions, (option) => option.value) })}>{roles.map((role) => <option value={role.code} key={role.code}>{role.nom}</option>)}</select></td>
         <td><select value={user.entrepriseId ?? ''} disabled={!user.roles.includes('PME')} onChange={(event) => patchLocal(user.id, { entrepriseId: event.target.value || null })}><option value="">Aucune</option>{enterprises.map((enterprise) => <option key={enterprise.id} value={enterprise.id}>{enterprise.raisonSociale}</option>)}</select></td>
@@ -86,6 +99,7 @@ export default function UsersAdministrationPage() {
         <td><input type="checkbox" checked={user.actif} onChange={(event) => patchLocal(user.id, { actif: event.target.checked })} aria-label={`Compte actif ${user.email}`} /></td>
         <td><input type="checkbox" checked={user.mfaRequired} onChange={(event) => patchLocal(user.id, { mfaRequired: event.target.checked })} aria-label={`MFA ${user.email}`} /></td>
         <td><button className={portal.secondary} type="button" onClick={() => save(user)}>Enregistrer</button></td>
+        <td><button className={portal.secondary} type="button" onClick={() => anonymize(user)} disabled={Boolean(user.anonymizedAt)}>{user.anonymizedAt ? 'Anonymisé' : 'Anonymiser'}</button></td>
       </tr>)}</tbody></table></div>
     </section>
     <section className={`${portal.card} ${portal.section}`}><h2>Référentiel RBAC</h2>{roles.map((role) => <details key={role.code}><summary><strong>{role.nom}</strong> · {role.code}</summary><p>{role.description}</p><p>{role.permissions.join(' · ') || 'Aucune permission directe'}</p></details>)}</section>

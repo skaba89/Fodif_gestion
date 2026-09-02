@@ -21,6 +21,7 @@ export class AdministrationRepository {
       `SELECT utilisateur.id, utilisateur.email, utilisateur.nom, utilisateur.prenom, utilisateur.telephone,
         utilisateur.actif, utilisateur.mfa_required AS "mfaRequired",
         utilisateur.last_login_at AS "lastLoginAt", utilisateur.created_at AS "createdAt",
+        utilisateur.anonymized_at AS "anonymizedAt",
         COALESCE(ARRAY_AGG(DISTINCT role.code) FILTER (WHERE role.code IS NOT NULL), '{}') AS roles,
         relation.entreprise_id AS "entrepriseId", entreprise.raison_sociale AS "raisonSociale",
         utilisateur.partenaire_bancaire_id AS "partenaireBancaireId", partenaire.raison_sociale AS "partenaireRaisonSociale"

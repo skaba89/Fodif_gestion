@@ -28,7 +28,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | B3 | MFA imposé (non simplement proposé) pour les rôles sensibles — le code prévoyait déjà `admin-policy.js#requiresMfa`/`PRIVILEGED_ROLES` (`SUPER_ADMIN`, `DIRECTION_FODIP`, `AGENT_FODIP`, `ANALYSTE`, `COMITE_FINANCEMENT`, `AUDITEUR`) mais la fonction n'était jamais appelée | **Fait** (cette itération) |
 | B4 | SSO/OpenID Connect pour les agents publics. Décision prise : Keycloak — open source, auto-hébergeable, sans dépendance à un fournisseur cloud, standard OpenID Connect (n'importe quel autre IdP compatible OIDC fonctionnera aussi côté API sans changement) | **Fait** (cette itération) |
 | B5 | Chiffrement au repos des données personnelles sensibles (au-delà du hachage des mots de passe et du chiffrement du secret MFA déjà en place) — **nécessite un gestionnaire de secrets/KMS en production** | À faire — décision d'infrastructure requise |
-| B6 | Politique de rétention et purge des données, export/suppression sur demande (droits des personnes) | À faire |
+| B6 | Politique de rétention et purge des données, export/suppression sur demande (droits des personnes) | **Partiel** (cette itération) — export et effacement sur demande faits ; purge automatique par durée de rétention en attente d'une décision juridique |
 | B7a | Dossier de déploiement d'un environnement de **test** (Render/Netlify + Neon/Supabase), en attendant le choix de l'hébergeur institutionnel définitif — `docs/15-DEPLOIEMENT-TEST.md` | **Fait** (cette itération) |
 | B7b | Séparation réelle DEV / REC / PPD / PROD sur l'hébergeur institutionnel définitif (actuellement un seul `docker-compose.yml` de démonstration locale + l'environnement de test B7a) — **nécessite le choix d'un hébergeur/cloud cible** | À faire — décision requise |
 | B8 | Revue de sécurité externe / test d'intrusion avant mise en production | À faire, en fin de parcours |
@@ -236,3 +236,47 @@ Détails A4 (`apps/web/app/_shared/ThemeToggle.tsx`, `apps/web/app/globals.css`,
   cohérence sur une page tierce (connexion agent) sans revisiter la page d'accueil au préalable —
   le thème choisi s'applique dès le premier chargement sur n'importe quelle page grâce au script
   inline.
+
+Détails B6, partiel (`database/012_data_rights.sql`, `apps/api/src/data-rights/`, `apps/web/app/mes-donnees/`) :
+
+- l'axe B6 recouvre en réalité deux décisions distinctes, et une seule relève de l'ingénierie.
+  Combien de temps chaque catégorie de donnée doit être conservée (dossiers de financement,
+  journal d'audit...) avant purge automatique est un fait juridique propre au droit guinéen, pas
+  un choix technique — inventer une durée serait pire que de laisser la question explicitement
+  ouverte. Cette itération construit donc uniquement le volet « droits des personnes » (export et
+  effacement sur demande), et documente la purge automatique par durée de rétention comme
+  bloquée sur cette décision juridique plutôt que de l'ignorer silencieusement ;
+- **export** : `GET /data-rights/export` (aucun décorateur `@RequireRoles`/`@RequirePermissions` —
+  accessible à tout compte authentifié, quel que soit son rôle, via le comportement par défaut
+  d'`AuthorizationGuard`) assemble tout ce que la plateforme détient sur le compte appelant : son
+  profil, et, pour un compte PME (présence d'`entrepriseId`), les informations de l'entreprise, ses
+  dirigeants et ses dossiers de financement — un compte agent FODIP, comité, partenaire bancaire ou
+  auditeur n'a pas d'`entrepriseId`, ces sections sont alors simplement omises plutôt que devinées
+  hors périmètre. Chaque export est journalisé (`audit_logs`, action `DATA_EXPORT`). Côté web,
+  `/mes-donnees` (lien ajouté à la navigation des sept portails) déclenche le téléchargement d'un
+  fichier JSON horodaté ;
+- **effacement sur demande** : l'application n'a ni inscription en libre-service ni objet « ticket
+  de demande » formel — comme la création de compte (déjà provisionnée par un SUPER_ADMIN), une
+  demande d'effacement arrive hors ligne (canal de support, courrier) et un SUPER_ADMIN la
+  traite via `POST /data-rights/users/:id/anonymize` (`@RequireRoles('SUPER_ADMIN')` +
+  `@RequirePermissions('user.manage')`, bouton « Anonymiser » dans
+  `apps/web/app/administration/utilisateurs/`). L'opération écrase `nom`/`prenom`/`telephone`/
+  `email` par un repère non identifiant, désactive le compte (`actif = FALSE`) et pose
+  `anonymized_at` — mais ne touche ni `dossiers_financement`, ni `financements`, ni `audit_logs` :
+  ces tables référencent le compte uniquement par UUID et portent la trace financière/d'audit que
+  l'établissement doit conserver, pas des données personnelles du titulaire. Une seconde tentative
+  sur un compte déjà traité échoue explicitement (`ALREADY_ANONYMIZED`) plutôt que de ré-écraser
+  silencieusement ;
+- même protection que la désactivation de compte (`canDeactivateUser`, déjà utilisé par
+  `administration.repository.ts#update`) : un SUPER_ADMIN ne peut ni s'auto-anonymiser, ni
+  anonymiser le dernier SUPER_ADMIN actif — réutilisé tel quel plutôt que dupliqué ; même verrou
+  consultatif Postgres (`pg_advisory_xact_lock(80913001)`) que la désactivation, puisque les deux
+  mutent la même ligne `utilisateurs` et ne doivent pas s'entrelacer ; email de remplacement
+  déterministe (`anonymise+<id>@fodip.invalid`) pour ne jamais entrer en collision avec la
+  contrainte `UNIQUE` sur `utilisateurs.email` lors d'anonymisations successives ;
+- migration additive uniquement (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS anonymized_at`,
+  15ᵉ migration validée par `scripts/check-migrations.py`) ; `DataRightsRepository` écrit ses
+  propres requêtes plutôt que d'importer `CompaniesRepository`/`ApplicationsRepository` (aucun des
+  deux modules n'exporte son repository — même choix que pour `PartnerRepository` à l'axe D1) ;
+- reste à faire pour clore complètement B6 : la décision juridique sur les durées de rétention par
+  catégorie de donnée, puis la purge automatique planifiée qui en découle.
