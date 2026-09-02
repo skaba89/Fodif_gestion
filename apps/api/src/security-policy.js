@@ -1,5 +1,7 @@
 'use strict';
 
+const crypto = require('node:crypto');
+
 const DEFAULT_PASSWORD_POLICY = Object.freeze({
   minLength: 12,
   requireUppercase: true,
@@ -56,6 +58,38 @@ function resolveJwtSecret(secret, environment) {
   return unsafe ? 'fodip-dev-only-jwt-secret-change-before-production' : normalized;
 }
 
+/**
+ * Derives a fixed-purpose 256-bit key from a base secret (e.g. JWT_SECRET) using HMAC-SHA256.
+ * Lets several distinct keys (MFA secret encryption, MFA challenge signing, ...) be obtained
+ * from a single already-validated secret instead of provisioning and rotating one env var per use.
+ */
+function deriveSecret(baseSecret, context) {
+  if (typeof baseSecret !== 'string' || !baseSecret) throw new Error('A base secret is required to derive a key');
+  if (typeof context !== 'string' || !context) throw new Error('A derivation context is required');
+  return crypto.createHmac('sha256', baseSecret).update(context).digest();
+}
+
+/**
+ * AES-256-GCM encrypt/decrypt helpers for small secrets at rest (e.g. TOTP seeds).
+ * Output packs iv (12 bytes) + auth tag (16 bytes) + ciphertext into a single base64 string.
+ */
+function encryptWithKey(plaintext, key) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([cipher.update(String(plaintext), 'utf8'), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString('base64');
+}
+
+function decryptWithKey(payload, key) {
+  const raw = Buffer.from(payload, 'base64');
+  const iv = raw.subarray(0, 12);
+  const authTag = raw.subarray(12, 28);
+  const ciphertext = raw.subarray(28);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+}
+
 module.exports = {
   DEFAULT_PASSWORD_POLICY,
   evaluatePassword,
@@ -63,4 +97,7 @@ module.exports = {
   hasAnyRole,
   resolveJwtSecret,
   parseDurationSeconds,
+  deriveSecret,
+  encryptWithKey,
+  decryptWithKey,
 };

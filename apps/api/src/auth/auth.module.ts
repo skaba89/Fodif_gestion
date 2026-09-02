@@ -5,6 +5,9 @@ import { parseDurationSeconds, resolveJwtSecret } from '../security-policy';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { MfaController } from './mfa/mfa.controller';
+import { MfaService } from './mfa/mfa.service';
+import { SessionTokenService } from './session-token.service';
 
 @Module({
   imports: [
@@ -21,8 +24,8 @@ import { AuthService } from './auth.service';
       }),
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService],
+  controllers: [AuthController, MfaController],
+  providers: [AuthService, MfaService, SessionTokenService],
   exports: [JwtModule],
 })
 export class AuthModule {}

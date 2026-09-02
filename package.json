@@ -2,6 +2,7 @@
   "name": "fodip-digital-2030",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "description": "FODIP Digital 2030 - plateforme de gestion, financement, suivi et pilotage des PME",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
