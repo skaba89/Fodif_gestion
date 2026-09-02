@@ -30,24 +30,23 @@ test.describe('Accessibility (axe A6)', () => {
     await expectNoSeriousViolations(page);
   });
 
-  test('the PME portal (post-login) has no serious WCAG violations, light and dark', async ({ page }) => {
-    await page.goto('/entrepreneur/connexion');
-    await page.getByLabel('Email').fill('pme@fodip.local');
+  // One session covers three checks (portal home in light and dark, then /mes-donnees - axe B6)
+  // with a single login, and deliberately as auditeur@fodip.local rather than the PME account:
+  // /auth/login is rate-limited to 5 attempts per email per 60s
+  // (apps/api/src/auth/auth.controller.ts), and pme@fodip.local's budget in this same run is
+  // already spent close to that limit by login.spec.ts and workflow.spec.ts's own two logins as
+  // that account - a login here as a role neither of those specs ever uses avoids the shared
+  // budget entirely rather than trying to stay just under it.
+  test('the Auditeur portal has no serious WCAG violations: home (light/dark) and /mes-donnees (axe B6)', async ({ page }) => {
+    await page.goto('/auditeur/connexion');
+    await page.getByLabel('Email').fill('auditeur@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
-    await expect(page).toHaveURL(/\/entrepreneur$/);
+    await expect(page).toHaveURL(/\/auditeur\/tableau-de-bord$/);
     await expectNoSeriousViolations(page);
 
     await page.getByRole('button', { name: /Passer au thème/ }).click();
     await expectNoSeriousViolations(page);
-  });
-
-  test('the "Mes données" self-service page has no serious WCAG violations (axe B6)', async ({ page }) => {
-    await page.goto('/entrepreneur/connexion');
-    await page.getByLabel('Email').fill('pme@fodip.local');
-    await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
-    await expect(page).toHaveURL(/\/entrepreneur$/);
 
     await page.getByRole('link', { name: 'Mes données' }).click();
     await expect(page).toHaveURL(/\/mes-donnees$/);
