@@ -39,10 +39,17 @@ séparément, pour permettre un avancement continu sans big-bang.
 | C1 | Tests unitaires et e2e API (Jest + Supertest), invariants anti-régression pré-push | Fait |
 | C2a | Tests e2e web (Playwright) : connexion, rejet de rôle, déconnexion, et le parcours TOTP complet (enrôlement puis vérification) — jusqu'ici jamais exercé de bout en bout dans un navigateur réel | **Fait** (cette itération) |
 | C2b | Tests e2e web : dépôt de dossier PME, instruction agent, décision comité | À faire |
-| C3 | Instrumentation OpenTelemetry (déjà prévue dans `.env.example` via `OTEL_SERVICE_NAME`, non câblée) : traces, métriques, logs structurés | À faire |
+| C3a | Traces OpenTelemetry (HTTP, routes Express, requêtes PostgreSQL) et logs structurés JSON en production, corrélés par `traceId`/`spanId` — même schéma que B3 : `OTEL_SERVICE_NAME` existait déjà dans `.env.example` sans jamais être câblé | **Fait** (cette itération) |
+| C3b | Métriques applicatives (latence, débit, taux d'erreur) — a un chevauchement naturel avec C4 (nécessite un consommateur : dashboard ou backend de métriques cible) | À faire |
 | C4 | Tableau de bord d'exploitation (latence, taux d'erreur, santé des files d'attente) — **nécessite un backend d'observabilité cible (Grafana/Datadog/...)** | À faire — décision requise |
 | C5 | Pagination et limites de charge sur les listes à fort volume (dossiers, notifications, audit) à mesure que le nombre de PME grandit | À faire |
 | C6 | Sauvegardes PostgreSQL automatisées et testées (restauration), plan de reprise après sinistre | À faire — décision d'infrastructure requise |
+
+Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.service.ts`) :
+
+- le traçage ne démarre que si `OTEL_EXPORTER_OTLP_ENDPOINT` (ou `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) est renseigné — l'exportateur OTLP lit lui-même ces variables d'environnement standard, donc aucune surface de configuration supplémentaire à ajouter. Aucun changement de comportement ni tentative d'export réseau tant que la variable est absente : le développement local, la CI et la démo Docker restent inertes par défaut ;
+- une fois activé, instrumente HTTP, les routes Express et les requêtes PostgreSQL (`instrumentation-http`/`-express`/`-pg`, choisies individuellement plutôt que le paquet `auto-instrumentations-node` complet, pour ne pas importer des dizaines de paquets d'instrumentation inutilisés) ;
+- en production (`NODE_ENV=production`), les logs passent en JSON structuré (un objet par ligne) plutôt que le format coloré de développement, avec `traceId`/`spanId` de la trace active attachés à chaque ligne pour corréler un log à la requête/trace qui l'a produit.
 
 ## Axe D — Autres chantiers produit
 
@@ -58,7 +65,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 - Chaque phase marquée « décision requise » bloque sur un choix qui n'appartient pas à
   l'équipe technique seule (fournisseur SSO, hébergeur cible, outil d'observabilité) : à trancher
   avec la Direction avant implémentation plutôt que de figer un choix par défaut.
-- Les phases sans dépendance externe (A1-A3, A5-A6, B6, C1-C3, C5) peuvent démarrer sans
+- Les phases sans dépendance externe (A1-A3, A5-A6, B6, C1-C3a, C5) peuvent démarrer sans
   attendre ces décisions.
 - Chaque phase livrée suit la même discipline que le reste du dépôt : tests, `pnpm lint`,
   `pnpm test:prepush`, build API et web verts avant fusion.
