@@ -12,6 +12,7 @@ export interface AuthUserRecord {
   mfaSecretEncrypted: string | null;
   mfaConfirmedAt: Date | null;
   entrepriseId: string | null;
+  partenaireBancaireId: string | null;
   roles: string[];
   permissions: string[];
 }
@@ -27,6 +28,7 @@ interface AuthUserRow {
   mfa_secret_encrypted: string | null;
   mfa_confirmed_at: Date | null;
   entreprise_id: string | null;
+  partenaire_bancaire_id: string | null;
   roles: string[] | null;
   permissions: string[] | null;
 }
@@ -43,6 +45,7 @@ const AUTH_USER_QUERY = `
     u.mfa_secret_encrypted,
     u.mfa_confirmed_at,
     ue.entreprise_id,
+    u.partenaire_bancaire_id,
     COALESCE(ARRAY_AGG(DISTINCT r.code) FILTER (WHERE r.code IS NOT NULL), '{}') AS roles,
     COALESCE(ARRAY_AGG(DISTINCT p.code) FILTER (WHERE p.code IS NOT NULL), '{}') AS permissions
   FROM utilisateurs u
@@ -124,6 +127,7 @@ export class UsersRepository {
       mfaSecretEncrypted: row.mfa_secret_encrypted,
       mfaConfirmedAt: row.mfa_confirmed_at,
       entrepriseId: row.entreprise_id,
+      partenaireBancaireId: row.partenaire_bancaire_id,
       roles: row.roles ?? [],
       permissions: row.permissions ?? [],
     };

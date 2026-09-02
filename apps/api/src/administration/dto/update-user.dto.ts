@@ -23,5 +23,10 @@ export class UpdateUserDto {
   @IsOptional()
   @IsUUID()
   entrepriseId?: string | null;
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true, description: 'Required when roles includes PARTENAIRE_BANCAIRE' })
+  @IsOptional()
+  @IsUUID()
+  partenaireBancaireId?: string | null;
 }
 

@@ -14,6 +14,7 @@ const baseUser: AuthUserRecord = {
   mfaSecretEncrypted: null,
   mfaConfirmedAt: null,
   entrepriseId: null,
+  partenaireBancaireId: null,
   roles: ['AGENT_FODIP'],
   permissions: [],
 };

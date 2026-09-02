@@ -42,5 +42,9 @@ export class AdministrationController {
   @Get('enterprises')
   @RequirePermissions('user.manage')
   listEnterprises() { return this.administration.listEnterprises(); }
+
+  @Get('partner-banks')
+  @RequirePermissions('user.manage')
+  listPartnerBanks() { return this.administration.listPartnerBanks(); }
 }
 

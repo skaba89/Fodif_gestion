@@ -46,6 +46,11 @@ export class CreateUserDto {
   @IsUUID()
   entrepriseId?: string;
 
+  @ApiPropertyOptional({ format: 'uuid', description: 'Required when roles includes PARTENAIRE_BANCAIRE' })
+  @IsOptional()
+  @IsUUID()
+  partenaireBancaireId?: string;
+
   @ApiPropertyOptional({ default: false })
   @IsOptional()
   @IsBoolean()

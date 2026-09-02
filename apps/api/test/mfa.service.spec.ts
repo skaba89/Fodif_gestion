@@ -23,6 +23,7 @@ const baseUser: AuthUserRecord = {
   mfaSecretEncrypted: null,
   mfaConfirmedAt: null,
   entrepriseId: null,
+  partenaireBancaireId: null,
   roles: ['SUPER_ADMIN'],
   permissions: [],
 };

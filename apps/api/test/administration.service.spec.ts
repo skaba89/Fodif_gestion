@@ -12,6 +12,15 @@ describe('AdministrationService', () => {
     })).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('refuses a PARTENAIRE_BANCAIRE account without a partner bank scope (axe D1)', async () => {
+    const repository = {} as AdministrationRepository;
+    const service = new AdministrationService(repository);
+
+    await expect(service.createUser('admin', {
+      email: 'partner@example.com', nom: 'Partner', password: 'Password2026!', roles: ['PARTENAIRE_BANCAIRE'],
+    })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('normalizes roles and hashes the password before persistence', async () => {
     const repository = {
       create: jest.fn().mockResolvedValue({ id: 'user-1' }),

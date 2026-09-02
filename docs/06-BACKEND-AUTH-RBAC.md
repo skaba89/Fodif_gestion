@@ -94,6 +94,39 @@ de permission (`AuthorizationGuard` applique les deux contrôles en ET, voir
 - compte de démonstration local : `auditeur@fodip.local` (`database/seeds/002_analytics_demo.sql`,
   voir le README pour le mot de passe commun de démonstration).
 
+## Portail Partenaire bancaire (axe D1)
+
+Le rôle `PARTENAIRE_BANCAIRE` existait en base depuis le premier commit RBAC mais, contrairement à
+`AUDITEUR`, son absence de fonctionnement n'était pas un simple oubli de garde d'accès : aucun
+modèle de données ne reliait un partenaire bancaire à un sous-ensemble de dossiers/financements.
+Voir `docs/14-ROADMAP-SAAS-PREMIUM.md` (axe D1) pour la décision de modèle.
+
+- authentification identique à tous les autres comptes (email/mot de passe + JWT) : pas de
+  sous-système de clé API séparé. `PARTENAIRE_BANCAIRE` n'est pas dans `admin-policy.js#PRIVILEGED_ROLES`
+  et n'exige donc pas le MFA — cohérent avec un accès conçu pour être appelé programmatiquement
+  par le système d'information de la banque plutôt que par un humain à chaque session ;
+- périmètre (`database/011_partner_banks.sql`) : union de deux mécanismes indépendants — les
+  financements où le partenaire est désigné banque correspondante
+  (`financements.banque_partenaire_id`) et les financements des PME de son portefeuille client
+  (`partenaire_entreprises`). Chaque requête de `PartnerController` (`GET /partner/financings`,
+  `GET /partner/financings/:id`, `POST .../disbursements`, `POST .../repayments`) est scopée en
+  base par le `partenaireBancaireId` de l'appelant (jamais par un identifiant transmis par le
+  client) ; un financement hors périmètre renvoie 404, jamais 403 — même principe
+  d'anti-énumération que l'isolation PME (`applications`/`companies` controllers) ;
+- un partenaire ne planifie rien : il déclare un paiement déjà exécuté en une seule étape
+  (contrairement au flux Direction planifier-puis-exécuter), validé par la même politique
+  `finance-policy.js#validateAvailableAmount` que le flux interne. La vue détail exposée à un
+  partenaire omet volontairement `impact` (reporting interne) et `audit` (identités des agents
+  FODIP) ;
+- `admin-policy.js#validateUserScope` exige un `partenaireBancaireId` pour tout compte
+  `PARTENAIRE_BANCAIRE`, même principe que `PME_ENTERPRISE_SCOPE_REQUIRED` pour un compte PME ;
+  les fiches `partenaires_bancaires` elles-mêmes sont provisionnées par SQL (aucun flux de
+  création en libre-service côté API), exactement comme les `entreprises` PME le sont déjà ;
+- portail web dédié (`apps/web/app/partenaire/`), volontairement sans lien SSO : un partenaire
+  bancaire est un tiers externe, pas un agent public, donc hors du périmètre de l'IdP
+  institutionnel (axe B4). Compte de démonstration local : `partenaire@fodip.local`
+  (`database/seeds/003_partner_bank_demo.sql`).
+
 ## Protections API transverses
 
 - `helmet` sur toute réponse HTTP (HSTS, `X-Frame-Options`, `X-Content-Type-Options`, etc.) ; la CSP par défaut reste désactivée car `/api/docs` sert l'interface Swagger, qui a besoin de scripts/styles inline.
