@@ -1,0 +1,92 @@
+/* Axe D2 (docs/14-ROADMAP-SAAS-PREMIUM.md) - the offline fallback shell. Cached by the service
+   worker (public/sw.js) at install time and served in place of a failed navigation, so an agent
+   in a low-connectivity zone gets this instead of the browser's own "no internet" error page. */
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.card {
+  max-width: 460px;
+  width: 100%;
+  padding: clamp(24px, 5vw, 40px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 18px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-300), var(--accent-600));
+  color: var(--primary-800);
+  font-weight: 900;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  color: var(--green-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent-500);
+  color: var(--primary-800);
+  font-weight: 750;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: filter var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+
+.retry:hover {
+  filter: brightness(1.06);
+}
+
+.retry:active {
+  transform: translateY(1px);
+}
