@@ -1,0 +1,75 @@
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
+import { AuthenticatedUser } from '../auth/auth-user.interface';
+import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { RequireRoles } from '../common/decorators/roles.decorator';
+import { CreateFinancingDto } from './dto/create-financing.dto';
+import { CreateRepaymentDto } from './dto/create-repayment.dto';
+import { ExecuteDisbursementDto } from './dto/execute-disbursement.dto';
+import { PlanDisbursementDto } from './dto/plan-disbursement.dto';
+import { SaveImpactDto } from './dto/save-impact.dto';
+import { FinancingsService } from './financings.service';
+
+interface AuthenticatedRequest extends Request { user: AuthenticatedUser }
+
+@ApiTags('financings')
+@ApiBearerAuth()
+@RequireRoles('DIRECTION_FODIP', 'ANALYSTE', 'SUPER_ADMIN')
+@Controller('financings')
+export class FinancingsController {
+  constructor(private readonly financings: FinancingsService) {}
+
+  @Get()
+  @RequirePermissions('financing.read')
+  list() { return this.financings.list(); }
+
+  @Get('eligible-applications')
+  @RequirePermissions('financing.manage')
+  listEligibleApplications() { return this.financings.listEligibleApplications(); }
+
+  @Get(':id')
+  @RequirePermissions('financing.read')
+  get(@Param('id', new ParseUUIDPipe()) id: string) { return this.financings.get(id); }
+
+  @Post('applications/:applicationId')
+  @RequirePermissions('financing.manage')
+  createFromApplication(
+    @Req() request: AuthenticatedRequest,
+    @Param('applicationId', new ParseUUIDPipe()) applicationId: string,
+    @Body() dto: CreateFinancingDto,
+  ) { return this.financings.createFromApplication(request.user, applicationId, dto); }
+
+  @Post(':id/disbursements')
+  @RequirePermissions('disbursement.manage')
+  planDisbursement(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: PlanDisbursementDto,
+  ) { return this.financings.planDisbursement(request.user, id, dto); }
+
+  @Post(':id/disbursements/:disbursementId/execute')
+  @RequirePermissions('disbursement.manage')
+  executeDisbursement(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('disbursementId', new ParseUUIDPipe()) disbursementId: string,
+    @Body() dto: ExecuteDisbursementDto,
+  ) { return this.financings.executeDisbursement(request.user, id, disbursementId, dto); }
+
+  @Post(':id/repayments')
+  @RequirePermissions('repayment.manage')
+  createRepayment(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: CreateRepaymentDto,
+  ) { return this.financings.createRepayment(request.user, id, dto); }
+
+  @Post(':id/impact')
+  @RequirePermissions('impact.manage')
+  saveImpact(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: SaveImpactDto,
+  ) { return this.financings.saveImpact(request.user, id, dto); }
+}

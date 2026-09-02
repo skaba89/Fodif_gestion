@@ -2,7 +2,7 @@
 
 Plateforme numérique de gestion, de financement, de suivi et de pilotage des PME accompagnées par le FODIP en Guinée.
 
-> Statut : MVP en développement — parcours PME, instruction Agent, scoring, Comité et cockpit Direction disponibles sur Docker.
+> Statut : MVP en développement — parcours PME, instruction Agent, scoring, Comité, cockpit Direction et cycle financier disponibles sur Docker.
 
 ## Vision
 
@@ -140,6 +140,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/09-PORTAIL-AGENT-DOCKER.md` — instruction 360° et exécution Docker autonome
 - `docs/10-SCORING-COMITE.md` — scoring versionné et décision humaine auditée
 - `docs/11-DATA-DASHBOARD.md` — vues analytiques PostgreSQL, définitions KPI et cockpit Direction
+- `docs/12-CYCLE-FINANCIER.md` — financements, décaissements, échéances, remboursements, impact et audit
 
 ## Sécurité
 
@@ -158,7 +159,8 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 9 — Portail Agent, instruction 360° et Docker
 - [x] Étape 10 — Workflow, scoring et comité
 - [x] Étape 11 — Data Platform et dashboards Docker/PostgreSQL
-- [ ] Étape 12 — Déploiement et dossier de présentation
+- [x] Étape 12 — Cycle financier opérationnel
+- [ ] Étape 13 — Notifications, administration et dossier de déploiement
 
 ## Licence
 
