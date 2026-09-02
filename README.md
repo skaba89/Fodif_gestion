@@ -144,6 +144,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/12-CYCLE-FINANCIER.md` — financements, décaissements, échéances, remboursements, impact et audit
 - `docs/13-NOTIFICATIONS-ADMINISTRATION.md` — notifications métier, utilisateurs, rôles et protections administratives
 - `docs/14-ROADMAP-SAAS-PREMIUM.md` — feuille de route identité visuelle, conformité étatique, fiabilité SaaS
+- `docs/15-DEPLOIEMENT-TEST.md` — déployer un environnement de test sur Render/Netlify avec Neon ou Supabase
 
 ## Sécurité
 
@@ -165,7 +166,7 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 12 — Cycle financier opérationnel
 - [x] Étape 13 — Notifications et administration
 - [x] Étape 14a — MFA (TOTP) pour les comptes `mfa_required`
-- [ ] Étape 14b — dossier de déploiement
+- [x] Étape 14b — dossier de déploiement (environnement de test ; la mise en production réelle reste conditionnée aux décisions B4/B5/B7/B8 de `docs/14-ROADMAP-SAAS-PREMIUM.md`)
 
 ## Licence
 

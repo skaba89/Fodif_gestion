@@ -8,7 +8,8 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
-    "lint": "eslint \"{src,test}/**/*.{ts,js,cjs}\"",
+    "migrate": "node scripts/run-migrations.js",
+    "lint": "eslint \"{src,test,scripts}/**/*.{ts,js,cjs}\"",
     "test": "jest --runInBand",
     "test:prepush": "node --check src/security-policy.js && node --test test/security-policy.test.cjs"
   },

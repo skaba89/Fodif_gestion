@@ -1,0 +1,52 @@
+# Render Blueprint - best-effort starting point for docs/15-DEPLOIEMENT-TEST.md.
+#
+# Render's Blueprint schema does change over time; if importing this fails, follow the manual
+# dashboard steps in docs/15-DEPLOIEMENT-TEST.md instead (they don't depend on this file and are
+# the source of truth). Secrets (sync: false) must still be filled in by hand after import -
+# nothing sensitive belongs in this file.
+
+services:
+  - type: web
+    name: fodip-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Neon or Supabase connection string - see docs/15 étape 1
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ISSUER
+        value: fodip-digital-2030
+      - key: JWT_AUDIENCE
+        value: fodip-web
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: STORAGE_ENDPOINT
+        sync: false # S3-compatible endpoint - see docs/15 étape 2
+      - key: STORAGE_REGION
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: STORAGE_ACCESS_KEY
+        sync: false
+      - key: STORAGE_SECRET_KEY
+        sync: false
+      - key: WEB_BASE_URL
+        sync: false # the web service's public URL - fill in after step 5, see docs/15 étape 6
+
+  - type: web
+    name: fodip-web
+    runtime: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: API_BASE_URL
+        sync: false # the api service's public URL - see docs/15 étape 3

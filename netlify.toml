@@ -1,0 +1,13 @@
+# Netlify config - best-effort starting point for docs/15-DEPLOIEMENT-TEST.md (frontend only;
+# the API is not deployable on Netlify, it needs a persistent process - see Render in that doc).
+#
+# Netlify's Next.js runtime detection and this schema do change over time; if this doesn't build
+# as-is, configure the same base/build/publish values by hand in the Netlify UI instead.
+
+[build]
+  base = "apps/web"
+  command = "pnpm install --frozen-lockfile && pnpm --filter @fodip/web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "22"
