@@ -16,7 +16,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | A2 | Refonte des composants partagés (boutons, cartes, tableaux, badges de statut, formulaires) avec états `:hover`/`:focus-visible`/`:disabled` cohérents, échelle d'élévation | **Fait** (cette itération) |
 | A3 | Page d'accueil : remplacement de la redirection brute vers `/direction/tableau-de-bord` par un sélecteur de portail explicite | **Fait** (cette itération) |
 | A4 | Bascule thème clair/sombre manuelle persistée (au-delà du `prefers-color-scheme` automatique livré en A1) | **Fait** (cette itération) |
-| A5 | Bibliothèque de composants documentée (Storybook ou équivalent léger) pour garder la cohérence à mesure que l'équipe grandit | À faire |
+| A5 | Bibliothèque de composants documentée (Storybook ou équivalent léger) pour garder la cohérence à mesure que l'équipe grandit | **Fait** (cette itération) — équivalent léger : `/design-system` |
 | A6 | Accessibilité WCAG 2.1 AA : audit contrastes, navigation clavier complète, lecteurs d'écran sur les tableaux et formulaires complexes (scoring, décision comité) | **Fait** (cette itération) — étiquettes de formulaire, contrastes, navigation clavier (liens d'évitement) et scan automatisé WCAG 2.1 A/AA en e2e ; reste un point : aucun test avec un lecteur d'écran réel (NVDA/JAWS/VoiceOver), aucun n'étant disponible dans cet environnement |
 
 ## Axe B — Conformité & sécurité de niveau étatique
@@ -314,3 +314,23 @@ Détails A6, suite et clôture (`apps/web/app/globals.css`, `apps/web/e2e/access
   --list` (les 5 nouveaux tests sont découverts). Comme pour les précédents specs Playwright, leur
   exécution réelle nécessite la pile Docker complète, indisponible ici (`dockerd` ne démarre pas
   dans ce bac à sable) - confirmée par la CI.
+
+Détails A5 (`apps/web/app/design-system/`) :
+
+- l'équivalent léger explicitement permis par la formulation de l'axe (« Storybook ou équivalent
+  léger ») plutôt que Storybook lui-même : une page `/design-system` dans l'application Next.js
+  existante, sans nouvelle brique d'outillage, de configuration de build séparée ni de risque de
+  compatibilité avec des versions aussi récentes que Next 16/React 19/Turbopack ;
+- vivante plutôt que recopiée : chaque exemple de la page (boutons, badges, cartes, tableau,
+  messages, champs de formulaire) est rendu avec les mêmes classes que le produit
+  (`globals.css`, `entrepreneur/portal.module.css`, déjà réutilisées par les sept portails) - une
+  évolution d'un jeton ou d'une classe partagée se reflète ici sans double maintenance ;
+- couvre les quatre sections demandées : palette et échelles de couleur (avec un rappel visuel des
+  contrastes vérifiés AA à l'axe A6, y compris le badge d'avertissement dont le mode sombre vient
+  d'être corrigé), typographie, composants (boutons, formulaires, cartes, tableaux, badges de
+  statut, messages), et un rappel des mécanismes d'accessibilité du produit (lien d'évitement,
+  anneau de focus, scan automatisé) ;
+- accessible publiquement (comme la page d'accueil - aucune donnée métier n'y transite), liée
+  depuis le pied de page de l'accueil, et elle-même couverte par le scan `@axe-core/playwright`
+  ajouté à l'axe A6 - une régression d'accessibilité sur la page de référence du design system
+  serait particulièrement ironique à laisser passer.

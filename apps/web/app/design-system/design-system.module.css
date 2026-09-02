@@ -1,0 +1,155 @@
+/*
+ * Layout for the design-system reference page only (axe A5). Every *component* shown on the page
+ * comes from the shared stylesheets it documents (globals.css, entrepreneur/portal.module.css) -
+ * these rules are just the scaffolding around them (section spacing, swatch grid, code labels).
+ */
+
+.shell {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px clamp(18px, 4vw, 40px);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+}
+
+.main {
+  width: min(1180px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 40px 0 72px;
+}
+
+.intro {
+  max-width: 760px;
+  margin-bottom: 36px;
+}
+
+.toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0 0 44px;
+  padding: 0;
+  list-style: none;
+}
+
+.toc a {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.toc a:hover {
+  text-decoration: underline;
+}
+
+.section {
+  margin-bottom: 56px;
+  scroll-margin-top: 84px;
+}
+
+.section h2 {
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.sectionLead {
+  max-width: 640px;
+  margin-bottom: 22px;
+  color: var(--muted);
+}
+
+.swatchGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.swatch {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.swatchColor {
+  height: 64px;
+}
+
+.swatchLabel {
+  padding: 8px 10px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.swatchLabel strong {
+  display: block;
+  font-size: 0.76rem;
+}
+
+.swatchLabel code {
+  color: var(--muted);
+}
+
+.exampleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.specimen {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.specimen + .specimen {
+  margin-top: 14px;
+}
+
+.typeSpecimen {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.typeSpecimen + .typeSpecimen {
+  margin-top: 10px;
+}
+
+.typeMeta {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.shell :global(code) {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}

@@ -54,7 +54,11 @@
   --surface: var(--neutral-0);
   --surface-soft: var(--primary-100);
   --ink: var(--neutral-900);
-  --muted: var(--neutral-500);
+  /* Not neutral-500 (#66756c): that passes AA against --bg/--surface but only 4.05:1 against
+     --surface-soft (a green-tinted background, not just lighter) - a real failure axe-core caught
+     on .status (portal.module.css) and the design system reference page (axe A5/A6). Darkened
+     slightly so every existing --muted-on-*-background pairing clears 4.5:1 with margin. */
+  --muted: #5c6a62;
   --line: var(--neutral-200);
   --green: var(--primary-500);
   --green-strong: var(--primary-700);

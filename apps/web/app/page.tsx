@@ -104,7 +104,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <footer className={styles.footer}>FODIP Digital 2030 — Plateforme de gestion, de financement, de suivi et de pilotage des PME accompagnées par le FODIP en Guinée</footer>
+      <footer className={styles.footer}>FODIP Digital 2030 — Plateforme de gestion, de financement, de suivi et de pilotage des PME accompagnées par le FODIP en Guinée · <Link href="/design-system">Design system</Link></footer>
     </main>
   );
 }
