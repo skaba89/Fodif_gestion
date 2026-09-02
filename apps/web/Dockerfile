@@ -20,4 +20,7 @@ COPY --from=build /app/apps/web/package.json ./apps/web/package.json
 COPY --chown=node:node --from=build /app/apps/web/.next ./apps/web/.next
 USER node
 EXPOSE 3000
-CMD ["node", "apps/web/node_modules/next/dist/bin/next", "start", "apps/web", "-p", "3000"]
+# Shell form (not exec/JSON form) so ${PORT} is actually substituted: docker-compose never sets
+# it (falls back to 3000, unchanged), but a host like Render assigns its own PORT and expects the
+# container to bind to it.
+CMD node apps/web/node_modules/next/dist/bin/next start apps/web -p ${PORT:-3000}

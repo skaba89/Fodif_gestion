@@ -9,6 +9,7 @@ export default function CommitteeLoginPage() {
       redirectTo="/comite/dossiers"
       allowedRoles={['COMITE_FINANCEMENT', 'SUPER_ADMIN']}
       deniedMessage="Ce compte ne possède pas le rôle Comité de financement."
+      oidcPortal="comite"
     />
   );
 }

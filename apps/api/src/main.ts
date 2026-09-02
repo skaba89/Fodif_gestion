@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { JsonLoggerService } from './common/json-logger.service';
@@ -17,6 +18,9 @@ async function bootstrap() {
   });
   const config = app.get(ConfigService);
 
+  // Only ever used to read back the short-lived, httpOnly OIDC flow cookie (auth/oidc) - the API
+  // sets no other cookies and never trusts one for authenticating a regular request.
+  app.use(cookieParser());
   app.use(
     helmet({
       // This is a pure JSON API; the only HTML it serves is the Swagger UI at

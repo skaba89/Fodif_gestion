@@ -26,10 +26,11 @@ séparément, pour permettre un avancement continu sans big-bang.
 | B1 | RBAC fin, JWT, hachage bcrypt, isolation multi-tenant PME testée en e2e | Fait (MVP initial) |
 | B2 | Rate limiting, `helmet`, filtre d'exceptions global (pas de fuite d'erreur interne), MFA TOTP fonctionnel | **Fait** (PR #12) |
 | B3 | MFA imposé (non simplement proposé) pour les rôles sensibles — le code prévoyait déjà `admin-policy.js#requiresMfa`/`PRIVILEGED_ROLES` (`SUPER_ADMIN`, `DIRECTION_FODIP`, `AGENT_FODIP`, `ANALYSTE`, `COMITE_FINANCEMENT`, `AUDITEUR`) mais la fonction n'était jamais appelée | **Fait** (cette itération) |
-| B4 | SSO/SAML ou OpenID Connect pour les agents publics (fédération avec un IdP gouvernemental) — **nécessite de choisir un fournisseur d'identité avant de démarrer** | À faire — décision requise |
+| B4 | SSO/OpenID Connect pour les agents publics. Décision prise : Keycloak — open source, auto-hébergeable, sans dépendance à un fournisseur cloud, standard OpenID Connect (n'importe quel autre IdP compatible OIDC fonctionnera aussi côté API sans changement) | **Fait** (cette itération) |
 | B5 | Chiffrement au repos des données personnelles sensibles (au-delà du hachage des mots de passe et du chiffrement du secret MFA déjà en place) — **nécessite un gestionnaire de secrets/KMS en production** | À faire — décision d'infrastructure requise |
 | B6 | Politique de rétention et purge des données, export/suppression sur demande (droits des personnes) | À faire |
-| B7 | Séparation réelle DEV / REC / PPD / PROD (actuellement un seul `docker-compose.yml` de démonstration locale) — **nécessite le choix d'un hébergeur/cloud cible** | À faire — décision requise |
+| B7a | Dossier de déploiement d'un environnement de **test** (Render/Netlify + Neon/Supabase), en attendant le choix de l'hébergeur institutionnel définitif — `docs/15-DEPLOIEMENT-TEST.md` | **Fait** (cette itération) |
+| B7b | Séparation réelle DEV / REC / PPD / PROD sur l'hébergeur institutionnel définitif (actuellement un seul `docker-compose.yml` de démonstration locale + l'environnement de test B7a) — **nécessite le choix d'un hébergeur/cloud cible** | À faire — décision requise |
 | B8 | Revue de sécurité externe / test d'intrusion avant mise en production | À faire, en fin de parcours |
 
 ## Axe C — Fiabilité & observabilité SaaS
@@ -65,7 +66,35 @@ Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.servic
 - Chaque phase marquée « décision requise » bloque sur un choix qui n'appartient pas à
   l'équipe technique seule (fournisseur SSO, hébergeur cible, outil d'observabilité) : à trancher
   avec la Direction avant implémentation plutôt que de figer un choix par défaut.
-- Les phases sans dépendance externe (A1-A3, A5-A6, B6, C1-C3a, C5) peuvent démarrer sans
+- Les phases sans dépendance externe (A1-A3, A5-A6, B6, B7a, C1-C3a, C5) peuvent démarrer sans
   attendre ces décisions.
 - Chaque phase livrée suit la même discipline que le reste du dépôt : tests, `pnpm lint`,
   `pnpm test:prepush`, build API et web verts avant fusion.
+
+Détails B4 (`apps/api/src/auth/oidc/`, `apps/web/app/api/session/oidc/`) :
+
+- flux « Authorization Code + PKCE » standard OIDC, avec `state`/`nonce` et vérificateur PKCE
+  générés à l'aller et vérifiés au retour (protection CSRF et rejeu) ; l'API reste sans état côté
+  serveur (pas de Redis/session store) — ces éléments transitent dans un cookie `httpOnly` signé
+  et à très courte durée de vie (`fodip_oidc_flow`, 10 min) plutôt que dans une session serveur ;
+- **authentification, pas provisioning** : une identité OIDC valide doit correspondre à un compte
+  déjà actif dans la base (`users.actif`) — aucune création de compte ni attribution de rôle
+  automatique à la connexion. Un compte inconnu ou inactif est rejeté avec un message explicite ;
+- le MFA TOTP existant n'est jamais contourné : si le compte résolu a `mfa_required`, le retour
+  d'OIDC déclenche exactement le même challenge MFA que la connexion par mot de passe
+  (`MfaService#beginChallenge`), avant l'émission du token de session final ;
+- la redirection navigateur `/auth/oidc/callback` → page de connexion du portail ne transporte
+  jamais le token de session final ni le secret TOTP dans l'URL, seulement un jeton de livraison
+  opaque à usage unique et à très courte durée (2 min), échangé côté serveur (BFF) contre la
+  session — analogue à un `authorization_code` OAuth ;
+- désactivé par défaut : `OidcService#isEnabled()` exige les quatre variables
+  `OIDC_ISSUER_URL`/`OIDC_CLIENT_ID`/`OIDC_CLIENT_SECRET`/`OIDC_REDIRECT_URI` ; en leur absence,
+  `/auth/oidc/login` et `/auth/oidc/callback` répondent 404 et aucun bouton SSO n'apparaît côté
+  web (voir `.env.example`). Le portail PME/entrepreneur ne propose pas le SSO (comptes externes,
+  hors périmètre agents publics) ;
+- vérification effectuée cette itération : suite de tests unitaires dédiée (mock du client OIDC),
+  build et lint API/web propres, vérification visuelle du bouton SSO sur les quatre portails
+  institutionnels et de son absence sur le portail PME. Aucun fournisseur d'identité OIDC réel
+  (Keycloak ou autre) n'était disponible dans cet environnement d'exécution : le round-trip complet
+  navigateur → IdP → callback n'a donc pas été exercé en conditions réelles et devra l'être avant
+  mise en production.

@@ -17,6 +17,10 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY apps/api/scripts ./apps/api/scripts
+# database/ isn't needed to run the API, only to run migrate.js as a one-off job/shell command
+# against a hosted database after a deploy - see docs/15-DEPLOIEMENT-TEST.md.
+COPY database ./database
 USER node
 EXPOSE 4000
 CMD ["node", "apps/api/dist/main.js"]

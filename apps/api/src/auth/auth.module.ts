@@ -7,6 +7,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { MfaController } from './mfa/mfa.controller';
 import { MfaService } from './mfa/mfa.service';
+import { OidcController } from './oidc/oidc.controller';
+import { OidcService } from './oidc/oidc.service';
 import { SessionTokenService } from './session-token.service';
 
 @Module({
@@ -24,8 +26,8 @@ import { SessionTokenService } from './session-token.service';
       }),
     }),
   ],
-  controllers: [AuthController, MfaController],
-  providers: [AuthService, MfaService, SessionTokenService],
+  controllers: [AuthController, MfaController, OidcController],
+  providers: [AuthService, MfaService, SessionTokenService, OidcService],
   exports: [JwtModule],
 })
 export class AuthModule {}
