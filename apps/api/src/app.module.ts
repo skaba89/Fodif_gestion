@@ -11,6 +11,7 @@ import { AuthorizationGuard } from './common/guards/authorization.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { DatabaseModule } from './database/database.module';
 import { DocumentsModule } from './documents/documents.module';
+import { FinancingsModule } from './financings/financings.module';
 import { HealthController } from './health/health.controller';
 import { ProgramsModule } from './programs/programs.module';
 import { ScoringModule } from './scoring/scoring.module';
@@ -26,6 +27,7 @@ import { ScoringModule } from './scoring/scoring.module';
     AgentApplicationsModule,
     AnalyticsModule,
     DocumentsModule,
+    FinancingsModule,
     ProgramsModule,
     ScoringModule,
   ],

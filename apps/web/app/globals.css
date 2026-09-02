@@ -225,6 +225,7 @@ h3 {
   background: var(--surface);
   color: var(--ink);
   font-weight: 700;
+  text-decoration: none;
 }
 
 .profile-button {
