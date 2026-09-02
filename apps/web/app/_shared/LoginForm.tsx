@@ -1,10 +1,11 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import styles from '../entrepreneur/portal.module.css';
 
 type Step = 'credentials' | 'setup' | 'verify';
+type OidcPortal = 'agent' | 'comite' | 'direction' | 'administration';
 
 interface SessionResponse {
   message?: string;
@@ -26,17 +27,29 @@ export interface LoginFormProps {
   /** 'narrow' renders a single centered card (used by /administration); 'wide' matches the other portals. */
   variant?: 'wide' | 'narrow';
   replaceHistory?: boolean;
+  /** Offers "sign in with SSO" for this portal when OIDC (docs/14 axe B4) is configured on the API.
+   * Omit for portals that shouldn't offer it (entrepreneur/PME accounts aren't institutional). */
+  oidcPortal?: OidcPortal;
 }
 
 /**
- * Shared login flow for every portal. Handles the plain email/password case as well as the
- * two-step TOTP flow returned by the API for accounts flagged `mfa_required`: first-time login
- * returns an enrollment challenge (secret + otpauth URI) that must be confirmed with one valid
- * code, while a later login on an already-enrolled account returns a plain verification
- * challenge. Neither challenge sets the session cookie by itself - only a successful
- * /api/session/mfa/confirm or /api/session/mfa/verify call does.
+ * Shared login flow for every portal. Handles the plain email/password case, the two-step TOTP
+ * flow returned by the API for accounts flagged `mfa_required` (enrollment then verification, or
+ * verification alone once enrolled), and resuming an OpenID Connect sign-in: the API's
+ * /auth/oidc/callback redirects the browser straight back to this same page with an
+ * `oidc_token` (or `oidc_error`) query param, which is picked up on mount and exchanged exactly
+ * like an MFA challenge would be - it may itself resolve to an MFA challenge, since OIDC doesn't
+ * bypass our own TOTP requirement for accounts that have it.
  */
-export default function LoginForm({
+export default function LoginForm(props: LoginFormProps) {
+  return (
+    <Suspense fallback={<main className={props.variant === 'narrow' ? undefined : styles.main} />}>
+      <LoginFormInner {...props} />
+    </Suspense>
+  );
+}
+
+function LoginFormInner({
   eyebrow,
   title,
   lead,
@@ -45,8 +58,11 @@ export default function LoginForm({
   deniedMessage,
   variant = 'wide',
   replaceHistory = false,
+  oidcPortal,
 }: LoginFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const oidcToken = searchParams.get('oidc_token');
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,7 +70,7 @@ export default function LoginForm({
   const [challenge, setChallenge] = useState('');
   const [secret, setSecret] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => Boolean(oidcToken));
 
   async function postJson(path: string, body: unknown): Promise<SessionResponse> {
     const response = await fetch(path, {
@@ -116,6 +132,38 @@ export default function LoginForm({
     }
   }
 
+  useEffect(() => {
+    if (oidcToken) {
+      postJson('/api/session/oidc/finish', { token: oidcToken })
+        .then(async (data) => {
+          if (data.mfaSetupRequired && data.mfaChallenge && data.secret) {
+            setChallenge(data.mfaChallenge);
+            setSecret(data.secret);
+            setStep('setup');
+            return;
+          }
+          if (data.mfaRequired && data.mfaChallenge) {
+            setChallenge(data.mfaChallenge);
+            setStep('verify');
+            return;
+          }
+          await finalizeSession(data);
+        })
+        .catch((exception) => setError(exception instanceof Error ? exception.message : 'Connexion impossible'))
+        .finally(() => setLoading(false));
+      return;
+    }
+    const oidcError = searchParams.get('oidc_error');
+    if (oidcError === 'account_not_found') {
+      setError('Aucun compte actif ne correspond à cette identité. Contactez un administrateur.');
+    } else if (oidcError) {
+      setError('La connexion via le fournisseur d’identité a échoué. Réessayez, ou utilisez votre mot de passe.');
+    }
+    // Runs once on mount only: this is consuming a one-time redirect result, not reacting to
+    // ongoing URL changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const card = variant === 'narrow'
     ? { className: `${styles.card} ${styles.formCard}`, style: { maxWidth: 560, margin: '50px auto' } }
     : { className: `${styles.card} ${styles.formCard} ${styles.section}` };
@@ -141,6 +189,11 @@ export default function LoginForm({
           {error && <div className={styles.notice} role="alert" data-testid="login-error">{error}</div>}
           <div className={styles.buttonRow}>
             <button className={styles.primary} disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</button>
+            {oidcPortal && (
+              <a className={styles.secondary} href={`/api/session/oidc/start?portal=${oidcPortal}`}>
+                Se connecter avec un compte institutionnel (SSO)
+              </a>
+            )}
           </div>
         </form>
       )}

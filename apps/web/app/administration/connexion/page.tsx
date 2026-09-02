@@ -11,6 +11,7 @@ export default function AdministrationLoginPage() {
       deniedMessage="Compte super-administrateur requis."
       variant="narrow"
       replaceHistory
+      oidcPortal="administration"
     />
   );
 }

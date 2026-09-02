@@ -37,6 +37,37 @@ Détails d'implémentation (`auth/mfa/mfa.service.ts`) :
 - chaque code TOTP n'est acceptable qu'une seule fois : le compteur temporel accepté est stocké (`mfa_last_used_step`) et toute réutilisation, même dans la fenêtre de validité, est rejetée ;
 - `POST /auth/mfa/confirm` et `POST /auth/mfa/verify` sont limités à 8 tentatives / 5 minutes, par jeton de défi (voir ci-dessous).
 
+## SSO institutionnel (OpenID Connect)
+
+Optionnel, désactivé par défaut. Permet aux agents publics (portails `agent`, `comite`,
+`direction`, `administration` — pas le portail PME/entrepreneur) de se connecter via un
+fournisseur d'identité institutionnel (Keycloak ou tout autre IdP compatible OpenID Connect)
+plutôt que par mot de passe. Voir `docs/14-ROADMAP-SAAS-PREMIUM.md` (axe B4) pour le contexte de
+décision.
+
+- activé uniquement si les quatre variables `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`,
+  `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI` sont renseignées (`OidcService#isEnabled`) ; sinon
+  `GET /auth/oidc/login` et `GET /auth/oidc/callback` répondent 404 et aucun lien SSO n'apparaît
+  sur les pages de connexion ;
+- flux « Authorization Code + PKCE » standard (`openid-client`) : `GET /auth/oidc/login?portal=...`
+  redirige vers le fournisseur d'identité avec un `code_challenge` PKCE, un `state` et un `nonce` ;
+  `GET /auth/oidc/callback` vérifie ces trois éléments au retour. L'API restant sans état côté
+  serveur, ils transitent dans un cookie `httpOnly`/`sameSite=lax` signé et à courte durée de vie
+  (`fodip_oidc_flow`, 10 minutes, scope `/api/v1/auth/oidc`) plutôt que dans une session serveur ;
+- **authentification, jamais provisioning** : le claim `email` renvoyé par l'IdP doit correspondre
+  à un compte déjà actif en base (`users.actif`) — aucun compte ni rôle n'est créé automatiquement
+  à la connexion. Un compte inconnu ou inactif est renvoyé vers la page de connexion avec
+  `?oidc_error=account_not_found` ;
+- le MFA TOTP existant n'est **jamais contourné** : si le compte résolu a `mfa_required = true`,
+  l'étape suivante déclenche exactement le même défi que la connexion par mot de passe
+  (`MfaService#beginChallenge`) avant l'émission du token final ;
+- la redirection navigateur du callback vers la page de connexion du portail ne transporte jamais
+  le token de session final : uniquement un jeton de livraison opaque à usage unique et très
+  courte durée (`?oidc_token=...`, 2 minutes), signé avec une clé dérivée dédiée
+  (`security-policy.js#deriveSecret`, distincte de celle des jetons de défi MFA et des tokens
+  d'accès), échangé côté serveur par `POST /auth/oidc/exchange` — analogue à un
+  `authorization_code` OAuth, jamais à une session utilisable directement.
+
 ## Protections API transverses
 
 - `helmet` sur toute réponse HTTP (HSTS, `X-Frame-Options`, `X-Content-Type-Options`, etc.) ; la CSP par défaut reste désactivée car `/api/docs` sert l'interface Swagger, qui a besoin de scripts/styles inline.

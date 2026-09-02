@@ -87,4 +87,11 @@ describe('FODIP API', () => {
   it('MFA challenge routes reject a well-formed but invalid or expired challenge', async () => {
     await request(app.getHttpServer()).post('/api/v1/auth/mfa/verify').send({ mfaChallenge: 'not-a-real-token', code: '123456' }).expect(401);
   });
+
+  it('OIDC routes stay public; status reflects it is unconfigured in this environment', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/auth/oidc/status').expect(200);
+    expect(response.body).toEqual({ enabled: false });
+    await request(app.getHttpServer()).get('/api/v1/auth/oidc/login?portal=agent').expect(404);
+    await request(app.getHttpServer()).post('/api/v1/auth/oidc/exchange').send({ token: 'not-a-real-token' }).expect(401);
+  });
 });

@@ -9,6 +9,7 @@ export default function AgentLoginPage() {
       redirectTo="/agent/dossiers"
       allowedRoles={['AGENT_FODIP', 'SUPER_ADMIN']}
       deniedMessage="Ce compte ne possède pas le rôle Agent FODIP."
+      oidcPortal="agent"
     />
   );
 }

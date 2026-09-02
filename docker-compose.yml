@@ -93,6 +93,13 @@ services:
       STORAGE_BUCKET: fodip-documents
       STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-fodip_local}
       STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fodip_local_secret}
+      # Institutional SSO (OpenID Connect, e.g. Keycloak) - optional, axis B4. Unset by default
+      # (empty values keep OidcService.isEnabled() false) so the local demo stays on
+      # email/password + TOTP only. Set all four on the host to try SSO against a local IdP.
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
     ports:
       - "${API_PORT:-4000}:4000"
     healthcheck:
@@ -113,6 +120,10 @@ services:
     environment:
       NODE_ENV: production
       API_BASE_URL: http://api:4000
+      # Browser-reachable API URL, distinct from the Docker-internal API_BASE_URL above: needed
+      # so the OIDC "sign in with SSO" link can redirect the browser straight to the API (which
+      # the browser cannot reach via the `api` service name). Only used when OIDC is enabled.
+      API_PUBLIC_URL: http://localhost:${API_PORT:-4000}
       COOKIE_SECURE: "false"
     ports:
       - "${WEB_PORT:-3000}:3000"
