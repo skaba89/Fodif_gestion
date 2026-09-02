@@ -8,7 +8,10 @@ institutionnel définitif (`docs/14-ROADMAP-SAAS-PREMIUM.md`, phase B7). Il n'es
 de mise en production :
 
 - pas de séparation DEV/REC/PPD/PROD réelle (B7) ;
-- pas de sauvegardes automatisées ni de plan de reprise (C6) ;
+- pas de sauvegardes automatisées ni de plan de reprise complet (C6) — le mécanisme de sauvegarde
+  et de restauration existe et est testé en continu (`docs/16-SAUVEGARDES-RESTAURATION.md`), mais
+  rien ne le planifie encore automatiquement sur cet environnement de test (Neon/Supabase gèrent
+  déjà leurs propres sauvegardes managées, indépendamment de ce mécanisme) ;
 - pas de chiffrement au repos géré par un KMS dédié (B5) ;
 - pas de revue de sécurité externe (B8).
 

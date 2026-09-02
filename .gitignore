@@ -35,6 +35,9 @@ Thumbs.db
 *.db
 local-data/
 
+# Postgres backups (scripts/backup-postgres.sh, axe C6) - operational output, never committed
+backups/
+
 # Infrastructure state
 .terraform/
 *.tfstate

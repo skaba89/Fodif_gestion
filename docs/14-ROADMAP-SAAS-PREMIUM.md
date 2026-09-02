@@ -45,7 +45,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | C3b | Métriques applicatives (latence, débit, taux d'erreur) — a un chevauchement naturel avec C4 (nécessite un consommateur : dashboard ou backend de métriques cible) | À faire |
 | C4 | Tableau de bord d'exploitation (latence, taux d'erreur, santé des files d'attente) — **nécessite un backend d'observabilité cible (Grafana/Datadog/...)** | À faire — décision requise |
 | C5 | Pagination et limites de charge sur les listes à fort volume (dossiers, notifications, audit) à mesure que le nombre de PME grandit | **Fait** (cette itération) |
-| C6 | Sauvegardes PostgreSQL automatisées et testées (restauration), plan de reprise après sinistre | À faire — décision d'infrastructure requise |
+| C6 | Sauvegardes PostgreSQL automatisées et testées (restauration), plan de reprise après sinistre | **Partiel** (cette itération) — mécanisme de sauvegarde/restauration construit et testé en continu par la CI (`docs/16-SAUVEGARDES-RESTAURATION.md`) ; planification, réplication hors site et objectifs RPO/RTO restent liés à la décision d'hébergement (B7b) |
 
 Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.service.ts`) :
 
@@ -378,3 +378,37 @@ Détails B5, partiel (`apps/api/src/security-policy.js`, `database/013_pii_encry
   build api+web, `python3 scripts/check-migrations.py` (16 migrations validées), 106 tests API,
   `npx playwright test --list` (12 tests découverts) tous verts ; exécution réelle des specs
   Playwright laissée à la CI comme pour les précédentes (aucun démon Docker dans ce bac à sable).
+
+Détails C6, partiel (`scripts/backup-postgres.sh`, `scripts/restore-postgres.sh`,
+`scripts/test-backup-restore.sh`, `docs/16-SAUVEGARDES-RESTAURATION.md`) :
+
+- même découpage que B5/B6 : le **mécanisme** de sauvegarde/restauration ne dépend d'aucune
+  décision d'hébergement et se construit maintenant ; sa **planification** en production (fréquence,
+  réplication hors site, rétention, RPO/RTO formels) n'a de sens qu'une fois la cible choisie (axe
+  B7b) - un PostgreSQL managé (Neon, Supabase, RDS...) a en général ses propres sauvegardes
+  intégrées à réutiliser plutôt qu'à dupliquer, un PostgreSQL auto-hébergé a besoin exactement de ce
+  mécanisme, planifié par l'ordonnanceur de tâches de la plateforme cible ;
+- les trois scripts passent par le conteneur `postgres:16.10-alpine` de `docker-compose.yml`
+  (`docker compose exec`) plutôt que par un `pg_dump`/`pg_restore` installé sur l'hôte - mêmes
+  outils client que le serveur, garantis compatibles, exactement le principe déjà appliqué par les
+  conteneurs `migrations`/`seed` du même fichier ;
+- `restore-postgres.sh` refuse de s'exécuter sans `--force` quand la cible est la base réelle
+  (par défaut) - une restauration écrase des données, une erreur de frappe ne doit pas y conduire
+  silencieusement. `--target-db` restaure dans une base différente (typiquement jetable) pour
+  vérifier une sauvegarde sans toucher à la base réelle ;
+- le point important de l'axe C6 n'est pas « sauvegarder » mais « sauvegarder **et vérifier que ça
+  se restaure** » : `test-backup-restore.sh` sauvegarde la base réelle, restaure la sauvegarde dans
+  une base jetable, puis compare le nombre de lignes de chaque table entre l'originale et la copie
+  restaurée - table par table, sans lister les tables à la main (elles sont énumérées dynamiquement
+  via `information_schema.tables`), pour ne pas se dérégler au fil des futures migrations. Ce script
+  tourne désormais à chaque exécution de la CI (`.github/workflows/ci.yml`, juste après le test de
+  fumée Docker existant), contre une vraie instance PostgreSQL réellement seedée - une régression du
+  mécanisme casserait la CI plutôt que de rester silencieuse jusqu'à une tentative de reprise après
+  sinistre réelle ;
+- vérifié : `bash -n` sur les trois scripts (ajouté à `scripts/test-prepush.sh`, comme pour
+  `docker-smoke.sh`), `docker compose config --quiet`, et une relecture attentive de chaque commande
+  (`pg_dump`/`pg_restore` via `docker compose exec -T`, redirections stdin/stdout, `psql -c` répétés
+  pour créer/supprimer la base de test) contre les comportements documentés de ces outils. Comme
+  pour les précédents scripts dépendant de Docker, leur exécution réelle contre une vraie base
+  n'a pas pu être vérifiée dans ce bac à sable (aucun démon Docker disponible) - la CI, qui exécute
+  désormais `test-backup-restore.sh` à chaque run, en apportera la première confirmation réelle.
