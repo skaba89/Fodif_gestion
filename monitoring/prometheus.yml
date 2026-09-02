@@ -1,0 +1,13 @@
+# FODIP Digital 2030 - Axe C4 (docs/14-ROADMAP-SAAS-PREMIUM.md)
+#
+# Scrapes the API's own /metrics endpoint (axe C3b, apps/api/src/metrics/). "api" here is the
+# Docker Compose service name, resolved on the internal compose network - the same way the API
+# itself reaches "postgres" and "minio" (see docker-compose.yml).
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: fodip-api
+    metrics_path: /api/v1/metrics
+    static_configs:
+      - targets: ["api:4000"]

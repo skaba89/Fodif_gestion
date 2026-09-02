@@ -27,6 +27,17 @@ describe('FODIP API', () => {
     expect(response.body.service).toBe('fodip-api');
   });
 
+  it('GET /api/v1/metrics remains public and exposes a Prometheus scrape (axe C3b)', async () => {
+    // Public for the same reason as /health: Prometheus never carries a bearer token.
+    const response = await request(app.getHttpServer()).get('/api/v1/metrics').expect(200);
+    expect(response.headers['content-type']).toMatch(/^text\/plain/);
+    expect(response.text).toContain('fodip_api_http_request_duration_seconds');
+    // The GET /api/v1/health call just above is itself one already-recorded request - route is
+    // Express's matched pattern including the global prefix (verified against a real running
+    // server, not assumed: request.route.path here is "/api/v1/health", not "/health").
+    expect(response.text).toContain('route="/api/v1/health"');
+  });
+
   it('GET /api/v1/auth/me is protected by default', async () => {
     await request(app.getHttpServer()).get('/api/v1/auth/me').expect(401);
   });

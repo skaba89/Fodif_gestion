@@ -1,0 +1,11 @@
+# FODIP Digital 2030 - Axe C4. Tells Grafana to load every dashboard JSON file in
+# monitoring/grafana/dashboards/ on startup, so the operations dashboard is there the first time
+# anyone opens Grafana - not something to click through a UI to recreate.
+apiVersion: 1
+
+providers:
+  - name: FODIP
+    folder: FODIP
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards/files
