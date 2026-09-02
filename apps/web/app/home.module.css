@@ -1,0 +1,202 @@
+.shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 85% -10%, rgba(229, 187, 64, 0.16), transparent 40%),
+    var(--bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px clamp(18px, 4vw, 54px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-300), var(--accent-600));
+  color: var(--primary-800);
+  font-weight: 900;
+}
+
+.brandText strong,
+.brandText span {
+  display: block;
+}
+
+.brandText strong {
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+}
+
+.brandText span {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.badge {
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hero {
+  padding: clamp(20px, 5vw, 40px) clamp(18px, 4vw, 54px) 8px;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--green-strong);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 900px;
+  margin: 0;
+  font-size: clamp(2.1rem, 5vw, 3.4rem);
+  line-height: 1.03;
+  letter-spacing: -0.045em;
+}
+
+.lead {
+  max-width: 680px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.portals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 36px clamp(18px, 4vw, 54px) 0;
+}
+
+.portalCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: var(--ink);
+  transition: box-shadow var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+
+.portalCard:hover {
+  border-color: var(--green);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.portalIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--primary-100);
+  color: var(--primary-700);
+  font-weight: 900;
+}
+
+.portalCard h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.portalCard p {
+  margin: 0;
+  flex-grow: 1;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.portalCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--green-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.principles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 48px clamp(18px, 4vw, 54px) 0;
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+}
+
+.principle strong,
+.principle span {
+  display: block;
+}
+
+.principle strong {
+  font-size: 0.86rem;
+}
+
+.principle span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.footer {
+  padding: 32px clamp(18px, 4vw, 54px) 40px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+@media (max-width: 1000px) {
+  .portals {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .principles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .portals,
+  .principles {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

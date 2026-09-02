@@ -143,6 +143,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/11-DATA-DASHBOARD.md` — vues analytiques PostgreSQL, définitions KPI et cockpit Direction
 - `docs/12-CYCLE-FINANCIER.md` — financements, décaissements, échéances, remboursements, impact et audit
 - `docs/13-NOTIFICATIONS-ADMINISTRATION.md` — notifications métier, utilisateurs, rôles et protections administratives
+- `docs/14-ROADMAP-SAAS-PREMIUM.md` — feuille de route identité visuelle, conformité étatique, fiabilité SaaS
 
 ## Sécurité
 

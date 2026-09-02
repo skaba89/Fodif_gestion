@@ -1,1 +1,145 @@
-.filterBar{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:18px 0;padding:16px 18px;background:#fff;border:1px solid #dfe7e2;border-radius:14px}.filterField{display:grid;gap:6px;min-width:210px}.filterField label{color:#66756c;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.filterField select{min-height:42px;padding:0 34px 0 11px;border:1px solid #d6e0da;border-radius:9px;background:#fff;color:#14231b;font:inherit}.freshness{margin-left:auto;color:#66756c;font-size:.76rem;line-height:1.45}.loading,.error{padding:28px;border:1px solid #dfe7e2;border-radius:16px;background:#fff;color:#66756c}.error{border-color:#ebc1b8;background:#fff4f1;color:#8b3525}.sectorList{display:grid;gap:14px}.sectorRow{display:grid;grid-template-columns:minmax(120px,1fr) minmax(100px,2fr) 42px;align-items:center;gap:12px;font-size:.82rem}.sectorRow strong{text-align:right}.secondaryMetric{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #edf1ee;font-size:.82rem}.secondaryMetric strong{color:#084e32;text-align:right}.sourceBadge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#dcefe5;color:#084e32;font-size:.68rem;font-weight:800}.filterSummary{margin:0;color:#66756c;font-size:.78rem;line-height:1.55}.reset{min-height:42px;padding:0 14px;border:0;border-radius:9px;background:#eef4f0;color:#0f6b45;font-weight:800}.filterBar select:focus,.reset:focus{outline:3px solid rgba(15,107,69,.18);outline-offset:1px}@media(max-width:680px){.filterBar{align-items:stretch}.filterField{min-width:100%}.freshness{margin-left:0}.sectorRow{grid-template-columns:100px 1fr 32px}}
+/* Direction cockpit extras, layered on top of ../entrepreneur/portal.module.css. */
+
+.filterBar {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.filterField {
+  display: grid;
+  gap: 6px;
+  min-width: 210px;
+}
+
+.filterField label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.filterField select {
+  min-height: 42px;
+  padding: 0 34px 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.freshness {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.loading,
+.error {
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.error {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger-strong);
+}
+
+.sectorList {
+  display: grid;
+  gap: 14px;
+}
+
+.sectorRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(100px, 2fr) 42px;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+}
+
+.sectorRow strong {
+  text-align: right;
+}
+
+.secondaryMetric {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.secondaryMetric strong {
+  color: var(--green-strong);
+  text-align: right;
+}
+
+.sourceBadge {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--success-soft);
+  color: var(--green-strong);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.filterSummary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.reset {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--green);
+  font-weight: 800;
+  transition: filter var(--duration-fast) var(--ease);
+}
+
+.reset:hover {
+  filter: brightness(0.97);
+}
+
+.filterBar select:focus-visible,
+.reset:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+@media (max-width: 680px) {
+  .filterBar {
+    align-items: stretch;
+  }
+
+  .filterField {
+    min-width: 100%;
+  }
+
+  .freshness {
+    margin-left: 0;
+  }
+
+  .sectorRow {
+    grid-template-columns: 100px 1fr 32px;
+  }
+}
