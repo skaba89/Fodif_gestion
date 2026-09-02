@@ -14,6 +14,7 @@ import { AuthorizationGuard } from './common/guards/authorization.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { DatabaseModule } from './database/database.module';
+import { DataRightsModule } from './data-rights/data-rights.module';
 import { DocumentsModule } from './documents/documents.module';
 import { FinancingsModule } from './financings/financings.module';
 import { HealthController } from './health/health.controller';
@@ -37,6 +38,7 @@ import { ScoringModule } from './scoring/scoring.module';
     AgentApplicationsModule,
     AnalyticsModule,
     AuditModule,
+    DataRightsModule,
     DocumentsModule,
     FinancingsModule,
     NotificationsModule,

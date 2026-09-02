@@ -108,7 +108,7 @@ export default function DirectionDashboardPage() {
     <section className="content">
       <header className="topbar">
         <div><p className="eyebrow">Cockpit national</p><h1>Vue d’ensemble</h1></div>
-        <div className="topbar-actions"><Link className="secondary-button" href="/notifications">Notifications</Link><Link className="secondary-button" href="/direction/financements">Gérer les financements</Link><span className={styles.sourceBadge}>Source vérifiée</span><ThemeToggle buttonClassName="theme-toggle" /><DirectionAccountMenu /></div>
+        <div className="topbar-actions"><Link className="secondary-button" href="/notifications">Notifications</Link><Link className="secondary-button" href="/mes-donnees">Mes données</Link><Link className="secondary-button" href="/direction/financements">Gérer les financements</Link><span className={styles.sourceBadge}>Source vérifiée</span><ThemeToggle buttonClassName="theme-toggle" /><DirectionAccountMenu /></div>
       </header>
 
       {dashboard && <section className={styles.filterBar} aria-label="Filtres du cockpit">

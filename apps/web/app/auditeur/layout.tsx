@@ -7,7 +7,7 @@ export default function AuditeurLayout({ children }: { children: React.ReactNode
   return <div className={styles.shell}>
     <header className={styles.header}>
       <Link href="/auditeur/tableau-de-bord" className={styles.brand}><span className={styles.mark}>FD</span><span className={styles.brandText}><strong>FODIP DIGITAL</strong><span>Auditeur</span></span></Link>
-      <nav className={styles.nav} aria-label="Navigation Auditeur"><Link href="/auditeur/tableau-de-bord">Supervision</Link></nav>
+      <nav className={styles.nav} aria-label="Navigation Auditeur"><Link href="/auditeur/tableau-de-bord">Supervision</Link><Link href="/mes-donnees">Mes données</Link></nav>
       <div className={styles.headerActions}><ThemeToggle buttonClassName={styles.themeToggle} /><AuditeurAccountMenu /></div>
     </header>
     {children}

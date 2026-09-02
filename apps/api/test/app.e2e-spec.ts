@@ -73,6 +73,12 @@ describe('FODIP API', () => {
     await request(app.getHttpServer()).get('/api/v1/notifications').expect(401);
   });
 
+  it('data-rights routes are protected by default (axe B6)', async () => {
+    const userId = '11111111-1111-4111-8111-111111111111';
+    await request(app.getHttpServer()).get('/api/v1/data-rights/export').expect(401);
+    await request(app.getHttpServer()).post(`/api/v1/data-rights/users/${userId}/anonymize`).expect(401);
+  });
+
   it('Administration routes are protected by default', async () => {
     await request(app.getHttpServer()).get('/api/v1/administration/users').expect(401);
     await request(app.getHttpServer()).post('/api/v1/administration/users').send({}).expect(401);
