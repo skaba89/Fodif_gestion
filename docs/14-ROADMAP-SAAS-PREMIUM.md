@@ -58,7 +58,7 @@ Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.servic
 | Phase | Contenu | Statut |
 |---|---|---|
 | D1 | API partenaires bancaires (le rôle `PARTENAIRE_BANCAIRE` existe déjà en base). Décision de modèle prise avec la Direction : un partenaire voit l'union de deux périmètres — les financements où il est désigné banque correspondante, et les PME de son propre portefeuille client — et s'authentifie comme tout autre compte (pas de sous-système de clé API séparé) | **Fait** (cette itération) |
-| D2 | PWA installable et mode dégradé hors-ligne pour les agents en zone à connectivité limitée | À faire |
+| D2 | PWA installable et mode dégradé hors-ligne pour les agents en zone à connectivité limitée | **Fait** (cette itération) — manifeste, icônes, service worker et page de repli (`docs/18-PWA-HORS-LIGNE.md`) |
 | D3 | Internationalisation (le contenu est actuellement en français uniquement, cohérent avec le contexte national — à revisiter seulement si un besoin multilingue apparaît) | À évaluer |
 | D4 | Facturation / gestion multi-organisme si la plateforme est mutualisée au-delà du FODIP | À évaluer |
 
@@ -444,3 +444,29 @@ Détails C3b/C4 (`apps/api/src/metrics/`, `monitoring/`, `docs/17-METRIQUES-OBSE
   `app.e2e-spec.ts` confirmant `/metrics` public et servant un vrai scrape - la même famille de
   test que celle qui protège déjà `/health`) ; `pnpm lint`, `npx tsc --noEmit`,
   `docker compose config --quiet`, `python3 scripts/check-docker.py` tous verts.
+
+Détails D2 (`apps/web/public/manifest.webmanifest`, `apps/web/public/sw.js`,
+`apps/web/app/hors-ligne/`, `docs/18-PWA-HORS-LIGNE.md`) :
+
+- axe purement frontend, sans dépendance à une décision d'hébergeur - aucune raison de le laisser
+  « à faire » plutôt que de l'implémenter directement ;
+- service worker écrit à la main (pas de Workbox), trois règles seulement : `/api/*` et toute
+  méthode non-GET traversent toujours le réseau (jamais de données de session ou personnelles
+  rejouées depuis un cache partagé) ; une navigation de page est réseau d'abord, avec repli vers
+  `/hors-ligne` (mis en cache à l'installation) seulement si `fetch()` échoue ; les fichiers
+  statiques hachés par contenu de Next sont cache d'abord ;
+- icônes générées par `scripts/generate-pwa-icons.py` (aucune dépendance image dans ce dépôt -
+  PNG assemblés à la main via `struct`/`zlib`), y compris une variante `maskable` recentrée dans
+  la zone de sécurité ~80 % du manifeste W3C ; un premier essai de padding par trait a cassé les
+  lettres du monogramme (autopsié et corrigé avant tout commit - voir l'historique du script) ;
+  version finale relue visuellement (image PNG rendue) avant d'être retenue ;
+- vérifié directement contre une vraie session Chromium (Playwright, même pipeline local sans
+  Docker que C3b/C4) : enregistrement et prise de contrôle du service worker, contenu exact du
+  cache du socle applicatif, contenu réel de la page `/hors-ligne` mise en cache, et absence de
+  régression sur les 17 tests e2e existants une fois le service worker actif sur chaque portail ;
+- limite trouvée en vérifiant plutôt que supposée : simuler une coupure réseau côté navigateur
+  (`context.setOffline`, `context.route().abort()`) ne bloque pas les requêtes que le service
+  worker émet lui-même - seule la page en émet dont Playwright peut intercepter dans cet
+  environnement. `apps/web/e2e/pwa.spec.ts` vérifie donc ce qui est réellement démontrable ici
+  plutôt qu'un scénario de bout en bout qui aurait pu passer même avec un service worker cassé ;
+  détail complet dans `docs/18-PWA-HORS-LIGNE.md`.

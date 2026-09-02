@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Public_Sans } from 'next/font/google';
+import ServiceWorkerRegistration from './_shared/ServiceWorkerRegistration';
 import './globals.css';
 
 // Public Sans is the typeface behind the U.S. Web Design System — a deliberate choice for a
@@ -16,6 +17,16 @@ const publicSans = Public_Sans({
 export const metadata: Metadata = {
   title: 'FODIP Digital 2030',
   description: 'Plateforme nationale de financement, suivi et pilotage des PME guinéennes',
+  // Axe D2 (docs/14-ROADMAP-SAAS-PREMIUM.md) - installable PWA. manifest/icons here (rather
+  // than hand-written <link> tags) so Next emits the correct <head> entries itself.
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
 };
 
 export const viewport = {
@@ -43,7 +54,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorkerRegistration />
+      </body>
     </html>
   );
 }

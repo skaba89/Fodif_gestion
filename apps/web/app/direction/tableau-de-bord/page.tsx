@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ThemeToggle from '../../_shared/ThemeToggle';
 import { DirectionAccountMenu } from '../components/DirectionAccountMenu';
@@ -29,7 +29,22 @@ type Dashboard = {
   freshness: { generatedAt: string; sourceUpdatedAt: string | null; source: string };
 };
 
-const navItems = ['Vue nationale', 'PME', 'Dossiers', 'Financements', 'Décaissements', 'Impact'];
+// Was a row of plain <span> elements up to this point - styled like links (.nav-item in
+// globals.css already had text-decoration/focus-visible rules for one) but with no href and no
+// click handler, so nothing past "Vue nationale" ever did anything. Each item now points
+// somewhere real: the two dedicated Direction routes, or an anchor into a section already
+// rendered further down this same page (no fabricated destination for a page that doesn't
+// exist yet - "Décaissements"/"Impact" are genuinely managed per financement on
+// /direction/financements, and this dashboard already has an aggregate "PME"/"Dossiers"/
+// "Impact" section to land on for the other three).
+const navItems: { label: string; href: string }[] = [
+  { label: 'Vue nationale', href: '/direction/tableau-de-bord' },
+  { label: 'PME', href: '/direction/tableau-de-bord#indicateurs' },
+  { label: 'Dossiers', href: '/direction/tableau-de-bord#pipeline' },
+  { label: 'Financements', href: '/direction/financements' },
+  { label: 'Décaissements', href: '/direction/financements' },
+  { label: 'Impact', href: '/direction/tableau-de-bord#impact' },
+];
 const statusLabels: Record<string, string> = {
   BROUILLON: 'Brouillon', SOUMIS: 'Soumis', EN_INSTRUCTION: 'En instruction',
   COMPLEMENT_REQUIS: 'Complément requis', PRET_COMITE: 'Prêt comité',
@@ -53,6 +68,7 @@ function formatDate(value: string | null): string {
 
 export default function DirectionDashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [regionId, setRegionId] = useState('');
   const [programmeId, setProgrammeId] = useState('');
@@ -101,7 +117,17 @@ export default function DirectionDashboardPage() {
     <aside className="sidebar" aria-label="Navigation principale">
       <div className="brand"><div className="brand-mark" aria-hidden="true">FD</div><div><strong>FODIP</strong><span>Digital 2030</span></div></div>
       <nav className="nav-list">
-        {navItems.map((item, index) => <span className={index === 0 ? 'nav-item active' : 'nav-item'} key={item}><span className="nav-dot" aria-hidden="true" />{item}</span>)}
+        {navItems.map((item) => {
+          // Only a plain page link (no #anchor) can meaningfully be "the current page" - an
+          // in-page anchor doesn't represent a distinct route to highlight against.
+          const isActive = !item.href.includes('#') && pathname === item.href;
+          return (
+            <Link className={isActive ? 'nav-item active' : 'nav-item'} href={item.href} key={item.label}>
+              <span className="nav-dot" aria-hidden="true" />
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
       <div className="sidebar-footer"><span className="environment">DIRECTION GÉNÉRALE</span><strong>Portail décisionnel</strong><small>Données consolidées PostgreSQL</small></div>
     </aside>
@@ -128,7 +154,7 @@ export default function DirectionDashboardPage() {
           <div className="hero-summary"><span>Montant approuvé</span><strong>{formatAmount(dashboard.kpis.montantApprouve)} GNF</strong><small>{formatAmount(dashboard.kpis.montantDecaisse)} GNF effectivement décaissés</small></div>
         </section>
 
-        <section className="stats-grid" aria-label="Indicateurs clés">
+        <section id="indicateurs" className="stats-grid" aria-label="Indicateurs clés">
           <article className="stat-card"><span>PME dans le portefeuille</span><div className="stat-value-row"><strong>{formatNumber(dashboard.kpis.pmeEnregistrees)}</strong></div><em className="neutral">Au moins un dossier dans le périmètre</em></article>
           <article className="stat-card"><span>Dossiers actifs</span><div className="stat-value-row"><strong>{formatNumber(dashboard.kpis.dossiersActifs)}</strong></div><em className="neutral">Soumis à prêt pour comité</em></article>
           <article className="stat-card"><span>Montants demandés</span><div className="stat-value-row"><strong>{formatAmount(dashboard.kpis.montantDemande)}</strong><small>GNF</small></div><em className="neutral">Hors brouillons</em></article>
@@ -139,12 +165,12 @@ export default function DirectionDashboardPage() {
 
         <section className="dashboard-grid">
           <article className="panel region-panel"><div className="panel-heading"><div><p className="eyebrow">Répartition territoriale</p><h3>Demandes par région</h3></div></div><div className="region-list">{dashboard.regions.length === 0 ? <p className={styles.filterSummary}>Aucune région pour ce périmètre.</p> : dashboard.regions.map((region) => <div className="region-row" key={region.id ?? region.nom}><span>{region.nom}</span><div className="bar-track" aria-hidden="true"><div className="bar-value" style={{ width: `${Math.round((region.montantDemande / maxRegionAmount) * 100)}%` }} /></div><strong>{formatAmount(region.montantDemande)}</strong></div>)}</div></article>
-          <article className="panel pipeline-panel"><div className="panel-heading"><div><p className="eyebrow">Instruction</p><h3>Pipeline des dossiers</h3></div></div><div className="pipeline-total"><strong>{formatNumber(dashboard.kpis.dossiersActifs)}</strong><span>dossiers actifs</span></div><div className="pipeline-list">{dashboard.pipeline.map((item) => <div className="pipeline-row" key={item.statut}><span>{statusLabels[item.statut] ?? item.statut}</span><strong>{item.total}</strong></div>)}</div></article>
+          <article id="pipeline" className="panel pipeline-panel"><div className="panel-heading"><div><p className="eyebrow">Instruction</p><h3>Pipeline des dossiers</h3></div></div><div className="pipeline-total"><strong>{formatNumber(dashboard.kpis.dossiersActifs)}</strong><span>dossiers actifs</span></div><div className="pipeline-list">{dashboard.pipeline.map((item) => <div className="pipeline-row" key={item.statut}><span>{statusLabels[item.statut] ?? item.statut}</span><strong>{item.total}</strong></div>)}</div></article>
         </section>
 
         <section className="dashboard-grid">
           <article className="panel"><div className="panel-heading"><div><p className="eyebrow">Portefeuille</p><h3>Dossiers par secteur</h3></div></div><div className={styles.sectorList}>{dashboard.sectors.map((sector) => <div className={styles.sectorRow} key={sector.id ?? sector.nom}><span>{sector.nom}</span><div className="bar-track" aria-hidden="true"><div className="bar-value" style={{ width: `${Math.round((sector.dossiers / maxSectorCases) * 100)}%` }} /></div><strong>{sector.dossiers}</strong></div>)}</div></article>
-          <article className="panel impact-panel"><div className="panel-heading"><div><p className="eyebrow">Impact mesuré</p><h3>Derniers suivis</h3></div></div><div className={styles.secondaryMetric}><span>Emplois maintenus</span><strong>{formatNumber(dashboard.impact.emploisMaintenus)}</strong></div><div className={styles.secondaryMetric}><span>PME suivies</span><strong>{formatNumber(dashboard.impact.entreprisesSuivies)}</strong></div><div className={styles.secondaryMetric}><span>Dirigeantes femmes</span><strong>{dashboard.impact.tauxDirigeantesFemmes.toLocaleString('fr-FR')} %</strong></div><div className={styles.secondaryMetric}><span>CA observé</span><strong>{formatAmount(dashboard.impact.chiffreAffaires)} GNF</strong></div></article>
+          <article id="impact" className="panel impact-panel"><div className="panel-heading"><div><p className="eyebrow">Impact mesuré</p><h3>Derniers suivis</h3></div></div><div className={styles.secondaryMetric}><span>Emplois maintenus</span><strong>{formatNumber(dashboard.impact.emploisMaintenus)}</strong></div><div className={styles.secondaryMetric}><span>PME suivies</span><strong>{formatNumber(dashboard.impact.entreprisesSuivies)}</strong></div><div className={styles.secondaryMetric}><span>Dirigeantes femmes</span><strong>{dashboard.impact.tauxDirigeantesFemmes.toLocaleString('fr-FR')} %</strong></div><div className={styles.secondaryMetric}><span>CA observé</span><strong>{formatAmount(dashboard.impact.chiffreAffaires)} GNF</strong></div></article>
         </section>
 
         <section className="dashboard-grid lower-grid">

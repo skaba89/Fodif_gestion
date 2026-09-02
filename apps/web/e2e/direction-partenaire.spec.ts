@@ -32,6 +32,26 @@ test.describe('Direction cockpit', () => {
     await expect(page.getByLabel('Région')).toHaveValue(/.+/);
     await expect(page.getByText('Réinitialiser')).toBeVisible();
 
+    // The sidebar used to render this nav as plain <span> elements with no href and no click
+    // handler - every entry but "Vue nationale" silently did nothing. Now real links: two route
+    // to a distinct page, three scroll to a section already rendered further down this same page.
+    await page.locator('.nav-list a', { hasText: 'PME' }).click();
+    await expect(page).toHaveURL(/#indicateurs$/);
+    await expect(page.locator('#indicateurs')).toBeInViewport();
+
+    await page.locator('.nav-list a', { hasText: 'Dossiers' }).click();
+    await expect(page).toHaveURL(/#pipeline$/);
+    await expect(page.locator('#pipeline')).toBeInViewport();
+
+    await page.locator('.nav-list a', { hasText: 'Impact' }).click();
+    await expect(page).toHaveURL(/#impact$/);
+    await expect(page.locator('#impact')).toBeInViewport();
+
+    // "Financements" and "Décaissements" both route to the dedicated page below - décaissements
+    // are managed per financing there, there is no separate global décaissements page.
+    await expect(page.locator('.nav-list a', { hasText: 'Financements' })).toHaveAttribute('href', '/direction/financements');
+    await expect(page.locator('.nav-list a', { hasText: 'Décaissements' })).toHaveAttribute('href', '/direction/financements');
+
     await page.getByRole('link', { name: 'Gérer les financements' }).click();
     await expect(page).toHaveURL(/\/direction\/financements$/);
     await expect(page.getByText('FIN-2026-DEMO01')).toBeVisible();
