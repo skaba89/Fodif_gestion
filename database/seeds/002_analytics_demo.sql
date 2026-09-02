@@ -143,3 +143,29 @@ VALUES
     ('84000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000001',
      NULL, CURRENT_DATE - 3, 2550000000, 22, 12, 10, 13, 4, 18, 1900000000)
 ON CONFLICT (id) DO NOTHING;
+
+-- A matching audit trail for the business objects above, so auditeur@fodip.local's journal
+-- (axe B9) is not empty on first login - the app itself only ever writes audit_logs from live
+-- actions (see e.g. committee.repository.ts, financings.repository.ts), and none of the rows
+-- inserted directly by seed SQL above went through those code paths. Backdated to line up with
+-- the dates already implied by decisions_comite.date_decision/financements.date_signature/
+-- suivis_impact.periode above, so the journal reads as a coherent history rather than everything
+-- happening at seed time.
+INSERT INTO audit_logs (id, utilisateur_id, action, entity_type, entity_id, new_values, created_at)
+VALUES
+    ('85000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000003',
+     'COMMITTEE_DECISION', 'DOSSIER_FINANCEMENT', '60000000-0000-4000-8000-000000000004',
+     '{"decision": "APPROUVE", "montantApprouve": 550000000}', NOW() - INTERVAL '20 days'),
+    ('85000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000003',
+     'COMMITTEE_DECISION', 'DOSSIER_FINANCEMENT', '60000000-0000-4000-8000-000000000006',
+     '{"decision": "REJETE"}', NOW() - INTERVAL '32 days'),
+    ('85000000-0000-4000-8000-000000000003', '50000000-0000-4000-8000-000000000004',
+     'CREATE_FINANCING', 'FINANCEMENT', '80000000-0000-4000-8000-000000000001',
+     '{"numeroFinancement": "FIN-2026-DEMO01", "montantAccorde": 550000000}', CURRENT_DATE - 18),
+    ('85000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000004',
+     'CREATE_IMPACT', 'SUIVI_IMPACT', '84000000-0000-4000-8000-000000000002',
+     '{"emploisCrees": 4, "chiffreAffaires": 2550000000}', CURRENT_DATE - 3),
+    ('85000000-0000-4000-8000-000000000005', '50000000-0000-4000-8000-000000000004',
+     'CREATE_IMPACT', 'SUIVI_IMPACT', '84000000-0000-4000-8000-000000000001',
+     '{"emploisCrees": 8, "chiffreAffaires": 2300000000}', CURRENT_DATE - 1)
+ON CONFLICT (id) DO NOTHING;

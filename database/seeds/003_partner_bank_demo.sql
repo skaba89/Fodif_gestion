@@ -29,3 +29,18 @@ WHERE id = '80000000-0000-4000-8000-000000000001';
 INSERT INTO partenaire_entreprises (partenaire_id, entreprise_id)
 VALUES ('90000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000002')
 ON CONFLICT DO NOTHING;
+
+-- Matching audit trail (see the equivalent block at the end of 002_analytics_demo.sql) for the
+-- disbursement/repayment already seeded there (decaissements/remboursements 81.../83...) - written
+-- here, after the partner account exists, as PARTNER_DECLARE_* (partner.repository.ts) rather than
+-- the direction-side PLAN_DISBURSEMENT (financings.repository.ts): this bank is the correspondent
+-- for this financing, so in the real flow the partner declares its own disbursements/repayments.
+INSERT INTO audit_logs (id, utilisateur_id, action, entity_type, entity_id, new_values, created_at)
+VALUES
+    ('85000000-0000-4000-8000-000000000006', '50000000-0000-4000-8000-000000000007',
+     'PARTNER_DECLARE_DISBURSEMENT', 'DECAISSEMENT', '81000000-0000-4000-8000-000000000001',
+     '{"reference": "DEC-DEMO-001", "montant": 400000000}', CURRENT_DATE - 14),
+    ('85000000-0000-4000-8000-000000000007', '50000000-0000-4000-8000-000000000007',
+     'PARTNER_DECLARE_REPAYMENT', 'REMBOURSEMENT', '83000000-0000-4000-8000-000000000001',
+     '{"reference": "REM-DEMO-001", "montant": 60000000}', CURRENT_DATE - 1)
+ON CONFLICT (id) DO NOTHING;
