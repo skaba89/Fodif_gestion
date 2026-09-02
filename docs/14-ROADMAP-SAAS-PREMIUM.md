@@ -469,4 +469,11 @@ Détails D2 (`apps/web/public/manifest.webmanifest`, `apps/web/public/sw.js`,
   worker émet lui-même - seule la page en émet dont Playwright peut intercepter dans cet
   environnement. `apps/web/e2e/pwa.spec.ts` vérifie donc ce qui est réellement démontrable ici
   plutôt qu'un scénario de bout en bout qui aurait pu passer même avec un service worker cassé ;
-  détail complet dans `docs/18-PWA-HORS-LIGNE.md`.
+- un vrai bug que seule la CI a pu attraper, la vérification locale sans Docker ne pouvant
+  structurellement pas le reproduire : `apps/web/Dockerfile` ne copiait pas `apps/web/public/`
+  dans l'étage `runtime`, donc manifeste/icônes/service worker répondaient 404 dans le conteneur
+  réel bien que fonctionnant parfaitement en local (où l'arborescence source complète est déjà sur
+  disque). Corrigé, reproduit directement en simulant l'écart (retrait temporaire de `public/`),
+  et un garde-fou ajouté à `scripts/check-docker.py` pour qu'un oubli similaire échoue la
+  vérification pré-push au lieu de rester silencieux jusqu'au déploiement ; détail complet dans
+  `docs/18-PWA-HORS-LIGNE.md`.
