@@ -77,7 +77,7 @@ export default function AuditeurDashboardPage() {
     <section className={`${portal.card} ${portal.tableCard} ${portal.section}`}>
       <div className={portal.sectionHeader}><div><h2>Journal d'audit</h2><p>Toute action journalisée par la plateforme — instruction, décision de comité, gestion des comptes, opérations de financement.</p></div></div>
       <form className={styles.filters} onSubmit={filterLogs}>
-        <div className={styles.filter}><label>Type d'entité</label><select value={entityType} onChange={(event) => setEntityType(event.target.value)}><option value="">Tous</option>{ENTITY_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></div>
+        <div className={styles.filter}><label htmlFor="entityType">Type d'entité</label><select id="entityType" value={entityType} onChange={(event) => setEntityType(event.target.value)}><option value="">Tous</option>{ENTITY_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></div>
         <button className={portal.primary}>Filtrer</button>
       </form>
       <table className={portal.table}><thead><tr><th>Date</th><th>Auteur</th><th>Action</th><th>Entité</th></tr></thead><tbody>{logs.items.map((log) => <tr key={log.id}><td>{formatDate(log.createdAt)}</td><td>{log.actorEmail ?? 'Système'}</td><td><span className={portal.pill}>{log.action}</span></td><td>{log.entityType}{log.entityId ? ` · ${log.entityId.slice(0, 8)}…` : ''}</td></tr>)}</tbody></table>

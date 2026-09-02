@@ -17,7 +17,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | A3 | Page d'accueil : remplacement de la redirection brute vers `/direction/tableau-de-bord` par un sélecteur de portail explicite | **Fait** (cette itération) |
 | A4 | Bascule thème clair/sombre manuelle persistée (au-delà du `prefers-color-scheme` automatique livré en A1) | À faire |
 | A5 | Bibliothèque de composants documentée (Storybook ou équivalent léger) pour garder la cohérence à mesure que l'équipe grandit | À faire |
-| A6 | Accessibilité WCAG 2.1 AA : audit contrastes, navigation clavier complète, lecteurs d'écran sur les tableaux et formulaires complexes (scoring, décision comité) | À faire |
+| A6 | Accessibilité WCAG 2.1 AA : audit contrastes, navigation clavier complète, lecteurs d'écran sur les tableaux et formulaires complexes (scoring, décision comité) | **Partiel** (cette itération) — association programmatique des étiquettes de formulaire corrigée sur tout le dépôt ; contrastes, navigation clavier et tests lecteur d'écran restent à faire |
 
 ## Axe B — Conformité & sécurité de niveau étatique
 
@@ -40,7 +40,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 |---|---|---|
 | C1 | Tests unitaires et e2e API (Jest + Supertest), invariants anti-régression pré-push | Fait |
 | C2a | Tests e2e web (Playwright) : connexion, rejet de rôle, déconnexion, et le parcours TOTP complet (enrôlement puis vérification) — jusqu'ici jamais exercé de bout en bout dans un navigateur réel | **Fait** (cette itération) |
-| C2b | Tests e2e web : dépôt de dossier PME, instruction agent, décision comité | À faire |
+| C2b | Tests e2e web : dépôt de dossier PME, instruction agent, décision comité | **Fait** (cette itération) |
 | C3a | Traces OpenTelemetry (HTTP, routes Express, requêtes PostgreSQL) et logs structurés JSON en production, corrélés par `traceId`/`spanId` — même schéma que B3 : `OTEL_SERVICE_NAME` existait déjà dans `.env.example` sans jamais être câblé | **Fait** (cette itération) |
 | C3b | Métriques applicatives (latence, débit, taux d'erreur) — a un chevauchement naturel avec C4 (nécessite un consommateur : dashboard ou backend de métriques cible) | À faire |
 | C4 | Tableau de bord d'exploitation (latence, taux d'erreur, santé des files d'attente) — **nécessite un backend d'observabilité cible (Grafana/Datadog/...)** | À faire — décision requise |
@@ -183,3 +183,33 @@ Détails D1 (`database/011_partner_banks.sql`, `apps/api/src/partner/`, `apps/we
   un tiers externe, pas un agent public, donc hors du périmètre de l'IdP institutionnel ; compte
   de démonstration `partenaire@fodip.local` exerçant les deux mécanismes de périmètre
   (`database/seeds/003_partner_bank_demo.sql`).
+
+Détails A6 (partiel) et C2b (`apps/web/e2e/workflow.spec.ts`) :
+
+- en préparant le test e2e du cycle complet (dépôt → instruction → décision), un défaut
+  d'accessibilité systémique est apparu dans le dépôt : 19 champs de formulaire répartis sur 8
+  pages utilisaient un `<label>Texte</label>` simplement adjacent au champ (`<input>`/`<select>`/
+  `<textarea>`) plutôt qu'associé par `htmlFor`/`id` ou par imbrication — visuellement identique à
+  un champ correctement étiqueté, mais sans lien programmatique : un lecteur d'écran ne peut pas
+  annoncer le nom du champ, et un outil comme `getByLabel` de Playwright ne peut pas le cibler.
+  Plusieurs contrôles (le sélecteur de décision d'instruction agent, le formulaire de notation du
+  scoring, le sélecteur de décision comité) n'avaient même aucune étiquette du tout, uniquement un
+  `placeholder` ou un texte visuel voisin. Tous ces cas sont corrigés (`htmlFor`/`id` pour les
+  champs statiques, `aria-label` pour les champs générés dynamiquement par critère de scoring) —
+  c'est un défaut WCAG 1.3.1/3.3.2/4.1.2 réel et vérifiable, corrigé sur l'ensemble du dépôt, mais
+  ce n'est qu'une des exigences de l'axe A6 : contrastes de couleur, navigation clavier complète
+  (ordre de tabulation, pièges au clavier) et tests avec un lecteur d'écran réel restent à faire ;
+- `apps/web/e2e/workflow.spec.ts` exerce pour la première fois le cycle métier central de bout en
+  bout dans un navigateur réel plutôt que par portail isolé (`login.spec.ts`/`mfa.spec.ts`
+  couvraient déjà chaque portail séparément) : une PME dépose et soumet un dossier, un agent le
+  prend en charge, note les 4 critères du modèle de scoring actif et le transmet au comité, le
+  comité l'approuve, puis la PME voit son dossier passer à `APPROUVE` — verrouillant en une seule
+  fois la régression sur l'intégralité de la chaîne de décision ;
+- comme pour `login.spec.ts`/`mfa.spec.ts`, ce test nécessite la pile complète (web + API +
+  PostgreSQL + MinIO, `docker compose up`) ; aucun démon Docker n'était disponible dans cet
+  environnement d'exécution (vérifié : le CLI Docker est présent mais `dockerd` ne démarre pas
+  dans ce bac à sable) pour l'exécuter réellement ici. Vérifié à la place : `pnpm lint`, `npx tsc
+  --noEmit`, `npx playwright test --list` (le fichier est syntaxiquement valide et découvert par
+  Playwright), et une relecture manuelle de chaque assertion contre le code des pages et des
+  contrôleurs concernés (formats `NUMERIC` Postgres, permissions requises, transitions de statut).
+  La CI (`.github/workflows`) dispose d'un vrai Docker et devra confirmer l'exécution réelle.

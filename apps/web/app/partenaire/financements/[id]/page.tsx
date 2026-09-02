@@ -89,9 +89,9 @@ export default function PartnerFinancingDetailPage({ params }: { params: Promise
       <h2>Déclarer un décaissement</h2>
       <p className={portal.lead}>Enregistrez un paiement que votre établissement a déjà exécuté pour le compte du FODIP — disponible {amount(remainingDisbursement)} GNF.</p>
       {remainingDisbursement > 0 ? <form onSubmit={declareDisbursement}><div className={portal.formGrid}>
-        <div className={portal.field}><label>Montant versé</label><input type="number" min="1" max={remainingDisbursement} required value={disbursementAmount} onChange={(event) => setDisbursementAmount(event.target.value)} /></div>
-        <div className={portal.field}><label>Date d'exécution</label><input type="date" required value={disbursementDate} onChange={(event) => setDisbursementDate(event.target.value)} /></div>
-        <div className={`${portal.field} ${portal.fieldFull}`}><label>Référence bancaire</label><input required minLength={3} value={disbursementRef} onChange={(event) => setDisbursementRef(event.target.value)} /></div>
+        <div className={portal.field}><label htmlFor="disbursementAmount">Montant versé</label><input id="disbursementAmount" type="number" min="1" max={remainingDisbursement} required value={disbursementAmount} onChange={(event) => setDisbursementAmount(event.target.value)} /></div>
+        <div className={portal.field}><label htmlFor="disbursementDate">Date d'exécution</label><input id="disbursementDate" type="date" required value={disbursementDate} onChange={(event) => setDisbursementDate(event.target.value)} /></div>
+        <div className={`${portal.field} ${portal.fieldFull}`}><label htmlFor="disbursementRef">Référence bancaire</label><input id="disbursementRef" required minLength={3} value={disbursementRef} onChange={(event) => setDisbursementRef(event.target.value)} /></div>
       </div><div className={portal.buttonRow}><button className={portal.primary}>Déclarer le décaissement</button></div></form> : <p className={portal.lead}>Le montant accordé est intégralement décaissé.</p>}
     </section>
 
@@ -101,11 +101,11 @@ export default function PartnerFinancingDetailPage({ params }: { params: Promise
       <h2>Déclarer un remboursement</h2>
       <p className={portal.lead}>Enregistrez un paiement que votre établissement a déjà collecté pour le compte du FODIP.</p>
       {openInstallments.length ? <form onSubmit={declareRepayment}><div className={portal.formGrid}>
-        <div className={`${portal.field} ${portal.fieldFull}`}><label>Échéance</label><select required value={installmentId} onChange={(event) => setInstallmentId(event.target.value)}>{openInstallments.map((item) => <option key={item.id} value={item.id}>N° {item.numeroEcheance} · {displayDate(item.dateEcheance)} · reste {amount(item.resteAPayer)} GNF</option>)}</select></div>
-        <div className={portal.field}><label>Montant collecté</label><input type="number" min="1" required value={repaymentAmount} onChange={(event) => setRepaymentAmount(event.target.value)} /></div>
-        <div className={portal.field}><label>Date de collecte</label><input type="date" required value={repaymentDate} onChange={(event) => setRepaymentDate(event.target.value)} /></div>
-        <div className={portal.field}><label>Moyen</label><select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="VIREMENT">Virement</option><option value="CHEQUE">Chèque</option><option value="ESPECES">Espèces</option><option value="MOBILE_MONEY">Mobile Money</option><option value="AUTRE">Autre</option></select></div>
-        <div className={portal.field}><label>Référence</label><input value={repaymentRef} onChange={(event) => setRepaymentRef(event.target.value)} /></div>
+        <div className={`${portal.field} ${portal.fieldFull}`}><label htmlFor="installmentId">Échéance</label><select id="installmentId" required value={installmentId} onChange={(event) => setInstallmentId(event.target.value)}>{openInstallments.map((item) => <option key={item.id} value={item.id}>N° {item.numeroEcheance} · {displayDate(item.dateEcheance)} · reste {amount(item.resteAPayer)} GNF</option>)}</select></div>
+        <div className={portal.field}><label htmlFor="repaymentAmount">Montant collecté</label><input id="repaymentAmount" type="number" min="1" required value={repaymentAmount} onChange={(event) => setRepaymentAmount(event.target.value)} /></div>
+        <div className={portal.field}><label htmlFor="repaymentDate">Date de collecte</label><input id="repaymentDate" type="date" required value={repaymentDate} onChange={(event) => setRepaymentDate(event.target.value)} /></div>
+        <div className={portal.field}><label htmlFor="paymentMethod">Moyen</label><select id="paymentMethod" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="VIREMENT">Virement</option><option value="CHEQUE">Chèque</option><option value="ESPECES">Espèces</option><option value="MOBILE_MONEY">Mobile Money</option><option value="AUTRE">Autre</option></select></div>
+        <div className={portal.field}><label htmlFor="repaymentRef">Référence</label><input id="repaymentRef" value={repaymentRef} onChange={(event) => setRepaymentRef(event.target.value)} /></div>
       </div><div className={portal.buttonRow}><button className={portal.primary}>Déclarer le remboursement</button></div></form> : <p className={portal.lead}>Toutes les échéances sont soldées.</p>}
     </section>
 

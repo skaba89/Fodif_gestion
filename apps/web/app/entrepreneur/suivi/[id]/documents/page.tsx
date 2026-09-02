@@ -69,8 +69,8 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
 
     <form className={`${styles.card} ${styles.formCard} ${styles.section}`} onSubmit={upload}>
       <div className={styles.formGrid}>
-        <div className={styles.field}><label>Type de document</label><select value={typeDocument} onChange={(event) => setTypeDocument(event.target.value)}>{documentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
-        <div className={styles.field}><label>Fichier</label><input type="file" accept="application/pdf,image/jpeg,image/png" required onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div>
+        <div className={styles.field}><label htmlFor="typeDocument">Type de document</label><select id="typeDocument" value={typeDocument} onChange={(event) => setTypeDocument(event.target.value)}>{documentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className={styles.field}><label htmlFor="documentFile">Fichier</label><input id="documentFile" type="file" accept="application/pdf,image/jpeg,image/png" required onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div>
       </div>
       <div className={styles.notice}>La clé de stockage est générée côté serveur. Le fichier n’est jamais rendu public et reste inaccessible aux autres PME.</div>
       {message && <div className={styles.notice} role="status">{message}</div>}
