@@ -54,6 +54,17 @@ INSERT INTO utilisateur_roles (utilisateur_id, role_id)
 SELECT '50000000-0000-4000-8000-000000000004', id FROM roles WHERE code = 'DIRECTION_FODIP'
 ON CONFLICT DO NOTHING;
 
+INSERT INTO utilisateurs (id, email, nom, prenom, password_hash, actif, mfa_required)
+VALUES (
+    '50000000-0000-4000-8000-000000000006', 'auditeur@fodip.local', 'SOUMAH', 'Alpha',
+    '$2b$12$/CmLG274z4XT2vEiOHGvB.x7.88nXoS.0mLc5ytOTaaiEQpFiZuoK', TRUE, FALSE
+)
+ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, actif = TRUE;
+
+INSERT INTO utilisateur_roles (utilisateur_id, role_id)
+SELECT '50000000-0000-4000-8000-000000000006', id FROM roles WHERE code = 'AUDITEUR'
+ON CONFLICT DO NOTHING;
+
 INSERT INTO dossiers_financement (
     id, numero_dossier, entreprise_id, programme_id, montant_demande, apport_personnel,
     objet_financement, nombre_emplois_prevus, statut, date_soumission, updated_at

@@ -145,6 +145,7 @@ describe('OidcService', () => {
       expect(service.loginPathFor('comite')).toBe('/comite/connexion');
       expect(service.loginPathFor('direction')).toBe('/direction/connexion');
       expect(service.loginPathFor('administration')).toBe('/administration/connexion');
+      expect(service.loginPathFor('auditeur')).toBe('/auditeur/connexion');
     });
 
     it('reconstructs the full callback URL from a path + query using the configured redirect origin', () => {

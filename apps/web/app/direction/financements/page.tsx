@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import Pagination from '../../_shared/Pagination';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from '../../agent/agent.module.css';
 
@@ -10,32 +11,33 @@ type Financing = {
   montantAccorde: number; montantDecaisse: number; montantRembourse: number; impaye: number; statut: string;
 };
 type Eligible = { id: string; numeroDossier: string; raisonSociale: string; programme: string; montantApprouve: number; dureeMois: number };
+type FinancingsResult = { items: Financing[]; total: number; page: number; limite: number };
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
 export default function FinancingsPage() {
-  const [items, setItems] = useState<Financing[]>([]);
+  const [result, setResult] = useState<FinancingsResult>({ items: [], total: 0, page: 1, limite: 25 });
   const [eligible, setEligible] = useState<Eligible[]>([]);
   const [selected, setSelected] = useState('');
   const [dateSignature, setDateSignature] = useState(today());
   const [dateDebut, setDateDebut] = useState(today());
   const [message, setMessage] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (page = 1) => {
     const [financingResponse, eligibleResponse] = await Promise.all([
-      fetch('/api/direction/financements', { cache: 'no-store' }),
+      fetch(`/api/direction/financements?page=${page}`, { cache: 'no-store' }),
       fetch('/api/direction/financements/eligibles', { cache: 'no-store' }),
     ]);
     const financingBody = await financingResponse.json();
     const eligibleBody = await eligibleResponse.json();
     if (!financingResponse.ok) throw new Error(financingBody.message ?? 'Chargement des financements impossible');
     if (!eligibleResponse.ok) throw new Error(eligibleBody.message ?? 'Chargement des décisions impossible');
-    setItems(financingBody.items ?? []);
+    setResult(financingBody);
     setEligible(eligibleBody.items ?? []);
     setSelected((current) => current || eligibleBody.items?.[0]?.id || '');
   }, []);
 
-  useEffect(() => { load().catch((error) => setMessage(error.message)); }, [load]);
+  useEffect(() => { load(1).catch((error) => setMessage(error.message)); }, [load]);
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -47,9 +49,10 @@ export default function FinancingsPage() {
     const body = await response.json();
     if (!response.ok) return setMessage(body.message ?? 'Création impossible');
     setMessage(`Financement ${body.numeroFinancement} créé avec ${body.installments.length} échéances.`);
-    await load();
+    await load(1);
   }
 
+  const { items } = result;
   const committed = items.reduce((sum, item) => sum + item.montantAccorde, 0);
   const disbursed = items.reduce((sum, item) => sum + item.montantDecaisse, 0);
   const repaid = items.reduce((sum, item) => sum + item.montantRembourse, 0);
@@ -59,10 +62,10 @@ export default function FinancingsPage() {
     <p className={portal.lead}>Transformez les décisions approuvées en financements, puis pilotez décaissements, échéances, paiements et impact.</p>
     <div className={portal.buttonRow}><Link className={portal.secondary} href="/direction/tableau-de-bord">Retour au cockpit</Link></div>
     <section className={styles.metrics}>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{items.length}</strong><span>Financements</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{committed.toLocaleString('fr-FR')}</strong><span>GNF accordés</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{disbursed.toLocaleString('fr-FR')}</strong><span>GNF décaissés</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{repaid.toLocaleString('fr-FR')}</strong><span>GNF remboursés</span></article>
+      <article className={`${portal.card} ${styles.metric}`}><strong>{result.total}</strong><span>Financements</span></article>
+      <article className={`${portal.card} ${styles.metric}`}><strong>{committed.toLocaleString('fr-FR')}</strong><span>GNF accordés (page)</span></article>
+      <article className={`${portal.card} ${styles.metric}`}><strong>{disbursed.toLocaleString('fr-FR')}</strong><span>GNF décaissés (page)</span></article>
+      <article className={`${portal.card} ${styles.metric}`}><strong>{repaid.toLocaleString('fr-FR')}</strong><span>GNF remboursés (page)</span></article>
     </section>
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
 
@@ -78,5 +81,6 @@ export default function FinancingsPage() {
     </section>
 
     <section className={`${portal.card} ${portal.tableCard} ${portal.section}`}><table className={portal.table}><thead><tr><th>Financement</th><th>Entreprise</th><th>Accordé</th><th>Décaissé</th><th>Remboursé</th><th>Impayé</th><th>Action</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.numeroFinancement}</strong><br />{item.numeroDossier}</td><td>{item.raisonSociale}<br />{item.region ?? '—'}</td><td>{item.montantAccorde.toLocaleString('fr-FR')} GNF</td><td>{item.montantDecaisse.toLocaleString('fr-FR')} GNF</td><td>{item.montantRembourse.toLocaleString('fr-FR')} GNF</td><td>{item.impaye.toLocaleString('fr-FR')} GNF</td><td><Link className={portal.secondary} href={`/direction/financements/${item.id}`}>Gérer</Link></td></tr>)}</tbody></table></section>
+    <Pagination page={result.page} limite={result.limite} total={result.total} onChange={(page) => load(page).catch((error) => setMessage(error.message))} buttonClassName={portal.secondary} rowClassName={portal.buttonRow} />
   </main>;
 }

@@ -32,6 +32,12 @@ const portals = [
     title: 'Administration',
     description: 'Gérez les comptes, rôles et permissions de la plateforme, sous contrôle et audit.',
   },
+  {
+    href: '/auditeur/connexion',
+    mark: 'AU',
+    title: 'Auditeur',
+    description: 'Consultez en lecture seule le portefeuille de financements et le journal d’audit de la plateforme.',
+  },
 ];
 
 export default function HomePage() {

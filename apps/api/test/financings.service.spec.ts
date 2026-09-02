@@ -34,4 +34,14 @@ describe('FinancingsService', () => {
     await expect(service.planDisbursement(direction, 'f1', { montant: 300, datePrevue: '2026-09-10' }))
       .rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('forwards pagination params to the repository and normalizes numeric fields (axis C5)', async () => {
+    const page = { items: [{ id: 'f1', montantAccorde: '1000' }], total: 3, page: 1, limite: 25 };
+    const repository = { list: jest.fn().mockResolvedValue(page) };
+    const service = new FinancingsService(repository as never);
+    await expect(service.list({ page: 1, limite: 25 })).resolves.toEqual({
+      items: [{ id: 'f1', montantAccorde: 1000 }], total: 3, page: 1, limite: 25,
+    });
+    expect(repository.list).toHaveBeenCalledWith({ page: 1, limite: 25 });
+  });
 });

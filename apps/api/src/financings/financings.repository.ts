@@ -3,6 +3,7 @@ import { PoolClient, QueryResultRow } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { Installment } from '../finance-policy';
 import { ExecuteDisbursementDto } from './dto/execute-disbursement.dto';
+import { ListFinancingsDto } from './dto/list-financings.dto';
 import { PlanDisbursementDto } from './dto/plan-disbursement.dto';
 import { CreateRepaymentDto } from './dto/create-repayment.dto';
 import { SaveImpactDto } from './dto/save-impact.dto';
@@ -24,7 +25,8 @@ interface PaymentContextRow extends QueryResultRow {
 export class FinancingsRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  async list() {
+  async list(query: ListFinancingsDto) {
+    const offset = (query.page - 1) * query.limite;
     const result = await this.db.query(
       `SELECT financing.financement_id AS id, financement.numero_financement AS "numeroFinancement",
         financing.dossier_id AS "dossierId", dossier.numero_dossier AS "numeroDossier",
@@ -34,15 +36,20 @@ export class FinancingsRepository {
         financing.montant_du AS "montantDu", financing.montant_rembourse AS "montantRembourse",
         financing.impaye, financement.taux_interet AS "tauxInteret",
         financement.duree_mois AS "dureeMois", financement.date_debut AS "dateDebut",
-        financement.date_fin_prevue AS "dateFinPrevue", financement.statut
+        financement.date_fin_prevue AS "dateFinPrevue", financement.statut,
+        COUNT(*) OVER()::INT AS "total"
        FROM analytics.vw_financing_performance financing
        JOIN financements financement ON financement.id = financing.financement_id
        JOIN dossiers_financement dossier ON dossier.id = financing.dossier_id
        JOIN entreprises entreprise ON entreprise.id = financing.entreprise_id
        LEFT JOIN programmes_fodip programme ON programme.id = financing.programme_id
-       ORDER BY financement.updated_at DESC`,
+       ORDER BY financement.updated_at DESC
+       LIMIT $1 OFFSET $2`,
+      [query.limite, offset],
     );
-    return { items: result.rows, total: result.rowCount };
+    const total = Number(result.rows[0]?.total ?? 0);
+    const items = result.rows.map(({ total: _total, ...item }) => item);
+    return { items, total, page: query.page, limite: query.limite };
   }
 
   async listEligibleApplications() {

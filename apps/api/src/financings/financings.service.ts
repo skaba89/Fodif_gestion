@@ -4,6 +4,7 @@ import { buildAmortizationSchedule, validateAvailableAmount, validateImpact } fr
 import { CreateFinancingDto } from './dto/create-financing.dto';
 import { CreateRepaymentDto } from './dto/create-repayment.dto';
 import { ExecuteDisbursementDto } from './dto/execute-disbursement.dto';
+import { ListFinancingsDto } from './dto/list-financings.dto';
 import { PlanDisbursementDto } from './dto/plan-disbursement.dto';
 import { SaveImpactDto } from './dto/save-impact.dto';
 import { FinancingsRepository } from './financings.repository';
@@ -41,8 +42,8 @@ function isDatabaseConflict(error: unknown): boolean {
 export class FinancingsService {
   constructor(private readonly financings: FinancingsRepository) {}
 
-  async list() {
-    return normalize(await this.financings.list());
+  async list(query: ListFinancingsDto) {
+    return normalize(await this.financings.list(query));
   }
 
   async listEligibleApplications() {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AuthenticatedUser } from '../auth/auth-user.interface';
@@ -6,6 +6,7 @@ import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { RequireRoles } from '../common/decorators/roles.decorator';
 import { CommitteeService } from './committee.service';
 import { CommitteeDecisionDto } from './dto/committee-decision.dto';
+import { ListCommitteeApplicationsDto } from './dto/list-committee-applications.dto';
 
 interface AuthenticatedRequest extends Request { user: AuthenticatedUser }
 
@@ -18,8 +19,8 @@ export class CommitteeController {
 
   @Get()
   @RequirePermissions('application.read', 'scoring.read')
-  list() {
-    return this.committee.list();
+  list(@Query() query: ListCommitteeApplicationsDto) {
+    return this.committee.list(query);
   }
 
   @Get(':id')

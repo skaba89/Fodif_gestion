@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { publicBackendUrl } from '../../../../../lib/backend';
 
-const PORTALS = new Set(['agent', 'comite', 'direction', 'administration']);
+const PORTALS = new Set(['agent', 'comite', 'direction', 'administration', 'auditeur']);
 
 export async function GET(request: Request) {
   const portal = new URL(request.url).searchParams.get('portal');
