@@ -73,7 +73,10 @@ test.describe('Cycle complet d\'un dossier', () => {
     await page.getByLabel('Motivation de la décision').fill('Dossier complet, scoring favorable, transmis au comité.');
     await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
     await expect(page.getByText('Décision d’instruction enregistrée.')).toBeVisible();
-    await expect(page.getByText('PRET_COMITE')).toBeVisible();
+    // exact: true - the status pill reads exactly "PRET_COMITE", but the Historique section
+    // below also renders "EN_INSTRUCTION → PRET_COMITE" as a transition line, which a substring
+    // match would ambiguously match too.
+    await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
 
     await logout(page);
     await expect(page).toHaveURL(/\/agent\/connexion$/);
@@ -86,9 +89,11 @@ test.describe('Cycle complet d\'un dossier', () => {
 
     const committeeUrl = dossierUrl.replace('/agent/dossiers/', '/comite/dossiers/');
     await page.goto(committeeUrl);
-    await expect(page.getByText('PRET_COMITE')).toBeVisible();
-    // scores_dossier.score_total is NUMERIC(6,2) - always renders with two decimals.
-    await expect(page.getByText('80.00/100')).toBeVisible();
+    await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
+    // scores_dossier.score_total is NUMERIC(6,2) - always renders with two decimals. exact: true
+    // because each criterion row below also renders "scoreObtenu/scoreMax" - with score_max
+    // NUMERIC(10,2), that's "80.00/100.00", which contains "80.00/100" as a substring.
+    await expect(page.getByText('80.00/100', { exact: true })).toBeVisible();
 
     await page.getByLabel('Décision').selectOption('APPROUVE');
     // Prefilled from the requested amount (montant_demande is NUMERIC(20,2), so the exact
