@@ -42,8 +42,8 @@ export default function AgentDossiersPage() {
       <article className={`${portal.card} ${styles.metric}`}><strong>{counts.PRET_COMITE ?? 0}</strong><span>Prêts pour comité (page)</span></article>
     </section>
     <form className={`${portal.card} ${portal.formCard} ${portal.section} ${styles.filters}`} onSubmit={filter}>
-      <div className={styles.filter}><label>Statut</label><select value={statut} onChange={(event) => setStatut(event.target.value)}><option value="">Tous</option><option value="SOUMIS">Soumis</option><option value="EN_INSTRUCTION">En instruction</option><option value="COMPLEMENT_REQUIS">Complément requis</option><option value="PRET_COMITE">Prêt comité</option></select></div>
-      <div className={styles.filter}><label>Recherche</label><input value={recherche} onChange={(event) => setRecherche(event.target.value)} placeholder="N° dossier ou PME" /></div>
+      <div className={styles.filter}><label htmlFor="statut">Statut</label><select id="statut" value={statut} onChange={(event) => setStatut(event.target.value)}><option value="">Tous</option><option value="SOUMIS">Soumis</option><option value="EN_INSTRUCTION">En instruction</option><option value="COMPLEMENT_REQUIS">Complément requis</option><option value="PRET_COMITE">Prêt comité</option></select></div>
+      <div className={styles.filter}><label htmlFor="recherche">Recherche</label><input id="recherche" value={recherche} onChange={(event) => setRecherche(event.target.value)} placeholder="N° dossier ou PME" /></div>
       <button className={portal.primary}>Filtrer</button>
     </form>
     {message && <div className={portal.notice}>{message}</div>}
