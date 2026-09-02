@@ -1,12 +1,20 @@
+import './tracing'; // must load first - see tracing.ts
+
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { JsonLoggerService } from './common/json-logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: false });
+  const app = await NestFactory.create(AppModule, {
+    cors: false,
+    // Structured JSON logs in production, where a real log aggregator is the reader; local dev,
+    // CI and the Docker demo keep Nest's default human-readable console logger.
+    logger: process.env.NODE_ENV === 'production' ? new JsonLoggerService() : undefined,
+  });
   const config = app.get(ConfigService);
 
   app.use(
