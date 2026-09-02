@@ -138,7 +138,7 @@ export default function LoginForm({
               <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
             </div>
           </div>
-          {error && <div className={styles.notice} role="alert">{error}</div>}
+          {error && <div className={styles.notice} role="alert" data-testid="login-error">{error}</div>}
           <div className={styles.buttonRow}>
             <button className={styles.primary} disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</button>
           </div>
@@ -163,7 +163,7 @@ export default function LoginForm({
                   value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
               </div>
             </div>
-            {error && <div className={styles.notice} role="alert">{error}</div>}
+            {error && <div className={styles.notice} role="alert" data-testid="login-error">{error}</div>}
             <div className={styles.buttonRow}>
               <button className={styles.primary} disabled={loading}>{loading ? 'Vérification…' : 'Activer et se connecter'}</button>
             </div>
@@ -182,7 +182,7 @@ export default function LoginForm({
                   value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
               </div>
             </div>
-            {error && <div className={styles.notice} role="alert">{error}</div>}
+            {error && <div className={styles.notice} role="alert" data-testid="login-error">{error}</div>}
             <div className={styles.buttonRow}>
               <button className={styles.primary} disabled={loading}>{loading ? 'Vérification…' : 'Se connecter'}</button>
             </div>

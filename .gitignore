@@ -7,6 +7,7 @@ node_modules/
 dist/
 build/
 coverage/
+*.tsbuildinfo
 
 # Environment / secrets
 .env
@@ -42,3 +43,8 @@ local-data/
 # Temporary
 .tmp/
 tmp/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
