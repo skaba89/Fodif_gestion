@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PoolClient } from 'pg';
 import { canDeactivateUser, requiresMfa } from '../admin-policy';
 import { DatabaseService } from '../database/database.service';
+import { decryptWithKey, deriveSecret, encryptWithKey, resolveJwtSecret } from '../security-policy';
 
 type UserWrite = {
   email: string; nom: string; prenom?: string; telephone?: string; passwordHash: string;
@@ -14,10 +16,18 @@ type UserUpdate = {
 
 @Injectable()
 export class AdministrationRepository {
-  constructor(private readonly db: DatabaseService) {}
+  // Axe B5: same key-derivation pattern as MfaService's TOTP seed encryption (a distinct HMAC
+  // context of the already-validated JWT_SECRET, rather than provisioning a separate secret) -
+  // see security-policy.js#deriveSecret and database/013_pii_encryption.sql.
+  private readonly piiEncryptionKey: Buffer;
+
+  constructor(private readonly db: DatabaseService, config: ConfigService) {
+    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV'));
+    this.piiEncryptionKey = deriveSecret(jwtSecret, 'fodip-pii-telephone-encryption-v1');
+  }
 
   async listUsers(search?: string) {
-    const result = await this.db.query(
+    const result = await this.db.query<{ telephone: string | null; [key: string]: unknown }>(
       `SELECT utilisateur.id, utilisateur.email, utilisateur.nom, utilisateur.prenom, utilisateur.telephone,
         utilisateur.actif, utilisateur.mfa_required AS "mfaRequired",
         utilisateur.last_login_at AS "lastLoginAt", utilisateur.created_at AS "createdAt",
@@ -40,7 +50,12 @@ export class AdministrationRepository {
        ORDER BY utilisateur.created_at DESC`,
       [search?.trim() || null],
     );
-    return { items: result.rows, total: result.rowCount };
+    const items = result.rows.map((row) => ({ ...row, telephone: this.decryptTelephone(row.telephone) }));
+    return { items, total: result.rowCount };
+  }
+
+  private decryptTelephone(value: string | null): string | null {
+    return value ? decryptWithKey(value, this.piiEncryptionKey) : null;
   }
 
   async listPartnerBanks() {
@@ -85,10 +100,12 @@ export class AdministrationRepository {
       // Accounts holding a privileged role (SUPER_ADMIN, DIRECTION_FODIP, ...) are always MFA-enrolled,
       // regardless of what the caller passed - an admin cannot opt a sensitive role out of it.
       const mfaRequired = input.mfaRequired || requiresMfa(input.roles);
+      const telephone = input.telephone?.trim() || null;
       const inserted = await client.query<{ id: string }>(
         `INSERT INTO utilisateurs (email, nom, prenom, telephone, password_hash, actif, mfa_required, partenaire_bancaire_id)
          VALUES (LOWER($1), $2, $3, $4, $5, TRUE, $6, $7) RETURNING id`,
-        [input.email.trim(), input.nom.trim(), input.prenom?.trim() || null, input.telephone?.trim() || null,
+        [input.email.trim(), input.nom.trim(), input.prenom?.trim() || null,
+          telephone ? encryptWithKey(telephone, this.piiEncryptionKey) : null,
           input.passwordHash, mfaRequired, input.partenaireBancaireId ?? null],
       );
       const id = inserted.rows[0].id;

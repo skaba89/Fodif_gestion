@@ -1,14 +1,23 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PoolClient } from 'pg';
 import { canDeactivateUser } from '../admin-policy';
 import { DatabaseService } from '../database/database.service';
+import { decryptWithKey, deriveSecret, resolveJwtSecret } from '../security-policy';
 
 @Injectable()
 export class DataRightsRepository {
-  constructor(private readonly db: DatabaseService) {}
+  // Axe B5: same derived key as AdministrationRepository - identical HMAC context of the same
+  // base secret always yields the same key, so either repository can decrypt what the other wrote.
+  private readonly piiEncryptionKey: Buffer;
+
+  constructor(private readonly db: DatabaseService, config: ConfigService) {
+    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV'));
+    this.piiEncryptionKey = deriveSecret(jwtSecret, 'fodip-pii-telephone-encryption-v1');
+  }
 
   async exportProfile(userId: string) {
-    const result = await this.db.query(
+    const result = await this.db.query<{ telephone: string | null; [key: string]: unknown }>(
       `SELECT utilisateur.id, utilisateur.email, utilisateur.nom, utilisateur.prenom, utilisateur.telephone,
         utilisateur.actif, utilisateur.created_at AS "createdAt", utilisateur.last_login_at AS "lastLoginAt",
         COALESCE(ARRAY_AGG(DISTINCT role.code) FILTER (WHERE role.code IS NOT NULL), '{}') AS roles
@@ -19,7 +28,9 @@ export class DataRightsRepository {
        GROUP BY utilisateur.id`,
       [userId],
     );
-    return result.rows[0] ?? null;
+    const row = result.rows[0];
+    if (!row) return null;
+    return { ...row, telephone: row.telephone ? decryptWithKey(row.telephone, this.piiEncryptionKey) : null };
   }
 
   async exportEnterprise(entrepriseId: string) {
