@@ -97,6 +97,7 @@ export default function DirectionDashboardPage() {
   );
 
   return <main className="app-shell">
+    <a href="#main-content" className="skip-link">Aller au contenu principal</a>
     <aside className="sidebar" aria-label="Navigation principale">
       <div className="brand"><div className="brand-mark" aria-hidden="true">FD</div><div><strong>FODIP</strong><span>Digital 2030</span></div></div>
       <nav className="nav-list">
@@ -105,7 +106,7 @@ export default function DirectionDashboardPage() {
       <div className="sidebar-footer"><span className="environment">DIRECTION GÉNÉRALE</span><strong>Portail décisionnel</strong><small>Données consolidées PostgreSQL</small></div>
     </aside>
 
-    <section className="content">
+    <section id="main-content" tabIndex={-1} className="content">
       <header className="topbar">
         <div><p className="eyebrow">Cockpit national</p><h1>Vue d’ensemble</h1></div>
         <div className="topbar-actions"><Link className="secondary-button" href="/notifications">Notifications</Link><Link className="secondary-button" href="/mes-donnees">Mes données</Link><Link className="secondary-button" href="/direction/financements">Gérer les financements</Link><span className={styles.sourceBadge}>Source vérifiée</span><ThemeToggle buttonClassName="theme-toggle" /><DirectionAccountMenu /></div>

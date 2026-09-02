@@ -42,11 +42,11 @@ export default function MesDonneesPage() {
     }
   }, []);
 
-  return <div className={portal.shell}><header className={portal.header}>
+  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
     <Link href={returnPath} className={portal.brand}><span className={portal.mark}>FD</span><span className={portal.brandText}><strong>FODIP DIGITAL</strong><span>Mes données</span></span></Link>
     <nav className={portal.nav}><Link href={returnPath}>Retour au portail</Link></nav>
     <ThemeToggle buttonClassName={portal.themeToggle} />
-  </header><main className={portal.main}>
+  </header><main id="main-content" tabIndex={-1} className={portal.main}>
     <p className={portal.eyebrow}>Droits des personnes (axe B6)</p><h1 className={portal.title}>Mes données personnelles</h1>
     <p className={portal.lead}>
       Conformément au droit d’accès à vos données, vous pouvez télécharger une copie de tout ce que la plateforme

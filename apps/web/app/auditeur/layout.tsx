@@ -5,12 +5,13 @@ import { AuditeurAccountMenu } from './components/AuditeurAccountMenu';
 
 export default function AuditeurLayout({ children }: { children: React.ReactNode }) {
   return <div className={styles.shell}>
+    <a href="#main-content" className="skip-link">Aller au contenu principal</a>
     <header className={styles.header}>
       <Link href="/auditeur/tableau-de-bord" className={styles.brand}><span className={styles.mark}>FD</span><span className={styles.brandText}><strong>FODIP DIGITAL</strong><span>Auditeur</span></span></Link>
       <nav className={styles.nav} aria-label="Navigation Auditeur"><Link href="/auditeur/tableau-de-bord">Supervision</Link><Link href="/mes-donnees">Mes données</Link></nav>
       <div className={styles.headerActions}><ThemeToggle buttonClassName={styles.themeToggle} /><AuditeurAccountMenu /></div>
     </header>
-    {children}
+    <div id="main-content" tabIndex={-1}>{children}</div>
     <footer className={styles.footer}>FODIP Digital 2030 · Accès en lecture seule, intégralement journalisé</footer>
   </div>;
 }
