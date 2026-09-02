@@ -86,7 +86,7 @@ test.describe('TOTP multi-factor authentication', () => {
       await page.getByLabel('Code à 6 chiffres').fill('000000');
       await page.getByRole('button', { name: 'Activer et se connecter' }).click();
 
-      await expect(page.getByRole('alert')).toBeVisible();
+      await expect(page.getByTestId('login-error')).toBeVisible();
       await expect(page).toHaveURL(/\/comite\/connexion$/);
     } finally {
       await admin.patch(`/api/administration/users/${id}`, { data: { actif: false } }).catch(() => undefined);

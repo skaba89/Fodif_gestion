@@ -35,12 +35,12 @@ Détails d'implémentation (`auth/mfa/mfa.service.ts`) :
 - le secret TOTP est chiffré au repos (AES-256-GCM) avec une clé dérivée de `JWT_SECRET` par HMAC-SHA256 (`security-policy.js#deriveSecret`) — aucune variable d'environnement supplémentaire à provisionner ;
 - les jetons de défi (`mfaChallenge`) sont des JWT à portée strictement limitée : signés avec une clé dérivée différente de celle des tokens d'accès, avec un claim `purpose` (`mfa_setup` ou `mfa_login`) vérifié à la résolution — un défi ne peut donc jamais être rejoué comme un token d'authentification classique ;
 - chaque code TOTP n'est acceptable qu'une seule fois : le compteur temporel accepté est stocké (`mfa_last_used_step`) et toute réutilisation, même dans la fenêtre de validité, est rejetée ;
-- `POST /auth/mfa/confirm` et `POST /auth/mfa/verify` sont limités à 8 tentatives / 5 minutes / IP.
+- `POST /auth/mfa/confirm` et `POST /auth/mfa/verify` sont limités à 8 tentatives / 5 minutes, par jeton de défi (voir ci-dessous).
 
 ## Protections API transverses
 
 - `helmet` sur toute réponse HTTP (HSTS, `X-Frame-Options`, `X-Content-Type-Options`, etc.) ; la CSP par défaut reste désactivée car `/api/docs` sert l'interface Swagger, qui a besoin de scripts/styles inline.
-- limitation de débit (`@nestjs/throttler`) : 300 requêtes/minute/IP par défaut sur toute l'API, ramenée à 5 tentatives/minute/IP sur `POST /auth/login` pour limiter le brute force sur les mots de passe.
+- limitation de débit (`@nestjs/throttler`) : 300 requêtes/minute/IP par défaut sur toute l'API. Sur `POST /auth/login`, ramenée à 5 tentatives/minute **par compte visé** (l'email soumis) plutôt que par IP : le frontend étant un BFF qui relaie chaque connexion depuis le serveur, l'API ne voit jamais l'IP réelle du navigateur mais celle du conteneur web, identique pour tous les utilisateurs — une limite par IP à cet endroit limiterait soit la plateforme entière ensemble, soit rien du tout selon la topologie de déploiement. Même logique sur `POST /auth/mfa/confirm`/`verify`, ramenée à 8 tentatives/5 minutes par jeton de défi plutôt que par IP (`common/throttle-tracker.ts`).
 - filtre d'exceptions global (`AllExceptionsFilter`) : toute erreur non anticipée (driver PostgreSQL, SDK S3, bug) est journalisée côté serveur mais renvoyée au client comme une 500 générique — jamais de détail interne (SQL, stack, endpoint de stockage) dans la réponse. Les exceptions HTTP volontaires (`BadRequestException`, `ForbiddenException`, ...) conservent leur statut et leur message.
 
 ## Garde-fous anti-régression

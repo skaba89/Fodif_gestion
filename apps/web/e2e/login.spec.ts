@@ -11,7 +11,7 @@ test.describe('Login flow', () => {
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
-    await expect(page.getByRole('alert')).toContainText('super-administrateur');
+    await expect(page.getByTestId('login-error')).toContainText('super-administrateur');
     await expect(page).toHaveURL(/\/administration\/connexion$/);
   });
 
@@ -40,7 +40,7 @@ test.describe('Login flow', () => {
     await page.getByLabel('Mot de passe').fill('not-the-right-password');
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByTestId('login-error')).toBeVisible();
     await expect(page).toHaveURL(/\/agent\/connexion$/);
   });
 });
