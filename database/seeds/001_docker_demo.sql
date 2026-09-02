@@ -79,6 +79,8 @@ VALUES
     ('50000000-0000-4000-8000-000000000002', 'pme@fodip.local', 'CAMARA', 'Aminata',
      '$2b$12$/CmLG274z4XT2vEiOHGvB.x7.88nXoS.0mLc5ytOTaaiEQpFiZuoK', TRUE, FALSE),
     ('50000000-0000-4000-8000-000000000003', 'comite@fodip.local', 'BANGOURA', 'Mariama',
+     '$2b$12$/CmLG274z4XT2vEiOHGvB.x7.88nXoS.0mLc5ytOTaaiEQpFiZuoK', TRUE, FALSE),
+    ('50000000-0000-4000-8000-000000000005', 'admin@fodip.local', 'ADMIN', 'Plateforme',
      '$2b$12$/CmLG274z4XT2vEiOHGvB.x7.88nXoS.0mLc5ytOTaaiEQpFiZuoK', TRUE, FALSE)
 ON CONFLICT (email) DO UPDATE
 SET password_hash = EXCLUDED.password_hash,
@@ -94,6 +96,10 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO utilisateur_roles (utilisateur_id, role_id)
 SELECT '50000000-0000-4000-8000-000000000003', id FROM roles WHERE code = 'COMITE_FINANCEMENT'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO utilisateur_roles (utilisateur_id, role_id)
+SELECT '50000000-0000-4000-8000-000000000005', id FROM roles WHERE code = 'SUPER_ADMIN'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO utilisateur_entreprises (utilisateur_id, entreprise_id, relation, principal)

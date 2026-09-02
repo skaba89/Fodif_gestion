@@ -32,6 +32,13 @@ login_response=$(curl --fail --silent \
 access_token=$(LOGIN_RESPONSE="$login_response" python -c \
   'import json, os; print(json.loads(os.environ["LOGIN_RESPONSE"])["accessToken"])')
 
+agent_notifications=$(curl --fail --silent \
+  --header "authorization: Bearer $access_token" \
+  'http://localhost:4000/api/v1/notifications?unreadOnly=true')
+
+AGENT_NOTIFICATIONS="$agent_notifications" python -c \
+  'import json, os; body=json.loads(os.environ["AGENT_NOTIFICATIONS"]); assert body["unread"] >= 1; assert any(item["type"] == "DOSSIER_SOUMIS" for item in body["items"])'
+
 dossiers_response=$(curl --fail --silent \
   --header "authorization: Bearer $access_token" \
   http://localhost:4000/api/v1/agent/applications)
@@ -189,7 +196,81 @@ dashboard_response=$(curl --fail --silent \
 DASHBOARD_RESPONSE="$dashboard_response" python -c \
   'import json, os; body=json.loads(os.environ["DASHBOARD_RESPONSE"]); assert body["kpis"]["pmeEnregistrees"] >= 4; assert body["kpis"]["montantDecaisse"] >= 500000000; assert body["kpis"]["montantApprouve"] >= 950000000; assert len(body["pipeline"]) >= 3; assert len(body["regions"]) >= 4; assert body["freshness"]["source"] == "PostgreSQL analytics"'
 
+pme_notifications=$(curl --fail --silent \
+  --header "authorization: Bearer $pme_token" \
+  'http://localhost:4000/api/v1/notifications?unreadOnly=true')
+
+first_notification_id=$(PME_NOTIFICATIONS="$pme_notifications" python -c \
+  'import json, os; body=json.loads(os.environ["PME_NOTIFICATIONS"]); assert body["unread"] >= 3; types={item["type"] for item in body["items"]}; assert "DOSSIER_APPROUVE" in types; assert "DECAISSEMENT_EFFECTUE" in types; assert "REMBOURSEMENT_ENREGISTRE" in types; print(body["items"][0]["id"])')
+
+curl --fail --silent --request PATCH \
+  --header "authorization: Bearer $pme_token" \
+  "http://localhost:4000/api/v1/notifications/$first_notification_id/read" \
+  --output /dev/null
+
+curl --fail --silent --request PATCH \
+  --header "authorization: Bearer $pme_token" \
+  http://localhost:4000/api/v1/notifications/read-all \
+  --output /dev/null
+
+pme_notifications_after=$(curl --fail --silent \
+  --header "authorization: Bearer $pme_token" \
+  'http://localhost:4000/api/v1/notifications?unreadOnly=true')
+
+PME_NOTIFICATIONS="$pme_notifications_after" python -c \
+  'import json, os; body=json.loads(os.environ["PME_NOTIFICATIONS"]); assert body["unread"] == 0; assert body["items"] == []'
+
+admin_login=$(curl --fail --silent \
+  --request POST \
+  --header 'content-type: application/json' \
+  --data '{"email":"admin@fodip.local","password":"FodipDemo2026!"}' \
+  http://localhost:4000/api/v1/auth/login)
+
+admin_token=$(LOGIN_RESPONSE="$admin_login" python -c \
+  'import json, os; body=json.loads(os.environ["LOGIN_RESPONSE"]); assert "SUPER_ADMIN" in body["user"]["roles"]; print(body["accessToken"])')
+
+roles_response=$(curl --fail --silent \
+  --header "authorization: Bearer $admin_token" \
+  http://localhost:4000/api/v1/administration/roles)
+
+ROLES_RESPONSE="$roles_response" python -c \
+  'import json, os; body=json.loads(os.environ["ROLES_RESPONSE"]); codes={item["code"] for item in body["items"]}; assert "SUPER_ADMIN" in codes; assert "PME" in codes'
+
+created_user=$(curl --fail --silent \
+  --request POST \
+  --header "authorization: Bearer $admin_token" \
+  --header 'content-type: application/json' \
+  --data '{"email":"smoke.auditeur@fodip.local","nom":"SMOKE","prenom":"Auditeur","password":"SmokeTest2026!","roles":["AUDITEUR"]}' \
+  http://localhost:4000/api/v1/administration/users)
+
+created_user_id=$(CREATED_USER="$created_user" python -c \
+  'import json, os; print(json.loads(os.environ["CREATED_USER"])["id"])')
+
+curl --fail --silent \
+  --request PATCH \
+  --header "authorization: Bearer $admin_token" \
+  --header 'content-type: application/json' \
+  --data '{"actif":false,"roles":["AUDITEUR"]}' \
+  "http://localhost:4000/api/v1/administration/users/$created_user_id" \
+  --output /dev/null
+
+users_response=$(curl --fail --silent \
+  --header "authorization: Bearer $admin_token" \
+  'http://localhost:4000/api/v1/administration/users?search=smoke.auditeur')
+
+USERS_RESPONSE="$users_response" python -c \
+  'import json, os; body=json.loads(os.environ["USERS_RESPONSE"]); assert body["total"] == 1; assert body["items"][0]["actif"] is False; assert body["items"][0]["roles"] == ["AUDITEUR"]'
+
+admin_audit_count=$(docker compose exec -T postgres psql \
+  --username "${POSTGRES_USER:-fodip}" --dbname "${POSTGRES_DB:-fodip}" --tuples-only --no-align \
+  --command "SELECT COUNT(*) FROM audit_logs WHERE action IN ('CREATE_USER', 'UPDATE_USER')")
+
+test "$admin_audit_count" -ge 2
+
 curl --fail --silent http://localhost:3000/direction/connexion --output /dev/null
 curl --fail --silent http://localhost:3000/direction/financements --output /dev/null
+curl --fail --silent http://localhost:3000/notifications --output /dev/null
+curl --fail --silent http://localhost:3000/administration/connexion --output /dev/null
+curl --fail --silent http://localhost:3000/administration/utilisateurs --output /dev/null
 
-echo "Docker smoke test passed: web, API, auth, PostgreSQL analytics, financing lifecycle, scoring, committee decision and MinIO document round-trip."
+echo "Docker smoke test passed: web, API, auth, notifications, administration, PostgreSQL analytics, financing lifecycle, scoring, committee decision and MinIO document round-trip."
