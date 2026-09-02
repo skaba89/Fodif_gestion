@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import ThemeToggle from './_shared/ThemeToggle';
 import styles from './home.module.css';
 
 const portals = [
@@ -57,7 +58,10 @@ export default function HomePage() {
             <span>2030</span>
           </span>
         </div>
-        <span className={styles.badge}>Plateforme institutionnelle</span>
+        <div className={styles.headerActions}>
+          <span className={styles.badge}>Plateforme institutionnelle</span>
+          <ThemeToggle buttonClassName={styles.themeToggle} />
+        </div>
       </header>
 
       <div className={styles.hero}>

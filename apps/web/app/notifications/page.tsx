@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import ThemeToggle from '../_shared/ThemeToggle';
 import portal from '../entrepreneur/portal.module.css';
 
 type Notification = {
@@ -49,6 +50,7 @@ export default function NotificationsPage() {
   return <div className={portal.shell}><header className={portal.header}>
     <Link href={returnPath} className={portal.brand}><span className={portal.mark}>FD</span><span className={portal.brandText}><strong>FODIP DIGITAL</strong><span>Centre de notifications</span></span></Link>
     <nav className={portal.nav}><Link href={returnPath}>Retour au portail</Link></nav>
+    <ThemeToggle buttonClassName={portal.themeToggle} />
   </header><main className={portal.main}>
     <p className={portal.eyebrow}>Activité personnelle</p><h1 className={portal.title}>Notifications</h1>
     <p className={portal.lead}>{unread} notification{unread === 1 ? '' : 's'} non lue{unread === 1 ? '' : 's'}. Les événements sont enregistrés atomiquement avec les opérations métier.</p>

@@ -82,8 +82,16 @@
   color-scheme: light;
 }
 
+/*
+ * Dark palette, shared by two triggers (axe A4 - docs/14-ROADMAP-SAAS-PREMIUM.md) :
+ *  - automatic: the OS-level preference (prefers-color-scheme), applied unless the visitor has
+ *    explicitly chosen light via the in-app toggle (:not([data-theme="light"]) guards that);
+ *  - manual: an explicit choice persisted in localStorage by _shared/ThemeToggle.tsx and applied
+ *    as a `data-theme` attribute on <html> before first paint (see the inline script in
+ *    layout.tsx) - wins over the OS preference in either direction.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b1712;
     --surface: #101f18;
     --surface-soft: #16281f;
@@ -108,6 +116,32 @@
 
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b1712;
+  --surface: #101f18;
+  --surface-soft: #16281f;
+  --ink: #eef5f0;
+  --muted: #91a49a;
+  --line: #223328;
+  --green: var(--primary-400);
+  --green-strong: var(--primary-300);
+  --green-soft: #16281f;
+  --gold: var(--accent-300);
+  --danger: #e07a63;
+  --danger-strong: #f0a691;
+  --danger-soft: #2a1712;
+  --success-soft: #16281f;
+  --info: #7ab0e0;
+  --info-soft: #10202e;
+  --warning-soft: #2a2211;
+  --focus-ring: 0 0 0 3px rgba(124, 196, 160, 0.35);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
 }
 
 * {
@@ -354,6 +388,25 @@ h3 {
 
 .secondary-button:hover {
   border-color: var(--green);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: border-color var(--duration-fast) var(--ease), filter var(--duration-fast) var(--ease);
+}
+
+.theme-toggle:hover {
+  border-color: var(--green);
+  filter: brightness(0.97);
 }
 
 .profile-button {

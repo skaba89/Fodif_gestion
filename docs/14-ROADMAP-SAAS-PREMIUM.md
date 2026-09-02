@@ -15,7 +15,7 @@ séparément, pour permettre un avancement continu sans big-bang.
 | A1 | Jetons de design (couleurs, typographie, espacements, ombres, mode sombre) centralisés dans `globals.css`, typographie institutionnelle auto-hébergée (Public Sans, la même famille que le design system gouvernemental américain USWDS — professionnelle, très lisible, gratuite) | **Fait** (cette itération) |
 | A2 | Refonte des composants partagés (boutons, cartes, tableaux, badges de statut, formulaires) avec états `:hover`/`:focus-visible`/`:disabled` cohérents, échelle d'élévation | **Fait** (cette itération) |
 | A3 | Page d'accueil : remplacement de la redirection brute vers `/direction/tableau-de-bord` par un sélecteur de portail explicite | **Fait** (cette itération) |
-| A4 | Bascule thème clair/sombre manuelle persistée (au-delà du `prefers-color-scheme` automatique livré en A1) | À faire |
+| A4 | Bascule thème clair/sombre manuelle persistée (au-delà du `prefers-color-scheme` automatique livré en A1) | **Fait** (cette itération) |
 | A5 | Bibliothèque de composants documentée (Storybook ou équivalent léger) pour garder la cohérence à mesure que l'équipe grandit | À faire |
 | A6 | Accessibilité WCAG 2.1 AA : audit contrastes, navigation clavier complète, lecteurs d'écran sur les tableaux et formulaires complexes (scoring, décision comité) | **Partiel** (cette itération) — association programmatique des étiquettes de formulaire corrigée sur tout le dépôt ; contrastes, navigation clavier et tests lecteur d'écran restent à faire |
 
@@ -213,3 +213,26 @@ Détails A6 (partiel) et C2b (`apps/web/e2e/workflow.spec.ts`) :
   Playwright), et une relecture manuelle de chaque assertion contre le code des pages et des
   contrôleurs concernés (formats `NUMERIC` Postgres, permissions requises, transitions de statut).
   La CI (`.github/workflows`) dispose d'un vrai Docker et devra confirmer l'exécution réelle.
+
+Détails A4 (`apps/web/app/_shared/ThemeToggle.tsx`, `apps/web/app/globals.css`, `apps/web/app/layout.tsx`) :
+
+- deux déclencheurs coexistent sur les mêmes jetons de conception : le `prefers-color-scheme`
+  automatique livré en A1 reste le comportement par défaut, mais un choix explicite le
+  prime dans les deux sens — `:root[data-theme="dark"]` force le sombre même si le système est en
+  clair, et `:root:not([data-theme="light"])` dans la media query empêche le sombre automatique
+  de s'appliquer si le visiteur a explicitement choisi le clair ;
+- le choix est persisté dans `localStorage` (`fodip-theme`) et appliqué comme attribut
+  `data-theme` sur `<html>` — jamais de cookie, jamais d'aller-retour serveur ;
+- pour éviter un flash du mauvais thème puis correction (l'écueil classique de ce genre de
+  bascule), un script inline synchrone dans `<head>` (`layout.tsx`) lit `localStorage` et pose
+  l'attribut *avant* la première peinture, donc avant même l'hydratation React — d'où le
+  `suppressHydrationWarning` sur `<html>`, le remède documenté pour ce décalage attendu entre le
+  balisage rendu côté serveur (qui ignore la préférence du visiteur) et le DOM réel ;
+- le bouton (☀️/🌙, `aria-label` explicite) est ajouté à l'en-tête des sept portails
+  (entrepreneur, agent, comité, direction, administration, auditeur, partenaire), de la page
+  d'accueil et du centre de notifications ;
+- vérifié visuellement (captures Playwright locales, build de production) : bascule immédiate,
+  persistance confirmée après rechargement (`data-theme` toujours présent, aucun flash), et
+  cohérence sur une page tierce (connexion agent) sans revisiter la page d'accueil au préalable —
+  le thème choisi s'applique dès le premier chargement sur n'importe quelle page grâce au script
+  inline.

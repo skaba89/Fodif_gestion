@@ -25,9 +25,24 @@ export const viewport = {
   ],
 };
 
+// Applies a persisted manual theme choice (axe A4) before first paint, so the page never flashes
+// the wrong theme then corrects itself. Deliberately a plain inline script rather than a
+// useEffect in _shared/ThemeToggle.tsx: that would only run after React hydrates, well after the
+// initial (unstyled-for-dark-mode) paint. Reads localStorage directly - no cookie round trip, no
+// server involvement - and does nothing (falls through to the prefers-color-scheme media query
+// in globals.css) when nothing was ever chosen.
+const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem('fodip-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // suppressHydrationWarning: the inline script below sets data-theme on this element before
+  // React hydrates, which is an expected, intentional mismatch with the server-rendered markup
+  // (the server has no notion of the visitor's stored preference) - the canonical pattern for
+  // this kind of pre-hydration theme script.
   return (
-    <html lang="fr" className={publicSans.variable}>
+    <html lang="fr" className={publicSans.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );
