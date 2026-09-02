@@ -57,6 +57,31 @@
   text-transform: uppercase;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.themeToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: border-color var(--duration-fast) var(--ease), filter var(--duration-fast) var(--ease);
+}
+
+.themeToggle:hover {
+  border-color: var(--green);
+  filter: brightness(0.97);
+}
+
 .hero {
   padding: clamp(20px, 5vw, 40px) clamp(18px, 4vw, 54px) 8px;
 }
