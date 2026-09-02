@@ -30,6 +30,11 @@ test.describe('Accessibility (axe A6)', () => {
     await expectNoSeriousViolations(page);
   });
 
+  test('the design system reference page has no serious WCAG violations (axe A5)', async ({ page }) => {
+    await page.goto('/design-system');
+    await expectNoSeriousViolations(page);
+  });
+
   // One session covers three checks (portal home in light and dark, then /mes-donnees - axe B6)
   // with a single login, and deliberately as auditeur@fodip.local rather than the PME account:
   // /auth/login is rate-limited to 5 attempts per email per 60s
