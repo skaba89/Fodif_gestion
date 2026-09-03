@@ -77,7 +77,7 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
       <div className={styles.buttonRow}><button className={styles.primary} disabled={submitting}>{submitting ? 'Envoi sécurisé…' : 'Envoyer le document'}</button></div>
     </form>
 
-    <section className={`${styles.card} ${styles.tableCard} ${styles.section}`}>
+    <section className={`${styles.card} ${styles.tableCard} ${styles.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran">
       <table className={styles.table}><thead><tr><th>Type</th><th>Fichier</th><th>Taille</th><th>Statut</th><th>Contrôle</th><th>Action</th></tr></thead>
         <tbody>{documents.map((document) => <tr key={document.id}>
           <td>{document.typeDocument}</td>

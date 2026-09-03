@@ -64,7 +64,11 @@ test.describe('Accessibility (axe A6)', () => {
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await expectNoSeriousViolations(page);
 
-    await page.getByRole('link', { name: 'Mes données' }).click();
+    // Direct navigation, not a nav-link click: mission "présentation Directeur général" (section
+    // 6) made the top nav `display: none` below 900px by design (replaced by the AppShell drawer
+    // on mobile, covered separately) - this test's purpose is scanning /mes-donnees for WCAG
+    // violations on every project including the mobile ones, not exercising the desktop nav.
+    await page.goto('/mes-donnees');
     await expect(page).toHaveURL(/\/mes-donnees$/);
     await expectNoSeriousViolations(page);
   });

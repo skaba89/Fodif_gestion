@@ -33,24 +33,27 @@ import { defineConfig, devices } from '@playwright/test';
  * direction-partenaire.spec.ts and pwa.spec.ts stay in HEAVY_LOGIN_SPECS's complement (light or no
  * login use, verified safe under the exact same replay) and run on the full matrix.
  *
- * Mobile device emulation (Android/iPhone, the matrix's other half) is deliberately NOT added
- * here yet: enabling it immediately turned up real, pre-existing bugs, not test-harness noise -
- * verified locally against this exact live stack (`Mobile Chrome (Android)` via `devices['Pixel
- * 7']`, chromium engine, no extra browser install needed) before deciding not to ship it. Below
- * ~900px / ~680px (depending on portal), several independent layouts (globals.css's
- * `.app-shell`/`.nav-list` used by the direction/comité portals, `entrepreneur/portal.module.css`
- * for the PME portal) set the whole navigation to `display: none` with no hamburger/drawer
- * replacement - the page becomes unusable, not just visually different, past that breakpoint. A
- * separate axe hit a genuine WCAG violation unrelated to navigation (a `tabindex`-bearing
- * `.tableCard` wrapper on the design-system page with no focusable content, mobile viewport only).
- * Fixing mobile navigation is real, multi-portal frontend work, not something to fold into an
- * infrastructure PR that would otherwise leave a fresh browser matrix permanently red - tracked as
- * its own follow-up (see docs/14-ROADMAP-SAAS-PREMIUM.md, axe E2) with the two mobile projects
- * ready to uncomment once it lands.
+ * Mobile device emulation (Android/iPhone, the matrix's other half) was deliberately left out of
+ * this file until mission "présentation Directeur général" (section 6): enabling it first turned
+ * up real, pre-existing bugs, not test-harness noise - below ~900px/~680px (depending on portal),
+ * every portal's layout set its whole navigation to `display: none` with no hamburger/drawer
+ * replacement, making the page unusable, not just visually different, past that breakpoint. That
+ * bug is now fixed (see AppShell.tsx, Drawer.tsx) and verified across all 7 portals at 375px, so
+ * the two mobile projects below are real coverage now, not a placeholder. `Pixel 7` runs on the
+ * `chromium` engine (Android device emulation in Playwright always does; there is no separate
+ * Android browser engine) so it needs no extra browser install beyond `chromium` itself. `iPhone
+ * 14` runs on `webkit` (Mobile Safari emulation always does) - CI already installs it
+ * (`playwright install --with-deps chromium firefox webkit`); running this project locally
+ * requires that same install.
  */
 // Specs that log in as agent@/pme@/admin@fodip.local enough times per run to matter for the
 // shared 5-per-60s throttle once replayed across projects - see the file-level comment above.
-const HEAVY_LOGIN_SPECS = [/login\.spec\.ts$/, /workflow\.spec\.ts$/, /mfa\.spec\.ts$/, /pii-encryption\.spec\.ts$/];
+const HEAVY_LOGIN_SPECS = [
+  /login\.spec\.ts$/, /workflow\.spec\.ts$/, /mfa\.spec\.ts$/, /pii-encryption\.spec\.ts$/,
+  // Mission "présentation Directeur général" (section 10): logs in as pme@/agent@/comite@ - the
+  // same three accounts workflow.spec.ts already uses - so it carries the same profile.
+  /executive-demo\.spec\.ts$/,
+];
 
 export default defineConfig({
   testDir: './e2e',
@@ -68,5 +71,11 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: HEAVY_LOGIN_SPECS },
     { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: HEAVY_LOGIN_SPECS },
+    // Mobile matrix (mission "présentation Directeur général", section 6 and 10) - same
+    // HEAVY_LOGIN_SPECS exclusion as firefox/webkit above, for the same reason: five projects all
+    // replaying login.spec.ts/workflow.spec.ts/mfa.spec.ts/pii-encryption.spec.ts within one run
+    // would trip the shared 5-attempts/60s login throttle even harder than three already do.
+    { name: 'Pixel 7', use: { ...devices['Pixel 7'] }, testIgnore: HEAVY_LOGIN_SPECS },
+    { name: 'iPhone 14', use: { ...devices['iPhone 14'] }, testIgnore: HEAVY_LOGIN_SPECS },
   ],
 });

@@ -178,7 +178,7 @@ export default function DesignSystemPage() {
             <p className={ds.typeMeta}>.card</p>
             <p style={{ margin: 0 }}>Conteneur de base : fond, bordure, ombre légère, coins arrondis.</p>
           </div>
-          <div className={`${portal.card} ${portal.tableCard}`}>
+          <div className={`${portal.card} ${portal.tableCard}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran">
             <table className={portal.table}>
               <thead><tr><th>Dossier</th><th>Montant</th><th>Statut</th></tr></thead>
               <tbody>
