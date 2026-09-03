@@ -2,13 +2,14 @@
 
 ## Objectif et périmètre
 
-Axe E2 de `docs/14-ROADMAP-SAAS-PREMIUM.md`. Couvre les quatre modules métier critiques identifiés
-dans la mission contre un vrai PostgreSQL, pas des mocks : `financings` (financements,
-décaissements, remboursements, échéances), `committee` (décisions du comité de financement),
-`administration` (comptes utilisateurs, rôles, protection du dernier SUPER_ADMIN) et `partner`
-(portail banque partenaire, isolation entre banques). Ne couvre pas encore : MinIO
-(`documents`/`document-storage`), la matrice Playwright multi-navigateurs/mobile, ni la régression
-visuelle — chacun un lot séparé à venir (jamais une PR géante).
+Axe E2 de `docs/14-ROADMAP-SAAS-PREMIUM.md`. Couvre les cinq modules métier critiques identifiés
+dans la mission contre un vrai PostgreSQL (et, pour `documents`, un vrai stockage compatible S3),
+pas des mocks : `financings` (financements, décaissements, remboursements, échéances), `committee`
+(décisions du comité de financement), `administration` (comptes utilisateurs, rôles, protection du
+dernier SUPER_ADMIN), `partner` (portail banque partenaire, isolation entre banques) et `documents`
+(upload/téléchargement de justificatifs via MinIO/S3, intégrité par checksum, isolation PME). Ne
+couvre pas encore : la matrice Playwright multi-navigateurs/mobile, ni la régression visuelle —
+chacun un lot séparé à venir (jamais une PR géante).
 
 ## Pourquoi les tests existants ne suffisaient pas
 
@@ -50,15 +51,25 @@ rollback transactionnel — ne sont vérifiables qu'avec un vrai moteur SQL.
   machine sans Docker qui tourne.
 - Nouveau script `pnpm --filter @fodip/api test:integration`.
 
-### Échappatoire `TEST_DATABASE_URL` (pourquoi, voir plus bas)
+- **`storage.ts`** : le pendant S3 de `database.ts`. Démarre un conteneur `minio/minio` jetable via
+  `@testcontainers/minio` (épinglé à `12.1.0`, même version que `testcontainers`/
+  `@testcontainers/postgresql`) — exactement l'image que `docker-compose.yml` épingle pour le
+  service `minio`. Construit un vrai `DocumentStorageService` (la classe de production) branché
+  dessus via `ConfigService`, expose `reset()` (vide le bucket de test entre deux tests) et
+  `stop()`, plus un helper `corruptStoredObject()` qui écrase les octets d'un objet déjà stocké en
+  place — utilisé pour simuler une corruption côté stockage et vérifier que le contrôle d'intégrité
+  de `DocumentsService#downloadVerified` la détecte réellement.
 
-`database.ts` accepte une variable d'environnement `TEST_DATABASE_URL` : si elle est définie, le
-harnais se connecte directement à cette base au lieu de démarrer un conteneur (mais applique quand
-même les migrations et fournit `reset()`/`stop()` normalement). **Non définie en CI** — la CI
-utilise le chemin normal, hermétique, via Testcontainers. Cette échappatoire a servi à la
-vérification locale (voir « Limitation constatée » plus bas) et reste utile pour tout
-environnement où Testcontainers ne peut pas atteindre un registre d'images mais où un vrai
-PostgreSQL jetable est disponible autrement.
+### Échappatoire `TEST_DATABASE_URL` / `TEST_STORAGE_ENDPOINT` (pourquoi, voir plus bas)
+
+`database.ts` accepte une variable d'environnement `TEST_DATABASE_URL`, et `storage.ts` son
+équivalent `TEST_STORAGE_ENDPOINT` (+ `TEST_STORAGE_ACCESS_KEY`/`TEST_STORAGE_SECRET_KEY`) : si
+elle est définie, le harnais se connecte directement à cette base/cet endpoint au lieu de démarrer
+un conteneur (mais applique quand même les migrations, ou fournit `reset()`/`stop()`, normalement).
+**Non définies en CI** — la CI utilise le chemin normal, hermétique, via Testcontainers. Cette
+échappatoire a servi à la vérification locale (voir « Limitation constatée » plus bas) et reste
+utile pour tout environnement où Testcontainers ne peut pas atteindre un registre d'images mais où
+un vrai PostgreSQL ou un vrai stockage compatible S3 jetable est disponible autrement.
 
 ### Specs (`apps/api/test/integration/financings.integration-spec.ts`, 12 tests)
 
@@ -148,16 +159,40 @@ qu'une banque ne peut effectivement jamais atteindre les données d'une autre.
 | Trop-perçu au-delà du montant dû | Remboursement seul au-dessus du reste dû → `BadRequestException` |
 | Audit | Une déclaration de décaissement réussie écrit une entrée `PARTNER_DECLARE_DISBURSEMENT` attribuée à la bonne banque partenaire |
 
+### Specs (`apps/api/test/integration/documents.integration-spec.ts`, 16 tests)
+
+Le module `documents` est le seul des cinq à dépendre d'un stockage objet réel, pas seulement de
+PostgreSQL : `test/documents.service.spec.ts` mocke à la fois le repository et
+`DocumentStorageService`, ce qui prouve la logique de branchement mais ne peut structurellement pas
+vérifier qu'un fichier uploadé revient identique une fois téléchargé, que le contrôle d'intégrité
+SHA-256 de `DocumentsService#downloadVerified` détecte une vraie corruption côté stockage (pas
+seulement une valeur de mock différente), ou que l'isolation PME (`dossier_documents` jointe à
+`dossiers_financement.entreprise_id`) tient sur une vraie jointure. Décision de périmètre : le
+rollback compensatoire (`storage.delete()` si l'insertion en base échoue après un upload réussi
+dans `uploadOwn`) n'est pas testé ici — le déclencher naturellement de l'extérieur demanderait de
+mocker intrusivement la couche base de données, ce qui casserait la philosophie « boîte noire
+réelle » suivie pour les quatre autres modules ; à réévaluer si un déclencheur propre se présente.
+
+| Scénario demandé dans la mission | Test |
+|---|---|
+| Cas nominal | Upload puis téléchargement : octets identiques à l'octet près, bon nom de fichier, bon type de contenu ; l'objet est réellement présent dans le bucket S3 à la clé annoncée et le checksum stocké correspond au SHA-256 réel du contenu |
+| Intégrité du stockage | Objet corrompu directement dans S3 (mêmes métadonnées en base, octets différents) → `downloadOwn` et `downloadForReview` refusent tous les deux avec `ServiceUnavailableException` |
+| Isolation PME | Une entreprise ne peut jamais télécharger le document d'une autre (`NotFoundException`, pas la vraie donnée) ; `listOwn` exclut les documents d'une autre entreprise même en interrogeant le bon `dossierId` ; upload refusé sur un dossier appartenant à une autre entreprise |
+| Garde-fous d'upload | Dossier hors des statuts éditables (`BROUILLON`/`COMPLEMENT_REQUIS`) → `ForbiddenException` ; type de document hors liste autorisée → `BadRequestException` ; contenu ne correspondant à aucune signature de fichier connue → `BadRequestException` ; mimetype annoncé différent de la signature réelle des octets (protection anti-spoofing) → `BadRequestException` ; aucun objet laissé dans S3 quand l'upload est refusé avant d'atteindre le stockage |
+| Vérification | Décision `VALIDE` : `statut_verification`, `verified_by`, `verified_at` mis à jour, entrée d'audit `DOCUMENT_VERIFY` avec l'ancien et le nouveau statut ; décision `A_COMPLETER` sans commentaire → `BadRequestException`, avec commentaire → stocké tel quel |
+| Audit d'accès | Téléchargement par la PME propriétaire → entrée `DOCUMENT_DOWNLOAD_PME` ; téléchargement par un agent en revue → entrée `DOCUMENT_DOWNLOAD_AGENT`, distincte |
+
 ## Vérifié
 
 Chaque affirmation ci-dessous a été vérifiée réellement, pas supposée :
 
-- **Les 36 tests passent** (12 `financings` + 6 `committee` + 9 `administration` + 9 `partner`)
-  contre un vrai PostgreSQL, chacun exécuté plusieurs fois de suite sans un seul échec intermittent
-  (les tests de concurrence sont exactement le genre de test qui peut être flaky s'il est mal
-  conçu — vérifié qu'il ne l'est pas, pas juste espéré).
+- **Les 52 tests passent** (12 `financings` + 6 `committee` + 9 `administration` + 9 `partner` + 16
+  `documents`) contre un vrai PostgreSQL (et, pour `documents`, un vrai stockage compatible S3),
+  chacun exécuté plusieurs fois de suite sans un seul échec intermittent (les tests de concurrence
+  sont exactement le genre de test qui peut être flaky s'il est mal conçu — vérifié qu'il ne l'est
+  pas, pas juste espéré).
 - **Ces tests détectent une vraie régression, pas seulement une régression injectée pour la forme**,
-  vérifié pour les quatre modules séparément : le verrou `FOR UPDATE` de `planDisbursement` retiré
+  vérifié pour les cinq modules séparément : le verrou `FOR UPDATE` de `planDisbursement` retiré
   temporairement fait échouer son test de concurrence (conflit de contrainte SQL au lieu du
   `ConflictException` applicatif attendu) ; la clause `WHERE statut = 'PRET_COMITE'` de
   `CommitteeRepository.decide` retirée temporairement fait échouer son test de concurrence (les deux
@@ -167,14 +202,21 @@ Chaque affirmation ci-dessous a été vérifiée réellement, pas supposée :
   vrai verrouillage de la plateforme) ; retirer `${PARTNER_SCOPE}` de `PartnerRepository.findById`
   fait échouer trois des cinq tests d'isolation immédiatement (une banque peut alors lire les
   données d'une autre), et retirer le verrou `FOR UPDATE` de `createDisbursement` fait échouer son
-  test de concurrence de la même façon que pour `financings`. Les quatre fichiers ont été restaurés
-  à l'identique ensuite (`git diff` vide) et la suite complète repassée au vert.
+  test de concurrence de la même façon que pour `financings` ; désactiver le contrôle de checksum
+  dans `DocumentsService#downloadVerified` fait échouer les deux tests d'intégrité du stockage (le
+  contenu corrompu est renvoyé sans erreur) ; retirer la condition `d.entreprise_id = $2` de
+  `DocumentsRepository.findOwnedById` fait échouer le test d'isolation croisée — une entreprise
+  télécharge alors réellement le document d'une autre, la fuite exacte que ce test doit empêcher.
+  Les cinq fichiers ont été restaurés à l'identique ensuite (`git diff` vide) et la suite complète
+  repassée au vert.
 - `pnpm --filter @fodip/api lint` : aucune erreur sur les nouveaux fichiers.
 - `pnpm --filter @fodip/api test` (suite unitaire existante, 112 tests, 23 fichiers) : toujours au
   vert, aucune régression. Couverture globale inchangée (65,51 % lignes) — attendu, les tests
   d'intégration tournent dans une configuration Jest séparée, non incluse dans cette mesure.
 - `npx tsc --noEmit` sur `apps/api` (le `tsconfig.json` du projet inclut déjà `test/**/*`) : aucune
   erreur.
+- `pnpm --filter @fodip/api test:prepush`, `pnpm --filter @fodip/api build` et
+  `pnpm --filter @fodip/web build` : tous au vert.
 - `.github/workflows/ci.yml` validé avec `actionlint` : aucun avertissement.
 
 ### Couverture apportée par les tests d'intégration
@@ -218,12 +260,27 @@ PostgreSQL vide diffère. Le job CI `integration-tests` (`.github/workflows/ci.y
 utilisera le vrai chemin Testcontainers hermétique — sa réussite en CI est la vérification de
 référence, à confirmer avant fusion de la PR.
 
+Même limitation, même contournement pour `documents`/MinIO, avec une contrainte supplémentaire :
+l'image `minio/minio` est bloquée par la même politique de registre, **et** le binaire MinIO
+lui-même n'est téléchargeable ni via `dl.min.io` (403 par le proxy sortant) ni via `apt` (aucun
+paquet serveur MinIO). Comme pour PostgreSQL, la solution n'est pas de contourner la politique
+réseau mais de trouver un vrai serveur compatible S3 atteignable par une voie autorisée : le
+registre npm l'est, et [`s3rver`](https://www.npmjs.com/package/s3rver) (serveur S3 factice pur
+Node, standard pour ce genre de vérification) y est disponible. Lancé localement en éphémère
+(`pnpm dlx s3rver@3.7.1 -d <tmp> -a 127.0.0.1 -p <port>`, jamais ajouté à `package.json` ni au
+lockfile — seul `@testcontainers/minio` est une vraie dépendance commitée), pointé via
+`TEST_STORAGE_ENDPOINT`, il fournit un vrai serveur S3 pour faire tourner `documents.integration-
+spec.ts` sans passer par `MinioContainer`. Même raisonnement que pour Postgres : mêmes assertions,
+même `DocumentStorageService`/`DocumentsService`/`DocumentsRepository` de production, seule la
+manière d'obtenir un endpoint S3 vide diffère. Le job CI `integration-tests` utilisera le vrai
+`MinioContainer` (l'image `minio/minio` exacte que `docker-compose.yml` épingle) — sa réussite en
+CI reste la vérification de référence.
+
 ## Prochaine étape recommandée
 
-Les quatre modules métier critiques cités explicitement dans la mission (`financings`, `committee`,
-`administration`, `partner`) sont maintenant tous couverts contre un vrai PostgreSQL. Reste, chacun
-en PR séparée : intégration MinIO réelle pour `documents`/`document-storage` (upload/téléchargement
-de justificatifs, checksum, quarantaine antivirus) ; matrice Playwright multi-navigateurs
-(Chromium/Firefox/WebKit) et mobile (Android/iPhone) ; régression visuelle. Un raffinement possible
-au passage : fusionner les rapports de couverture unitaire + intégration en un seul chiffre par
-module (actuellement mesurés séparément, voir plus haut).
+Les cinq modules métier critiques cités explicitement dans la mission (`financings`, `committee`,
+`administration`, `partner`, `documents`) sont maintenant tous couverts contre un vrai backend réel
+(PostgreSQL, et pour `documents` un vrai stockage S3). Reste, chacun en PR séparée : matrice
+Playwright multi-navigateurs (Chromium/Firefox/WebKit) et mobile (Android/iPhone) ; régression
+visuelle. Un raffinement possible au passage : fusionner les rapports de couverture unitaire +
+intégration en un seul chiffre par module (actuellement mesurés séparément, voir plus haut).

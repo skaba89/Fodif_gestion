@@ -106,6 +106,42 @@ export async function seedEligibleDossier(pool: Pool, options: EligibleDossierOp
   return { entrepriseId, dossierId, decisionId: decision.rows[0].id, montantApprouve, tauxInteret, dureeMois };
 }
 
+export interface EditableDossierOptions {
+  statut?: string;
+}
+
+export interface EditableDossier {
+  entrepriseId: string;
+  dossierId: string;
+}
+
+/**
+ * Inserts a bare entreprise + dossier at a status DocumentsService#uploadOwn accepts
+ * (EDITABLE_APPLICATION_STATUSES in document-policy.js - defaults to BROUILLON), with no decision
+ * or scoring rows since the documents module doesn't need them. `entrepriseId` is what
+ * DocumentsRepository's queries join dossier_documents against, so it's what an
+ * AuthenticatedUser.entrepriseId fixture must match to exercise PME-owned document access.
+ */
+export async function seedEditableDossier(pool: Pool, options: EditableDossierOptions = {}): Promise<EditableDossier> {
+  const unique = randomUUID().slice(0, 8);
+  const statut = options.statut ?? 'BROUILLON';
+
+  const entreprise = await pool.query<{ id: string }>(
+    `INSERT INTO entreprises (code_fodip, raison_sociale, statut)
+     VALUES ($1, $2, 'ACTIVE') RETURNING id`,
+    [`FODIP-TEST-${unique}`, `Entreprise Test ${unique}`],
+  );
+  const entrepriseId = entreprise.rows[0].id;
+
+  const dossier = await pool.query<{ id: string }>(
+    `INSERT INTO dossiers_financement (numero_dossier, entreprise_id, montant_demande, objet_financement, statut)
+     VALUES ($1, $2, 500000, 'Fonds de roulement (fixture de test)', $3) RETURNING id`,
+    [`DOS-TEST-${unique}`, entrepriseId, statut],
+  );
+
+  return { entrepriseId, dossierId: dossier.rows[0].id };
+}
+
 export interface DossierReadyForCommitteeOptions {
   montantDemande?: number;
   scoreTotal?: number;
