@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import ConfirmDialog from '../../_shared/ConfirmDialog';
 import portal from '../../entrepreneur/portal.module.css';
 
 type Role = { code: string; nom: string; description?: string; permissions: string[] };
@@ -19,6 +20,7 @@ export default function UsersAdministrationPage() {
   const [users, setUsers] = useState<User[]>([]); const [roles, setRoles] = useState<Role[]>([]);
   const [enterprises, setEnterprises] = useState<Enterprise[]>([]); const [partnerBanks, setPartnerBanks] = useState<PartnerBank[]>([]);
   const [form, setForm] = useState(emptyForm); const [search, setSearch] = useState(''); const [message, setMessage] = useState('');
+  const [pendingAnonymize, setPendingAnonymize] = useState<User | null>(null);
 
   const load = useCallback(async () => {
     const [usersResponse, rolesResponse, enterprisesResponse, partnerBanksResponse] = await Promise.all([
@@ -67,7 +69,6 @@ export default function UsersAdministrationPage() {
   // est remplacée par un repère non identifiant et le compte est désactivé ; ses dossiers et son
   // historique financier restent inchangés (voir database/012_data_rights.sql).
   async function anonymize(user: User) {
-    if (!window.confirm(`Anonymiser le compte ${user.email} ? Cette action est irréversible : le nom, prénom, téléphone et email seront remplacés par un repère non identifiant et le compte sera désactivé.`)) return;
     setMessage('');
     const response = await fetch(`/api/data-rights/users/${user.id}/anonymize`, { method: 'POST' });
     const body = await response.json().catch(() => ({}));
@@ -99,9 +100,18 @@ export default function UsersAdministrationPage() {
         <td><input type="checkbox" checked={user.actif} onChange={(event) => patchLocal(user.id, { actif: event.target.checked })} aria-label={`Compte actif ${user.email}`} /></td>
         <td><input type="checkbox" checked={user.mfaRequired} onChange={(event) => patchLocal(user.id, { mfaRequired: event.target.checked })} aria-label={`MFA ${user.email}`} /></td>
         <td><button className={portal.secondary} type="button" onClick={() => save(user)}>Enregistrer</button></td>
-        <td><button className={portal.secondary} type="button" onClick={() => anonymize(user)} disabled={Boolean(user.anonymizedAt)}>{user.anonymizedAt ? 'Anonymisé' : 'Anonymiser'}</button></td>
+        <td><button className={portal.secondary} type="button" onClick={() => setPendingAnonymize(user)} disabled={Boolean(user.anonymizedAt)}>{user.anonymizedAt ? 'Anonymisé' : 'Anonymiser'}</button></td>
       </tr>)}</tbody></table></div>
     </section>
     <section className={`${portal.card} ${portal.section}`}><h2>Référentiel RBAC</h2>{roles.map((role) => <details key={role.code}><summary><strong>{role.nom}</strong> · {role.code}</summary><p>{role.description}</p><p>{role.permissions.join(' · ') || 'Aucune permission directe'}</p></details>)}</section>
+    <ConfirmDialog
+      open={Boolean(pendingAnonymize)}
+      title="Anonymiser ce compte ?"
+      message={pendingAnonymize ? `Anonymiser le compte ${pendingAnonymize.email} ? Cette action est irréversible : le nom, prénom, téléphone et email seront remplacés par un repère non identifiant et le compte sera désactivé.` : ''}
+      confirmLabel="Anonymiser"
+      danger
+      onConfirm={() => { const user = pendingAnonymize; setPendingAnonymize(null); if (user) void anonymize(user); }}
+      onCancel={() => setPendingAnonymize(null)}
+    />
   </main>;
 }

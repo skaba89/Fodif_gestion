@@ -21,6 +21,21 @@
   border-bottom: 1px solid var(--line);
 }
 
+/* Mission "présentation Directeur général", axe 9 (mode présentation) - shown app-wide by
+   AppShell, under every portal's header, whenever GET /api/config reports demoMode: true
+   (docker-compose.presentation.yml / scripts/demo-presentation.sh). Was previously rendered only
+   inside direction/tableau-de-bord/page.tsx via a NEXT_PUBLIC_ build-time flag; moved here and made
+   runtime so every portal shows it consistently, not only the Direction cockpit. */
+.demoBanner {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--warning);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -603,6 +618,71 @@
   font-size: 0.76rem;
 }
 
+/* AppShell (mission "présentation Directeur général", section 6 - navigation mobile) - the
+   desktop account menu and the mobile hamburger button are mutually exclusive, swapped by the
+   same 900px breakpoint that used to just hide `.nav` outright with nothing in its place. */
+.accountDesktop {
+  display: contents;
+}
+
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.hamburger:hover {
+  border-color: var(--green);
+}
+
+.drawerNav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 18px;
+}
+
+.drawerNav a,
+.drawerNavItem,
+.drawerNavItemActive {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.drawerNavItemActive {
+  background: var(--surface-soft);
+  color: var(--green-strong);
+  font-weight: 750;
+}
+
+.drawerNav a:hover {
+  background: var(--surface-soft);
+  color: var(--green-strong);
+}
+
+.drawerAccount {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.drawerAccount :global(.account) {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
 @media (max-width: 900px) {
   .header {
     align-items: flex-start;
@@ -610,6 +690,14 @@
 
   .nav {
     display: none;
+  }
+
+  .accountDesktop {
+    display: none;
+  }
+
+  .hamburger {
+    display: inline-flex;
   }
 
   .hero,
@@ -624,9 +712,9 @@
 }
 
 @media (max-width: 620px) {
-  .account span {
-    display: none;
-  }
+  /* .account's email <span> used to be hidden here to save cramped header space - moot now that
+     the account menu only ever renders in the header above 900px (plenty of room) or inside the
+     320px-wide Drawer below it (also plenty of room for an email address). */
 
   .main {
     width: min(100% - 24px, 1180px);
@@ -660,5 +748,18 @@
   .heroCard,
   .formCard {
     padding: 19px;
+  }
+}
+
+/* Mission "présentation Directeur général" (section 2, "export PDF/Excel uniquement s'il
+   fonctionne réellement") - the cockpit's "Export PDF" button calls window.print() directly, a
+   real, working export with no extra dependency; this is what makes the printed/PDF'd page show
+   only the report itself, not the app chrome around it. */
+@media print {
+  .header,
+  .skip-link,
+  .footer,
+  .demoBanner {
+    display: none !important;
   }
 }
