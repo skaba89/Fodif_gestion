@@ -62,6 +62,24 @@ Détails C3a (`apps/api/src/tracing.ts`, `apps/api/src/common/json-logger.servic
 | D3 | Internationalisation (le contenu est actuellement en français uniquement, cohérent avec le contexte national — à revisiter seulement si un besoin multilingue apparaît) | À évaluer |
 | D4 | Facturation / gestion multi-organisme si la plateforme est mutualisée au-delà du FODIP | À évaluer |
 
+## Axe E — Sprint Enterprise 0 (SaaS entreprise critique)
+
+Mission distincte des axes A-D ci-dessus : faire mûrir la gouvernance, les tests, l'UI/UX,
+l'identité/sécurité, l'intégrité financière, la gestion documentaire et l'architecture Docker au
+niveau attendu d'un SaaS entreprise critique, en petits lots indépendants (une PR par lot,
+jamais une transformation géante). Détail par lot dans son propre document une fois livré.
+
+| Phase | Contenu | Statut |
+|---|---|---|
+| E1 | Gouvernance GitHub et supply chain : CODEOWNERS, template de PR, `SECURITY.md`, Dependabot, CodeQL, scan de secrets, audit de licences, CI parallélisée et durcie (lockfile figé, Actions épinglées par SHA), vulnérabilité lodash corrigée | **Fait** (cette itération) — `docs/19-GOUVERNANCE-SUPPLY-CHAIN.md` |
+| E2 | Tests entreprise : intégration réelle PostgreSQL/MinIO, priorité aux modules financiers critiques, matrice Playwright multi-navigateurs/mobile, régression visuelle | À faire |
+| E3 | Refonte UI/UX ultra premium : design system partagé, navigation mobile, états de chargement/erreur/vide systématiques, assistants PME/Agent/Comité/Direction | À faire |
+| E4 | Identité et sécurité entreprise : cycle de vie de session complet, révocation, rate limiting distribué, durcissement OIDC, séparation et rotation des clés | À faire |
+| E5 | Intégrité financière : idempotency keys, maker-checker, rapprochement bancaire, verrouillage optimiste, contraintes PostgreSQL sur montants/statuts | À faire |
+| E6 | Documents entreprise : antivirus, quarantaine, checksum, versioning, upload en streaming | À faire |
+| E7 | Architecture Docker entreprise : profils dédiés, images non-root avec healthchecks, SBOM signé, cible de production OCI/K8s documentée sans dépendance cloud | À faire |
+| E8 | Multi-tenance réelle (organisations multiples) | Décision requise — ne pas migrer le modèle de données sans validation explicite du périmètre cible (FODIP seul, programmes internes multiples, ou plusieurs organismes indépendants) |
+
 ## Méthode
 
 - Chaque phase marquée « décision requise » bloque sur un choix qui n'appartient pas à

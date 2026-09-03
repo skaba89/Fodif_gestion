@@ -1,0 +1,49 @@
+# FODIP Digital 2030 - mises à jour de dépendances automatisées (Sprint Enterprise 0, Lot 1).
+# Un PR groupée par écosystème et par semaine plutôt qu'une par paquet : ce dépôt a un seul
+# mainteneur aujourd'hui, une avalanche de PR individuelles serait du bruit, pas de la sécurité.
+version: 2
+updates:
+  # pnpm workspace racine (couvre apps/api et apps/web - un seul lockfile pour les trois).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      npm-dependencies:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    commit-message:
+      prefix: chore(deps)
+
+  # Images de base des deux Dockerfile applicatifs.
+  - package-ecosystem: docker
+    directory: /apps/api
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, docker]
+    commit-message:
+      prefix: chore(deps)
+
+  - package-ecosystem: docker
+    directory: /apps/web
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, docker]
+    commit-message:
+      prefix: chore(deps)
+
+  # Les Actions elles-mêmes (checkout, setup-node...) sont épinglées par SHA immuable dans
+  # ci.yml/codeql.yml - Dependabot sait proposer la mise à jour d'un SHA épinglé aussi bien que
+  # d'un tag mobile, et garde le commentaire de version à jour au passage.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, ci]
+    commit-message:
+      prefix: chore(ci)

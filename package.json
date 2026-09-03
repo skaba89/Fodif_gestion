@@ -11,5 +11,12 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "test:prepush": "bash scripts/test-prepush.sh"
+  },
+  "pnpm": {
+    "overrides": {
+      "glob@>=11.0.0 <11.1.0": "^11.1.0",
+      "picomatch@>=4.0.0 <4.0.4": "^4.0.4",
+      "ajv@>=7.0.0-alpha.0 <8.18.0": "^8.18.0"
+    }
   }
 }
