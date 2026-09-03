@@ -29,6 +29,16 @@ export async function seedUser(pool: Pool): Promise<{ id: string }> {
  * users in a known state (e.g. two active SUPER_ADMIN accounts) rather than exercising creation
  * itself for every fixture.
  */
+/** Inserts a partner bank row (database/011_partner_banks.sql) - the entity partner-scoped fixtures attach financings/PME portfolios to. */
+export async function seedPartnerBank(pool: Pool): Promise<{ id: string }> {
+  const unique = randomUUID().slice(0, 8);
+  const result = await pool.query<{ id: string }>(
+    `INSERT INTO partenaires_bancaires (code, raison_sociale, actif) VALUES ($1, $2, TRUE) RETURNING id`,
+    [`PARTNER-TEST-${unique}`, `Banque Partenaire Test ${unique}`],
+  );
+  return result.rows[0];
+}
+
 export async function seedUserWithRoles(pool: Pool, roleCodes: string[], options: { actif?: boolean } = {}): Promise<{ id: string }> {
   const unique = randomUUID().slice(0, 8);
   const user = await pool.query<{ id: string }>(
