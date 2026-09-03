@@ -83,8 +83,13 @@ jobs:
       # is the separate `integration-tests` job below (Sprint Enterprise 0 Lot 2, axe E2 -
       # docs/14-ROADMAP-SAAS-PREMIUM.md) - *.integration-spec.ts files, excluded from this job's
       # testRegex on purpose (jest.config.js vs. jest.integration.config.js).
+      # --coverageReporters=json (on top of the human-facing text-summary/json-summary/lcov)
+      # produces the raw, per-file coverage-final.json below `integration-tests`'s combined-report
+      # step also needs (that step re-runs this exact command inside its own job) - see
+      # apps/api/scripts/merge-coverage.js's own comment for why the merge lives there instead of
+      # a third job.
       - name: API tests with coverage
-        run: pnpm --filter @fodip/api test -- --coverage --coverageReporters=text-summary --coverageReporters=json-summary --coverageReporters=lcov
+        run: pnpm --filter @fodip/api test -- --coverage --coverageReporters=text-summary --coverageReporters=json-summary --coverageReporters=lcov --coverageReporters=json
 
       - name: Upload coverage report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -127,8 +132,41 @@ jobs:
       # install and a local `s3rver` stood in for Testcontainers there via TEST_DATABASE_URL /
       # TEST_STORAGE_ENDPOINT - deliberately not set here, so this job exercises the real,
       # hermetic, disposable-container path for both.
+      # `pnpm --filter @fodip/api test:integration -- --coverage ...` (the same "run <script> --
+      # <args>" form the unit-tests job above uses successfully for its own `test` script)
+      # reproducibly mis-forwards args for this particular script name: verified locally that pnpm
+      # inserts a literal, unwanted `--` before the forwarded flags for `test:integration`
+      # specifically (not for `test`), which Jest then treats as "everything after this is a test
+      # path pattern", matching zero files. `exec jest` bypasses pnpm's script-arg forwarding
+      # entirely - no such argument gets in the way.
       - name: Business modules integration tests (real PostgreSQL + MinIO, locking, concurrency, storage integrity)
-        run: pnpm --filter @fodip/api test:integration
+        run: pnpm --filter @fodip/api exec jest --config jest.integration.config.js --runInBand --coverage --coverageReporters=text-summary --coverageReporters=json
+
+      # Sprint Enterprise 0 - mission "niveau 80-85/100" Lot 2 (axe 5.1, couverture combinée) : a
+      # line only exercised by an integration test (a real unique-constraint conflict under row
+      # locking, say) counts as covered in the *combined* report even though the unit suite alone
+      # never reaches it - apps/api/jest.config.cjs's own coverageThreshold, checked against the
+      # `unit-tests` job's run above, can't see that. Re-running the unit suite here (~15s, cheap
+      # next to the Testcontainers startup this job already pays for) rather than downloading the
+      # `unit-tests` job's own coverage artifact keeps this to the two jobs this workflow already
+      # has - a third job would need actions/download-artifact, which nothing in this repo has a
+      # SHA pin for yet. See apps/api/scripts/merge-coverage.js's own comment for the full
+      # rationale, including why raw coverage-final.json (the `json` reporter), not any of the
+      # aggregated report formats, is what actually gets merged.
+      - name: Unit tests with coverage (for the combined report below)
+        run: pnpm --filter @fodip/api test -- --coverage --coverageReporters=json
+
+      - name: Merge unit + integration coverage into one combined report
+        run: node scripts/merge-coverage.js
+        working-directory: apps/api
+
+      - name: Upload combined coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: api-coverage-combined
+          path: apps/api/coverage-combined/
+          retention-days: 30
 
   build:
     name: Builds (API + Web)
