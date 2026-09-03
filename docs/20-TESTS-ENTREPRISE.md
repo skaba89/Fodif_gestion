@@ -1,13 +1,14 @@
-# Étape 16 — Sprint Enterprise 0, Lot 2 (partiel) : tests entreprise, modules `financings` et `committee`
+# Étape 16 — Sprint Enterprise 0, Lot 2 (partiel) : tests entreprise, modules `financings`, `committee` et `administration`
 
 ## Objectif et périmètre
 
-Axe E2 de `docs/14-ROADMAP-SAAS-PREMIUM.md`. Couvre deux modules contre un vrai PostgreSQL, pas des
+Axe E2 de `docs/14-ROADMAP-SAAS-PREMIUM.md`. Couvre trois modules contre un vrai PostgreSQL, pas des
 mocks : `financings` (financements, décaissements, remboursements, échéances, le plus critique
-financièrement) et `committee` (décisions du comité de financement). Ne couvre pas encore : MinIO,
-les autres modules critiques (administration, partenaires bancaires, scoring, isolation PME), la
-matrice Playwright multi-navigateurs/mobile, ni la régression visuelle — tout cela reste à faire
-dans des lots suivants, volontairement séparés (jamais une PR géante).
+financièrement), `committee` (décisions du comité de financement) et `administration` (gestion des
+comptes utilisateurs, rôles, protection du dernier SUPER_ADMIN). Ne couvre pas encore : MinIO, le
+module `partner` (accès croisé entre banques partenaires), la matrice Playwright
+multi-navigateurs/mobile, ni la régression visuelle — tout cela reste à faire dans des lots
+suivants, volontairement séparés (jamais une PR géante).
 
 ## Pourquoi les tests existants ne suffisaient pas
 
@@ -34,12 +35,14 @@ rollback transactionnel — ne sont vérifiables qu'avec un vrai moteur SQL.
   épinglés à `12.1.0`) — exactement l'image que `docker-compose.yml` épingle pour le service
   `postgres`. Applique les vraies migrations `database/*.sql` dessus, puis construit un vrai
   `DatabaseService` (la classe de production, pas une doublure) branché dessus via `ConfigService`.
-  Expose `reset()` (TRUNCATE CASCADE de toutes les tables entre deux tests, rapide) et `stop()`.
-  Un seul conteneur par fichier de test (`beforeAll`), pas par cas de test : le démarrage prend
-  plusieurs secondes, `reset()` entre chaque test est presque instantané.
+  Expose `reset()` (TRUNCATE CASCADE de toutes les tables *sauf* `roles`/`permissions`/
+  `role_permissions` entre deux tests, rapide — voir « Un vrai bug de harnais » ci-dessous) et
+  `stop()`. Un seul conteneur par fichier de test (`beforeAll`), pas par cas de test : le démarrage
+  prend plusieurs secondes, `reset()` entre chaque test est presque instantané.
 - **`fixtures.ts`** : générateurs de données minimales (entreprise + dossier + décision de comité
-  APPROUVE, entreprise + dossier prêt pour le comité avec un score complet, utilisateur) avec
-  identifiants uniques par appel pour ne jamais entrer en collision entre tests.
+  APPROUVE, entreprise + dossier prêt pour le comité avec un score complet, utilisateur, utilisateur
+  déjà rattaché à des codes de rôle donnés) avec identifiants uniques par appel pour ne jamais
+  entrer en collision entre tests.
 - **`jest.integration.config.js`** : configuration Jest séparée (`testRegex:
   '.*\.integration-spec\.ts$'`), **volontairement exclue** de `jest.config.js` (qui ne matche que
   `*.spec.ts` / `*.e2e-spec.ts`) — ces specs ont besoin d'un démon Docker et prennent plusieurs
@@ -86,22 +89,64 @@ statut = 'PRET_COMITE'` atomique (pas de verrou explicite `FOR UPDATE` séparé,
 | Double-clic / double-soumission | Deux membres du comité décident le même dossier en même temps (une `APPROUVE`, une `REJETE`) → une seule réussit, une seule ligne dans `decisions_comite`, le statut final du dossier correspond exactement à la décision qui a réellement gagné la course (pas supposé être la première) |
 | Liste | Seuls les dossiers `PRET_COMITE` apparaissent dans la file du comité |
 
+### Specs (`apps/api/test/integration/administration.integration-spec.ts`, 9 tests)
+
+Deux choses que les mocks ne peuvent structurellement pas vérifier ici : le chiffrement AES-256-GCM
+du numéro de téléphone (axe B5) réellement écrit puis relu depuis PostgreSQL (pas une valeur en
+mémoire), et le verrou global `pg_advisory_xact_lock(80913001)` qui protège le dernier compte
+SUPER_ADMIN actif d'une suppression par deux requêtes concurrentes.
+
+| Scénario demandé dans la mission | Test |
+|---|---|
+| Chiffrement au repos | Téléphone jamais stocké en clair (`SELECT` direct sur la colonne) ; `listUsers` le déchiffre correctement |
+| Règle métier | Rôle privilégié → MFA forcé même si l'appelant demande explicitement `mfaRequired: false` ; email dupliqué → `ConflictException` (contrainte unique réelle) ; code de rôle inconnu → `BadRequestException` |
+| Transition de statut interdite | Un utilisateur ne peut jamais se désactiver lui-même ; désactiver le seul SUPER_ADMIN actif est refusé ; désactiver un SUPER_ADMIN quand un autre reste actif est autorisé |
+| Double-clic / double-soumission | Deux requêtes concurrentes désactivent chacune l'un des deux seuls SUPER_ADMIN actifs → une seule réussit, il reste toujours exactement un SUPER_ADMIN actif (jamais zéro) |
+| Audit | Une modification de rôle réussie écrit une entrée `UPDATE_USER` dans `audit_logs` |
+
+### Un vrai bug de harnais trouvé en écrivant ces tests : `reset()` effaçait les données de référence
+
+`database.ts` faisait un `TRUNCATE` de **toutes** les tables `public` entre deux tests, y compris
+`roles`, `permissions` et `role_permissions` — des tables que les migrations elles-mêmes peuplent
+une seule fois par `INSERT` (`grep '^INSERT INTO' database/*.sql`, confirmé exhaustif : ce sont les
+trois seules) et qu'aucun code applicatif ne modifie jamais (`grep` sur `INTO`/`UPDATE`/`DELETE`
+contre les trois dans `apps/api/src` : zéro résultat) — des données de référence figées par le
+schéma, pas des fixtures de test.
+
+Conséquence concrète, découverte en écrivant le tout premier test de ce fichier qui en dépend : le
+tout premier `beforeEach` de **n'importe quel** fichier de spec vidait la table `roles`, et comme
+les migrations ne tournent qu'une fois dans `beforeAll`, elle restait vide pour tout le reste du
+fichier. `financings` et `committee` n'avaient jamais remarqué ce bug parce qu'aucun des deux ne
+dépend de rôles pré-semés. Deux symptômes réels observés avant le correctif :
+- `service.createUser(..., { roles: ['ANALYSTE'] })` échouait avec `BadRequestException:
+  INVALID_ROLE` — un rôle pourtant réel et seedé par migration ;
+- le test « interdit de désactiver le seul SUPER_ADMIN actif » **passait pour la mauvaise raison** :
+  `seedUserWithRoles(['SUPER_ADMIN'])` n'assignait en réalité aucun rôle (la table `roles` était
+  vide), donc la garde `canDeactivateUser` autorisait la désactivation — pas parce qu'elle protégeait
+  correctement, mais parce que l'utilisateur ciblé n'avait techniquement plus aucun rôle à protéger.
+
+Corrigé en excluant ces trois tables du `TRUNCATE` (`SEED_ONLY_TABLES` dans `database.ts`, avec
+commentaire expliquant pourquoi). Ce correctif profite à `financings` et `committee` aussi bien
+qu'à `administration`, et à chaque futur module du Lot 2.
+
 ## Vérifié
 
 Chaque affirmation ci-dessous a été vérifiée réellement, pas supposée :
 
-- **Les 18 tests passent** (12 `financings` + 6 `committee`) contre un vrai PostgreSQL, chacun
-  exécuté plusieurs fois de suite sans un seul échec intermittent (les tests de concurrence sont
-  exactement le genre de test qui peut être flaky s'il est mal conçu — vérifié qu'il ne l'est pas,
-  pas juste espéré).
+- **Les 27 tests passent** (12 `financings` + 6 `committee` + 9 `administration`) contre un vrai
+  PostgreSQL, chacun exécuté plusieurs fois de suite sans un seul échec intermittent (les tests de
+  concurrence sont exactement le genre de test qui peut être flaky s'il est mal conçu — vérifié
+  qu'il ne l'est pas, pas juste espéré).
 - **Ces tests détectent une vraie régression, pas seulement une régression injectée pour la forme**,
-  vérifié pour les deux modules séparément : le verrou `FOR UPDATE` de `planDisbursement` retiré
+  vérifié pour les trois modules séparément : le verrou `FOR UPDATE` de `planDisbursement` retiré
   temporairement fait échouer son test de concurrence (conflit de contrainte SQL au lieu du
   `ConflictException` applicatif attendu) ; la clause `WHERE statut = 'PRET_COMITE'` de
   `CommitteeRepository.decide` retirée temporairement fait échouer son test de concurrence (les deux
-  décisions concurrentes réussissent, deux lignes dans `decisions_comite` au lieu d'une). Les deux
-  fichiers ont été restaurés à l'identique ensuite (`git diff` vide) et la suite complète repassée
-  au vert.
+  décisions concurrentes réussissent, deux lignes dans `decisions_comite` au lieu d'une) ; le
+  `pg_advisory_xact_lock` d'`AdministrationRepository.update` retiré temporairement fait échouer son
+  test de concurrence (les deux désactivations réussissent — zéro SUPER_ADMIN actif restant, un
+  vrai verrouillage de la plateforme). Les trois fichiers ont été restaurés à l'identique ensuite
+  (`git diff` vide) et la suite complète repassée au vert.
 - `pnpm --filter @fodip/api lint` : aucune erreur sur les nouveaux fichiers.
 - `pnpm --filter @fodip/api test` (suite unitaire existante, 112 tests, 23 fichiers) : toujours au
   vert, aucune régression. Couverture globale inchangée (65,51 % lignes) — attendu, les tests
@@ -119,6 +164,7 @@ sans fusionner avec la suite unitaire) :
 |---|---|---|
 | `financings.repository.ts` (lignes) | 7,84 % | 43,57 % (statements) / 51,42 % (branches) sur l'ensemble du module `financings/**` |
 | `committee.repository.ts` (lignes) | 22,22 % | 48,61 % (lignes) / 75 % (branches) sur l'ensemble du module `committee/**` |
+| `administration.repository.ts` (lignes) | non mesuré séparément (mocké dans `test/administration.repository.spec.ts`) | couvre la création, la mise à jour, le chiffrement PII et la protection SUPER_ADMIN — chemins d'erreur non exercés (base de données indisponible) exclus, comme pour les deux autres modules |
 
 Les deux mesures ne sont pas directement fusionnées ici (rapports Istanbul distincts, deux
 configurations Jest) — un vrai chiffre combiné est un raffinement possible d'un lot suivant, pas
@@ -143,15 +189,15 @@ intervention — c'est exactement ce que fait déjà le job `docker` existant (T
 `postgres:16.10-alpine` via `docker-compose.yml`) avec succès sur PR #38. Pour vérifier la logique
 malgré tout **avant de pousser** (jamais pousser sans validation locale, Règle 1), PostgreSQL 16 a
 été installé nativement dans ce sandbox via `apt` (réseau autorisé, contrairement aux registres
-d'images) et les 12 tests ont tourné dessus via `TEST_DATABASE_URL` — mêmes assertions, même code
-de production (`DatabaseService`, `FinancingsRepository`, `FinancingsService`), seule la manière
-d'obtenir un PostgreSQL vide diffère. Le nouveau job CI `integration-tests` (`.github/workflows/ci.yml`)
+d'images) et les tests ont tourné dessus via `TEST_DATABASE_URL` — mêmes assertions, même code de
+production (`DatabaseService`, chaque `*Repository`/`*Service`), seule la manière d'obtenir un
+PostgreSQL vide diffère. Le job CI `integration-tests` (`.github/workflows/ci.yml`)
 utilisera le vrai chemin Testcontainers hermétique — sa réussite en CI est la vérification de
 référence, à confirmer avant fusion de la PR.
 
 ## Prochaine étape recommandée
 
-Suite du Lot 2, chacun en PR séparée : intégration réelle des modules `administration` et `partner`
-(isolation PME, accès croisé entre banques partenaires) contre le même harnais ; intégration MinIO
-réelle pour `documents`/`document-storage` ; matrice Playwright multi-navigateurs
-(Chromium/Firefox/WebKit) et mobile (Android/iPhone) ; régression visuelle.
+Suite du Lot 2, chacun en PR séparée : intégration réelle du module `partner` (accès croisé entre
+banques partenaires et leur portefeuille de PME) contre le même harnais ; intégration MinIO réelle
+pour `documents`/`document-storage` ; matrice Playwright multi-navigateurs (Chromium/Firefox/WebKit)
+et mobile (Android/iPhone) ; régression visuelle.
