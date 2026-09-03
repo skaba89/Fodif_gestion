@@ -73,10 +73,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # No PostgreSQL/MinIO service container here on purpose: every current apps/api/test/*
-      # spec is either a mocked-repository unit test or an e2e-spec.ts that only exercises
-      # public/protected-by-default routes (never reaches the database) - verified by reading
-      # every spec file, not assumed. Real Postgres/MinIO integration tests are Sprint Enterprise
-      # 0 Lot 2 (docs/14-ROADMAP-SAAS-PREMIUM.md); this job's name will grow a second half then.
+      # spec (*.spec.ts, *.e2e-spec.ts) is either a mocked-repository unit test or an e2e-spec.ts
+      # that only exercises public/protected-by-default routes (never reaches the database) -
+      # verified by reading every spec file, not assumed. Real-Postgres coverage of the
+      # repository layer itself (row locking, unique-constraint conflicts, genuine concurrency)
+      # is the separate `integration-tests` job below (Sprint Enterprise 0 Lot 2, axe E2 -
+      # docs/14-ROADMAP-SAAS-PREMIUM.md) - *.integration-spec.ts files, excluded from this job's
+      # testRegex on purpose (jest.config.js vs. jest.integration.config.js).
       - name: API tests with coverage
         run: pnpm --filter @fodip/api test -- --coverage --coverageReporters=text-summary --coverageReporters=json-summary --coverageReporters=lcov
 
@@ -87,6 +90,40 @@ jobs:
           name: api-coverage
           path: apps/api/coverage/
           retention-days: 30
+
+  integration-tests:
+    name: Tests d'intégration API (PostgreSQL réel)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # No `services:` block needed: apps/api/test/integration/support/database.ts starts its own
+      # disposable postgres:16.10-alpine container per spec file via Testcontainers (the same
+      # library, the same image docker-compose.yml's `postgres` service pins) - ubuntu-latest
+      # runners already have a working Docker daemon. Verified locally against a real Postgres
+      # before this was wired into CI (see docs/19-GOUVERNANCE-SUPPLY-CHAIN.md, axe E2): this
+      # sandbox's own egress policy blocks Docker Hub image pulls, so a native `postgres` install
+      # stood in for Testcontainers there via TEST_DATABASE_URL - deliberately not set here, so
+      # this job exercises the real, hermetic, disposable-container path.
+      - name: Financings integration tests (real PostgreSQL, row locking, concurrency)
+        run: pnpm --filter @fodip/api test:integration
 
   build:
     name: Builds (API + Web)
