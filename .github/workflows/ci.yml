@@ -158,8 +158,17 @@ jobs:
             zricethezav/gitleaks:v8.30.1 \
             git /repo -c /repo/.gitleaks.toml --redact
 
+      # Requires the repository's own "Dependency graph" setting (Settings > Security > Code
+      # security and analysis) - a repo setting this workflow cannot enable on its own, and this
+      # session's tools have no API access to toggle either (confirmed: no branch-protection or
+      # security-analysis settings tool available). continue-on-error so a PR is never blocked
+      # by infrastructure this workflow doesn't control - real findings from pnpm audit and
+      # check-licenses.py above still block normally. DÉCISION REQUISE : le propriétaire du dépôt
+      # doit activer "Dependency graph" pour que cette étape ait un effet réel plutôt que
+      # d'échouer silencieusement (avertissement visible dans le résumé du job sinon).
       - name: Dependency review (new/changed dependencies only)
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
         with:
           fail-on-severity: high

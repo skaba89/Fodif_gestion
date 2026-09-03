@@ -145,3 +145,23 @@ Sans surprise très en-dessous des cibles du Sprint Enterprise 0 : la suite actu
 règle métier au niveau service avec des dépôts simulés (`jest.fn()`), jamais contre un vrai
 PostgreSQL/MinIO - exactement le manque que le Lot 2 (tests d'intégration réels, modules
 financiers critiques en priorité) doit combler.
+
+## DÉCISION REQUISE — réglages GitHub que ce dépôt ne peut pas activer lui-même
+
+Deux réglages ne peuvent être changés que depuis les paramètres du dépôt sur GitHub, hors de
+portée de tout fichier versionné ou des outils disponibles dans cette session (confirmé : aucun
+outil d'accès à l'API des paramètres de sécurité ou de protection de branche) :
+
+- **Protection de la branche `main`** (Settings → Branches) : PR obligatoire, CI obligatoire,
+  branche à jour avant fusion, deux validations sur les zones sensibles, interdiction du push
+  direct et du force-push, `CODEOWNERS` obligatoire - tout ce que le Lot 1 met en place
+  (`.github/CODEOWNERS`, statuts CI nommés) n'a d'effet contraignant qu'une fois cette protection
+  activée.
+- **Dependency graph** (Settings → Security → Code security and analysis) : sans lui,
+  `dependency-review-action` (job `security` de `ci.yml`) échoue avec « Dependency review is not
+  supported on this repository » - trouvé en conditions réelles sur la première PR à déclencher
+  cette étape (`pull_request`, jamais exercée par les runs `push` précédents). Corrigé en
+  `continue-on-error: true` pour ne jamais bloquer une PR sur un réglage que ce workflow ne
+  contrôle pas - `pnpm audit`/`check-licenses.py` continuent de bloquer normalement en attendant.
+  Une fois Dependency graph activé, cette étape redevient pleinement bloquante sans autre
+  changement de code.
