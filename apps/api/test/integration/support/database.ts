@@ -49,12 +49,26 @@ function migrationFiles(): string[] {
     .map((name) => path.join(dir, name));
 }
 
+// Tables the migrations themselves seed once via INSERT (grep '^INSERT INTO' database/*.sql -
+// confirmed exhaustive) and application code never writes to (grep for INTO/UPDATE/DELETE against
+// each across apps/api/src - zero matches): fixed reference data the schema owns, not per-test
+// fixtures. reset() must never wipe these, or the very first beforeEach in any spec file empties
+// the roles table - a real bug this comment exists because of (caught the hard way: an
+// administration integration spec's "unknown role" fixture silently matched zero roles instead of
+// the real ones, and a "last SUPER_ADMIN" guard test passed for the wrong reason - the seeded
+// SUPER_ADMIN role was gone, not correctly protected).
+const SEED_ONLY_TABLES = new Set(['roles', 'permissions', 'role_permissions']);
+
 export interface IntegrationDatabase {
   /** The production `DatabaseService`, wired to the disposable container - use this to exercise repositories/services. */
   db: DatabaseService;
   /** Raw `pg` pool for fixture setup and assertions the repository layer doesn't expose. */
   pool: Pool;
-  /** Wipes every table's rows (structure kept) so the next test starts from an empty database. */
+  /**
+   * Wipes every test-owned table's rows (structure kept) so the next test starts from a clean
+   * slate - except SEED_ONLY_TABLES (roles, permissions, role_permissions), migration-seeded
+   * reference data that must survive every reset exactly as the real schema provides it.
+   */
   reset(): Promise<void>;
   /** Stops the pool and the container. Call once in `afterAll`. */
   stop(): Promise<void>;
@@ -92,12 +106,14 @@ export async function startIntegrationDatabase(): Promise<IntegrationDatabase> {
       const { rows } = await pool.query<{ tablename: string }>(
         `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
       );
-      if (rows.length === 0) return;
-      const tables = rows.map((row) => `"${row.tablename}"`).join(', ');
+      const tables = rows
+        .filter((row) => !SEED_ONLY_TABLES.has(row.tablename))
+        .map((row) => `"${row.tablename}"`);
+      if (tables.length === 0) return;
       // CASCADE handles FK ordering for us; sequences used via nextval() (financement_numero_seq,
       // dossier_numero_seq) are intentionally left untouched - they only need to keep producing
       // unique values across tests, not reset to 1.
-      await pool.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
+      await pool.query(`TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY CASCADE`);
     },
     async stop() {
       await db.onModuleDestroy();

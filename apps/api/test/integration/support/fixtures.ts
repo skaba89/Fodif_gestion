@@ -22,6 +22,27 @@ export async function seedUser(pool: Pool): Promise<{ id: string }> {
   return result.rows[0];
 }
 
+/**
+ * Inserts a user already carrying the given role codes (all seeded by database/002_auth_rbac.sql,
+ * applied before any test runs) - direct SQL rather than going through
+ * AdministrationService.createUser, since the administration integration specs need pre-existing
+ * users in a known state (e.g. two active SUPER_ADMIN accounts) rather than exercising creation
+ * itself for every fixture.
+ */
+export async function seedUserWithRoles(pool: Pool, roleCodes: string[], options: { actif?: boolean } = {}): Promise<{ id: string }> {
+  const unique = randomUUID().slice(0, 8);
+  const user = await pool.query<{ id: string }>(
+    `INSERT INTO utilisateurs (email, nom, actif, password_hash) VALUES ($1, 'Utilisateur Test', $2, 'x') RETURNING id`,
+    [`role-test-${unique}@fodip.test`, options.actif ?? true],
+  );
+  const userId = user.rows[0].id;
+  await pool.query(
+    `INSERT INTO utilisateur_roles (utilisateur_id, role_id) SELECT $1, id FROM roles WHERE code = ANY($2::text[])`,
+    [userId, roleCodes],
+  );
+  return { id: userId };
+}
+
 export interface EligibleDossierOptions {
   montantApprouve?: number;
   tauxInteret?: number;
