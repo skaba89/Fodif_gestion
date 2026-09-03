@@ -1,0 +1,82 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(15, 23, 20, 0.45);
+  cursor: pointer;
+}
+
+.panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(320px, 86vw);
+  height: 100%;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  animation: slide-in var(--duration-fast, 160ms) var(--ease, ease-out);
+}
+
+.panelRight {
+  margin-left: auto;
+}
+
+.panelLeft {
+  margin-right: auto;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(0); opacity: 0.6; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panelHeader strong {
+  font-size: 0.95rem;
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.closeButton:hover {
+  border-color: var(--green);
+}
+
+.panelBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

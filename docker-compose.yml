@@ -129,6 +129,13 @@ services:
       # the browser cannot reach via the `api` service name). Only used when OIDC is enabled.
       API_PUBLIC_URL: http://localhost:${API_PORT:-4000}
       COOKIE_SECURE: "false"
+      # Mission "présentation Directeur général", axe 9 (mode présentation) - a runtime env var,
+      # not a NEXT_PUBLIC_ build-time one: this same `web` image serves both the plain local demo
+      # and the presentation profile unmodified, read via GET /api/config
+      # (apps/web/app/api/config/route.ts) rather than baked into the client bundle at build time.
+      # Defaults to false - a plain `docker compose up` never shows the demo banner; only
+      # docker-compose.presentation.yml's override (scripts/demo-presentation.sh) sets it.
+      DEMO_MODE: ${DEMO_MODE:-false}
     ports:
       - "${WEB_PORT:-3000}:3000"
 

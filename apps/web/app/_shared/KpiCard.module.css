@@ -1,0 +1,135 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.headRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.definitionWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.definitionMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: help;
+}
+
+.definitionTooltip {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: 24px;
+  width: 220px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-800);
+  color: white;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast, 120ms) var(--ease, ease);
+}
+
+.definitionWrap:hover .definitionTooltip,
+.definitionWrap:focus-within .definitionTooltip {
+  opacity: 1;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.valueRow strong {
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+}
+
+.unit {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.unavailable {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.footRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.trend,
+.trendMuted {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.trend svg {
+  width: 14px;
+  height: 14px;
+}
+
+.trendGood {
+  color: var(--green-strong);
+}
+
+.trendBad {
+  color: var(--danger-strong);
+}
+
+.trendMuted {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.detailLink {
+  color: var(--green-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.detailLink:hover {
+  text-decoration: underline;
+}

@@ -1,13 +1,22 @@
-import Link from 'next/link';
-import ThemeToggle from '../_shared/ThemeToggle';
-import portal from '../entrepreneur/portal.module.css';
-import { AdministrationAccountMenu } from './components/AdministrationAccountMenu';
+import AppShell from '../_shared/AppShell';
+import { AccountMenu } from '../_shared/AccountMenu';
+
+const navItems = [
+  { label: 'Utilisateurs et rôles', href: '/administration/utilisateurs' },
+  { label: 'Notifications', href: '/notifications' },
+  { label: 'Mes données', href: '/mes-donnees' },
+];
 
 export default function AdministrationLayout({ children }: { children: React.ReactNode }) {
-  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
-    <Link href="/administration/utilisateurs" className={portal.brand}><span className={portal.mark}>FD</span><span className={portal.brandText}><strong>FODIP DIGITAL</strong><span>Administration</span></span></Link>
-    <nav className={portal.nav} aria-label="Navigation Administration"><Link href="/administration/utilisateurs">Utilisateurs et rôles</Link><Link href="/notifications">Notifications</Link><Link href="/mes-donnees">Mes données</Link></nav>
-    <div className={portal.headerActions}><ThemeToggle buttonClassName={portal.themeToggle} /><AdministrationAccountMenu /></div>
-  </header><div id="main-content" tabIndex={-1}>{children}</div><footer className={portal.footer}>FODIP Digital 2030 · Administration auditée</footer></div>;
+  return (
+    <AppShell
+      portalLabel="Administration"
+      homeHref="/administration/utilisateurs"
+      navItems={navItems}
+      accountMenu={<AccountMenu loginHref="/administration/connexion" loginLabel="Connexion administration" />}
+      footer="FODIP Digital 2030 · Administration auditée"
+    >
+      {children}
+    </AppShell>
+  );
 }
-

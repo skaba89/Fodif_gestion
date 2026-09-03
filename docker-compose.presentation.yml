@@ -1,0 +1,22 @@
+# Mission "présentation Directeur général", axe 9 (mode présentation) - Compose override, applied
+# on top of docker-compose.yml with `docker compose -f docker-compose.yml -f
+# docker-compose.presentation.yml up --build` (see scripts/demo-presentation.sh, the real command
+# this repo ships and tests - the mission text's own example command,
+# `docker compose --profile presentation up --build`, cannot toggle a single always-on service's
+# env var through a Compose profile: profiles only add extra opt-in services, they never replace
+# or reconfigure one that has no `profiles:` key, and `web` here is exactly that kind of
+# always-on service. This override file is the "configuration dédiée" alternative the mission
+# text explicitly allows ("un profil ou une configuration dédiée").
+#
+# Everything else - Postgres, MinIO, the API, RBAC/MFA, migrations, seeds - stays byte-for-byte
+# the same stack as a plain `docker compose up`: fully local, no Azure, no production credentials.
+# The only thing this file changes is one runtime env var read by GET /api/config
+# (apps/web/app/api/config/route.ts) and rendered by AppShell.tsx as the
+# "Données de démonstration - aucune donnée réelle" banner on every portal page. It cannot be
+# activated by accident in production: nothing in apps/api or apps/web ever sets DEMO_MODE=true on
+# its own, and this file is never referenced unless explicitly passed with `-f` (never applied by
+# a bare `docker compose up`, and never wired into any deploy pipeline in this repository).
+services:
+  web:
+    environment:
+      DEMO_MODE: "true"

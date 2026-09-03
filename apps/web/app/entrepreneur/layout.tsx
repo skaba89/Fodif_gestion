@@ -1,5 +1,25 @@
-import Link from 'next/link';
-import ThemeToggle from '../_shared/ThemeToggle';
-import { AccountMenu } from './components/AccountMenu';
-import styles from './portal.module.css';
-export default function EntrepreneurLayout({ children }: { children: React.ReactNode }) { return <div className={styles.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={styles.header}><Link href="/entrepreneur" className={styles.brand}><span className={styles.mark}>FD</span><span className={styles.brandText}><strong>FODIP DIGITAL</strong><span>Espace PME</span></span></Link><nav className={styles.nav} aria-label="Navigation PME"><Link href="/entrepreneur">Accueil</Link><Link href="/entrepreneur/entreprise">Mon entreprise</Link><Link href="/entrepreneur/demande">Nouvelle demande</Link><Link href="/entrepreneur/suivi">Mes dossiers</Link><Link href="/notifications">Notifications</Link><Link href="/mes-donnees">Mes données</Link></nav><div className={styles.headerActions}><ThemeToggle buttonClassName={styles.themeToggle} /><AccountMenu /></div></header><div id="main-content" tabIndex={-1}>{children}</div><footer className={styles.footer}>FODIP Digital 2030 · Portail PME sécurisé</footer></div>; }
+import AppShell from '../_shared/AppShell';
+import { AccountMenu } from '../_shared/AccountMenu';
+
+const navItems = [
+  { label: 'Accueil', href: '/entrepreneur' },
+  { label: 'Mon entreprise', href: '/entrepreneur/entreprise' },
+  { label: 'Nouvelle demande', href: '/entrepreneur/demande' },
+  { label: 'Mes dossiers', href: '/entrepreneur/suivi' },
+  { label: 'Notifications', href: '/notifications' },
+  { label: 'Mes données', href: '/mes-donnees' },
+];
+
+export default function EntrepreneurLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AppShell
+      portalLabel="Espace PME"
+      homeHref="/entrepreneur"
+      navItems={navItems}
+      accountMenu={<AccountMenu loginHref="/entrepreneur/connexion" />}
+      footer="FODIP Digital 2030 · Portail PME sécurisé"
+    >
+      {children}
+    </AppShell>
+  );
+}

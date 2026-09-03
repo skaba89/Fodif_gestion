@@ -1,0 +1,41 @@
+.wrap {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(560px, calc(100% - 36px));
+  margin: 60px auto;
+  padding: 32px;
+  text-align: center;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+  background: var(--danger-soft);
+  color: var(--danger-strong);
+}
+
+.wrap svg {
+  width: 32px;
+  height: 32px;
+}
+
+.wrap h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.wrap p {
+  margin: 0;
+  color: var(--danger-strong);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.retry {
+  margin-top: 6px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--danger-strong);
+  color: white;
+  font-weight: 750;
+}

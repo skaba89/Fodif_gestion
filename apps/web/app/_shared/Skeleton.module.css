@@ -1,0 +1,36 @@
+.wrap {
+  width: min(1180px, calc(100% - 36px));
+  margin: 36px auto;
+}
+
+.block {
+  height: 120px;
+  margin-bottom: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+.line {
+  height: 54px;
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block,
+  .line {
+    animation: none;
+  }
+}

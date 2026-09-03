@@ -1,17 +1,21 @@
-import Link from 'next/link';
-import ThemeToggle from '../_shared/ThemeToggle';
-import styles from '../entrepreneur/portal.module.css';
-import { AuditeurAccountMenu } from './components/AuditeurAccountMenu';
+import AppShell from '../_shared/AppShell';
+import { AccountMenu } from '../_shared/AccountMenu';
+
+const navItems = [
+  { label: 'Supervision', href: '/auditeur/tableau-de-bord' },
+  { label: 'Mes données', href: '/mes-donnees' },
+];
 
 export default function AuditeurLayout({ children }: { children: React.ReactNode }) {
-  return <div className={styles.shell}>
-    <a href="#main-content" className="skip-link">Aller au contenu principal</a>
-    <header className={styles.header}>
-      <Link href="/auditeur/tableau-de-bord" className={styles.brand}><span className={styles.mark}>FD</span><span className={styles.brandText}><strong>FODIP DIGITAL</strong><span>Auditeur</span></span></Link>
-      <nav className={styles.nav} aria-label="Navigation Auditeur"><Link href="/auditeur/tableau-de-bord">Supervision</Link><Link href="/mes-donnees">Mes données</Link></nav>
-      <div className={styles.headerActions}><ThemeToggle buttonClassName={styles.themeToggle} /><AuditeurAccountMenu /></div>
-    </header>
-    <div id="main-content" tabIndex={-1}>{children}</div>
-    <footer className={styles.footer}>FODIP Digital 2030 · Accès en lecture seule, intégralement journalisé</footer>
-  </div>;
+  return (
+    <AppShell
+      portalLabel="Auditeur"
+      homeHref="/auditeur/tableau-de-bord"
+      navItems={navItems}
+      accountMenu={<AccountMenu loginHref="/auditeur/connexion" loginLabel="Connexion auditeur" />}
+      footer="FODIP Digital 2030 · Accès en lecture seule, intégralement journalisé"
+    >
+      {children}
+    </AppShell>
+  );
 }
