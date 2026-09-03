@@ -8,7 +8,8 @@ pas des mocks : `financings` (financements, décaissements, remboursements, éch
 (décisions du comité de financement), `administration` (comptes utilisateurs, rôles, protection du
 dernier SUPER_ADMIN), `partner` (portail banque partenaire, isolation entre banques) et `documents`
 (upload/téléchargement de justificatifs via MinIO/S3, intégrité par checksum, isolation PME). Ne
-couvre pas encore : la matrice Playwright multi-navigateurs/mobile, ni la régression visuelle —
+couvre pas la matrice Playwright multi-navigateurs/mobile (voir `docs/14-ROADMAP-SAAS-PREMIUM.md`,
+« Détails E2, matrice Playwright », pour ce volet-là) ni la régression visuelle —
 chacun un lot séparé à venir (jamais une PR géante).
 
 ## Pourquoi les tests existants ne suffisaient pas
@@ -280,7 +281,11 @@ CI reste la vérification de référence.
 
 Les cinq modules métier critiques cités explicitement dans la mission (`financings`, `committee`,
 `administration`, `partner`, `documents`) sont maintenant tous couverts contre un vrai backend réel
-(PostgreSQL, et pour `documents` un vrai stockage S3). Reste, chacun en PR séparée : matrice
-Playwright multi-navigateurs (Chromium/Firefox/WebKit) et mobile (Android/iPhone) ; régression
-visuelle. Un raffinement possible au passage : fusionner les rapports de couverture unitaire +
-intégration en un seul chiffre par module (actuellement mesurés séparément, voir plus haut).
+(PostgreSQL, et pour `documents` un vrai stockage S3). La matrice Playwright desktop
+(Chromium/Firefox/WebKit) est également faite depuis, en dehors de ce document — voir
+`docs/14-ROADMAP-SAAS-PREMIUM.md`, « Détails E2, matrice Playwright » ; son volet mobile
+(Android/iPhone) est bloqué par un vrai bug de navigation produit trouvé en l'essayant, dont la
+correction relève de l'axe E3 (« navigation mobile »), pas de cet axe de tests. Reste, en PR
+séparée : régression visuelle. Un raffinement possible au passage : fusionner les rapports de
+couverture unitaire + intégration en un seul chiffre par module (actuellement mesurés séparément,
+voir plus haut).

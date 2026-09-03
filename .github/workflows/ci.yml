@@ -220,7 +220,10 @@ jobs:
     name: Docker Compose, Playwright et audit des images
     needs: [invariants, unit-tests, build]
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 25 -> 35: the Playwright matrix (axe E2) now installs and runs three browser engines
+    # (Chromium/Firefox/WebKit) across five projects instead of Chromium alone - extra install and
+    # test time, same job.
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -304,9 +307,9 @@ jobs:
         run: bash scripts/test-backup-restore.sh
 
       - name: Install Playwright browsers
-        run: pnpm --filter @fodip/web exec playwright install --with-deps chromium
+        run: pnpm --filter @fodip/web exec playwright install --with-deps chromium firefox webkit
 
-      - name: Web e2e tests
+      - name: Web e2e tests (Chromium/Firefox/WebKit desktop matrix)
         run: pnpm --filter @fodip/web test:e2e
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
