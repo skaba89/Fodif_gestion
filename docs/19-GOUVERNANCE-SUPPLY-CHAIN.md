@@ -165,3 +165,43 @@ outil d'accès à l'API des paramètres de sécurité ou de protection de branch
   contrôle pas - `pnpm audit`/`check-licenses.py` continuent de bloquer normalement en attendant.
   Une fois Dependency graph activé, cette étape redevient pleinement bloquante sans autre
   changement de code.
+
+## Un vrai bug d'architecture Docker que le scan Trivy a trouvé dès son premier vrai passage
+
+Le scan Trivy (axe C4 - premier passage réel sur PR #38, cette fois avec la bonne image
+`ghcr.io/aquasecurity/trivy`) a trouvé de vraies vulnérabilités CRITICAL/HIGH dans les deux
+images : des paquets Debian du système (`perl-base`, `zlib1g`, `bsdutils` - certaines sans
+correctif Debian disponible pour l'instant, `will_not_fix`/`fix_deferred`) et, plus significatif,
+`tar`/`brace-expansion` **provenant du côté `devDependencies` de l'API** (`@nestjs/cli` et sa
+propre chaîne `webpack`/`glob`) retrouvés **dans l'image `web`**.
+
+Root cause, pas une CVE isolée à corriger au cas par cas : les deux `Dockerfile` faisaient
+`pnpm install --frozen-lockfile` **à la racine du workspace**, sans `--filter` ni `--prod`. Dans
+un monorepo pnpm, cette commande résout et installe les dépendances de **tous** les paquets du
+workspace dans le même `node_modules` partagé - les `devDependencies` de l'API se retrouvaient
+donc dans l'image `web` et réciproquement, en plus des `devDependencies` de chaque paquet
+lui-même. Un `COPY node_modules` naïf embarquait tout ça dans l'image de production : `jest`,
+`eslint`, `@nestjs/cli`, `webpack`, `ts-jest`... jamais nécessaires à l'exécution, uniquement à la
+compilation, mais bien présents et scannés par Trivy dans l'image finale.
+
+Corrigé avec `pnpm deploy --prod` (commande pnpm dédiée à exactement ce cas : produire, pour un
+seul paquet d'un workspace, un `node_modules` autonome ne contenant que ses propres dépendances
+de production) plutôt qu'un correctif ponctuel par CVE - qui n'aurait rien réglé pour la
+prochaine dépendance de compilation vulnérable. Vérifié directement (pas supposé) : `pnpm
+--filter @fodip/api deploy --prod` et son équivalent web exécutés ici, contenu du `node_modules`
+déployé inspecté (aucune trace de `jest`/`eslint`/`@nestjs/cli` côté API, aucune trace des
+équivalents web), et les deux applications démarrées avec succès depuis leur répertoire déployé
+(`node dist/main.js` pour l'API répond correctement sur toutes ses routes ; `next start` pour le
+web sert la page d'accueil et `/manifest.webmanifest` en 200).
+
+`scripts/check-docker.py` (garde-fou `public/` de la PR #29) ajusté au passage : la
+restructuration change le chemin source de la copie de `public/` dans le Dockerfile web
+(`/app/deploy/public` au lieu de `apps/web/public`) - le garde-fou vérifiait la chaîne exacte de
+l'ancien chemin, resserré pour vérifier l'invariant réel (« `public/` est copié quelque part »)
+plutôt qu'un chemin source spécifique, testé dans les deux sens comme la première fois.
+
+Les paquets Debian sans correctif disponible (`will_not_fix`/`fix_deferred`) ne peuvent pas être
+corrigés depuis ce dépôt - ils dépendent du mainteneur Debian ou d'une future image de base. Pas
+encore ajoutés à `.trivyignore` : la prochaine exécution de la CI, avec les images `node_modules`
+désormais propres, dira précisément lesquels restent réellement bloquants une fois le bruit des
+`devDependencies` mal placées éliminé.
