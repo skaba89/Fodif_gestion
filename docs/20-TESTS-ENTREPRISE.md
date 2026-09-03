@@ -1,14 +1,14 @@
-# Étape 16 — Sprint Enterprise 0, Lot 2 (partiel) : tests entreprise, modules `financings`, `committee` et `administration`
+# Étape 16 — Sprint Enterprise 0, Lot 2 : tests entreprise, modules métier critiques
 
 ## Objectif et périmètre
 
-Axe E2 de `docs/14-ROADMAP-SAAS-PREMIUM.md`. Couvre trois modules contre un vrai PostgreSQL, pas des
-mocks : `financings` (financements, décaissements, remboursements, échéances, le plus critique
-financièrement), `committee` (décisions du comité de financement) et `administration` (gestion des
-comptes utilisateurs, rôles, protection du dernier SUPER_ADMIN). Ne couvre pas encore : MinIO, le
-module `partner` (accès croisé entre banques partenaires), la matrice Playwright
-multi-navigateurs/mobile, ni la régression visuelle — tout cela reste à faire dans des lots
-suivants, volontairement séparés (jamais une PR géante).
+Axe E2 de `docs/14-ROADMAP-SAAS-PREMIUM.md`. Couvre les quatre modules métier critiques identifiés
+dans la mission contre un vrai PostgreSQL, pas des mocks : `financings` (financements,
+décaissements, remboursements, échéances), `committee` (décisions du comité de financement),
+`administration` (comptes utilisateurs, rôles, protection du dernier SUPER_ADMIN) et `partner`
+(portail banque partenaire, isolation entre banques). Ne couvre pas encore : MinIO
+(`documents`/`document-storage`), la matrice Playwright multi-navigateurs/mobile, ni la régression
+visuelle — chacun un lot séparé à venir (jamais une PR géante).
 
 ## Pourquoi les tests existants ne suffisaient pas
 
@@ -129,24 +129,46 @@ Corrigé en excluant ces trois tables du `TRUNCATE` (`SEED_ONLY_TABLES` dans `da
 commentaire expliquant pourquoi). Ce correctif profite à `financings` et `committee` aussi bien
 qu'à `administration`, et à chaque futur module du Lot 2.
 
+### Specs (`apps/api/test/integration/partner.integration-spec.ts`, 9 tests)
+
+Le portail banque partenaire est le scénario « accès croisé entre banques » cité explicitement dans
+la mission. Le périmètre visible d'un partenaire (`PARTNER_SCOPE` dans `partner.repository.ts`) est
+l'union de deux mécanismes indépendants (`database/011_partner_banks.sql`) : banque correspondante
+désignée sur un financement, ou PME de son portefeuille client. Un repository mocké peut vérifier
+que le bon fragment SQL a été appelé ; seule une vraie jointure contre de vraies lignes prouve
+qu'une banque ne peut effectivement jamais atteindre les données d'une autre.
+
+| Scénario demandé dans la mission | Test |
+|---|---|
+| Accès croisé entre banques partenaires | Un financement de la banque B n'apparaît jamais dans la liste de la banque A ; `get()` sur ce financement lève `NotFoundException` ; déclarer un décaissement dessus lève `NotFoundException` |
+| Défense en profondeur | Le repository lui-même refuse l'écriture pour un financement hors périmètre — appelé directement, sans passer par la pré-vérification `get()` du service — vérifié qu'aucune ligne n'est insérée |
+| Double mécanisme de périmètre | Un financement sans banque correspondante désignée reste visible via le seul rattachement au portefeuille PME |
+| Dépassement du montant accordé | Décaissement seul au-dessus du solde → `BadRequestException` |
+| Double-clic / double-soumission | Deux déclarations de décaissement concurrentes qui tiennent chacune individuellement mais dépassent ensemble le montant accordé → une seule réussit (verrou `FOR UPDATE` scopé au partenaire), le total engagé ne dépasse jamais le montant accordé |
+| Trop-perçu au-delà du montant dû | Remboursement seul au-dessus du reste dû → `BadRequestException` |
+| Audit | Une déclaration de décaissement réussie écrit une entrée `PARTNER_DECLARE_DISBURSEMENT` attribuée à la bonne banque partenaire |
+
 ## Vérifié
 
 Chaque affirmation ci-dessous a été vérifiée réellement, pas supposée :
 
-- **Les 27 tests passent** (12 `financings` + 6 `committee` + 9 `administration`) contre un vrai
-  PostgreSQL, chacun exécuté plusieurs fois de suite sans un seul échec intermittent (les tests de
-  concurrence sont exactement le genre de test qui peut être flaky s'il est mal conçu — vérifié
-  qu'il ne l'est pas, pas juste espéré).
+- **Les 36 tests passent** (12 `financings` + 6 `committee` + 9 `administration` + 9 `partner`)
+  contre un vrai PostgreSQL, chacun exécuté plusieurs fois de suite sans un seul échec intermittent
+  (les tests de concurrence sont exactement le genre de test qui peut être flaky s'il est mal
+  conçu — vérifié qu'il ne l'est pas, pas juste espéré).
 - **Ces tests détectent une vraie régression, pas seulement une régression injectée pour la forme**,
-  vérifié pour les trois modules séparément : le verrou `FOR UPDATE` de `planDisbursement` retiré
+  vérifié pour les quatre modules séparément : le verrou `FOR UPDATE` de `planDisbursement` retiré
   temporairement fait échouer son test de concurrence (conflit de contrainte SQL au lieu du
   `ConflictException` applicatif attendu) ; la clause `WHERE statut = 'PRET_COMITE'` de
   `CommitteeRepository.decide` retirée temporairement fait échouer son test de concurrence (les deux
   décisions concurrentes réussissent, deux lignes dans `decisions_comite` au lieu d'une) ; le
   `pg_advisory_xact_lock` d'`AdministrationRepository.update` retiré temporairement fait échouer son
   test de concurrence (les deux désactivations réussissent — zéro SUPER_ADMIN actif restant, un
-  vrai verrouillage de la plateforme). Les trois fichiers ont été restaurés à l'identique ensuite
-  (`git diff` vide) et la suite complète repassée au vert.
+  vrai verrouillage de la plateforme) ; retirer `${PARTNER_SCOPE}` de `PartnerRepository.findById`
+  fait échouer trois des cinq tests d'isolation immédiatement (une banque peut alors lire les
+  données d'une autre), et retirer le verrou `FOR UPDATE` de `createDisbursement` fait échouer son
+  test de concurrence de la même façon que pour `financings`. Les quatre fichiers ont été restaurés
+  à l'identique ensuite (`git diff` vide) et la suite complète repassée au vert.
 - `pnpm --filter @fodip/api lint` : aucune erreur sur les nouveaux fichiers.
 - `pnpm --filter @fodip/api test` (suite unitaire existante, 112 tests, 23 fichiers) : toujours au
   vert, aucune régression. Couverture globale inchangée (65,51 % lignes) — attendu, les tests
@@ -164,6 +186,7 @@ sans fusionner avec la suite unitaire) :
 |---|---|---|
 | `financings.repository.ts` (lignes) | 7,84 % | 43,57 % (statements) / 51,42 % (branches) sur l'ensemble du module `financings/**` |
 | `committee.repository.ts` (lignes) | 22,22 % | 48,61 % (lignes) / 75 % (branches) sur l'ensemble du module `committee/**` |
+| `partner.repository.ts` (lignes) | non mesuré séparément (mocké dans les tests unitaires de service) | couvre `list`, `findById`, `createDisbursement`, `createRepayment` et les deux mécanismes de `PARTNER_SCOPE` — chemins d'erreur de connexion non exercés |
 | `administration.repository.ts` (lignes) | non mesuré séparément (mocké dans `test/administration.repository.spec.ts`) | couvre la création, la mise à jour, le chiffrement PII et la protection SUPER_ADMIN — chemins d'erreur non exercés (base de données indisponible) exclus, comme pour les deux autres modules |
 
 Les deux mesures ne sont pas directement fusionnées ici (rapports Istanbul distincts, deux
@@ -197,7 +220,10 @@ référence, à confirmer avant fusion de la PR.
 
 ## Prochaine étape recommandée
 
-Suite du Lot 2, chacun en PR séparée : intégration réelle du module `partner` (accès croisé entre
-banques partenaires et leur portefeuille de PME) contre le même harnais ; intégration MinIO réelle
-pour `documents`/`document-storage` ; matrice Playwright multi-navigateurs (Chromium/Firefox/WebKit)
-et mobile (Android/iPhone) ; régression visuelle.
+Les quatre modules métier critiques cités explicitement dans la mission (`financings`, `committee`,
+`administration`, `partner`) sont maintenant tous couverts contre un vrai PostgreSQL. Reste, chacun
+en PR séparée : intégration MinIO réelle pour `documents`/`document-storage` (upload/téléchargement
+de justificatifs, checksum, quarantaine antivirus) ; matrice Playwright multi-navigateurs
+(Chromium/Firefox/WebKit) et mobile (Android/iPhone) ; régression visuelle. Un raffinement possible
+au passage : fusionner les rapports de couverture unitaire + intégration en un seul chiffre par
+module (actuellement mesurés séparément, voir plus haut).
