@@ -17,7 +17,10 @@ permissions:
 
 env:
   PNPM_VERSION: 9.15.0
-  NODE_VERSION: 22
+  # Node 24 LTS ("Krypton", active LTS since Oct 2025) - kept in sync with .nvmrc,
+  # package.json's engines.node, both Dockerfiles' FROM lines, and netlify.toml by
+  # scripts/check-node-version.py (wired into pnpm test:prepush, the "invariants" job below).
+  NODE_VERSION: 24
 
 jobs:
   invariants:

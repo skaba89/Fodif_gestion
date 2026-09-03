@@ -18,22 +18,26 @@ services:
       timeout: 5s
       retries: 20
 
+  # Sprint Enterprise 0 - fondations entreprise, axe P0 4.4 : réutilise l'image `api` déjà
+  # construite (apps/api/Dockerfile embarque scripts/run-migrations.js et database/ dans son stage
+  # runtime) plutôt qu'un simple rejeu psql de tous les fichiers à chaque fois - le nouveau runner
+  # ne (re)joue que les migrations non encore appliquées, détecte un fichier déjà appliqué puis
+  # modifié (écart de somme de contrôle) et refuse plutôt que de le rejouer, et empêche deux
+  # exécutions concurrentes via un verrou consultatif PostgreSQL - voir
+  # apps/api/scripts/run-migrations.js pour le mécanisme complet et son propre test
+  # d'intégration. Même image que le service `api`, même contexte de build : Compose la construit
+  # une seule fois et la réutilise pour les deux services.
   migrations:
-    image: postgres:16.10-alpine
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      PGHOST: postgres
-      PGPORT: 5432
-      PGDATABASE: ${POSTGRES_DB:-fodip}
-      PGUSER: ${POSTGRES_USER:-fodip}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-fodip_local_dev}
-    volumes:
-      - ./database:/migrations:ro
-    command: >-
-      sh -ec 'for file in /migrations/[0-9][0-9][0-9]_*.sql;
-      do echo "Applying $$file"; psql --set ON_ERROR_STOP=1 --file "$$file"; done'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fodip}:${POSTGRES_PASSWORD:-fodip_local_dev}@postgres:5432/${POSTGRES_DB:-fodip}
+      DATABASE_SSL: "false"
+    command: ["node", "scripts/run-migrations.js"]
     restart: "no"
 
   seed:

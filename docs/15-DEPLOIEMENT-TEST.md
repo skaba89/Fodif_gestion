@@ -106,6 +106,18 @@ cela charge les comptes de démonstration documentés dans le `README.md`, avec 
 partagé connu de quiconque lit ce dépôt. Ne jamais `--seed` un environnement dont l'URL est
 partagée publiquement ou durablement.
 
+Depuis l'axe fondations entreprise (Lot 1), `run-migrations.js` refuse `--seed` d'emblée quand
+`NODE_ENV=production` (le cas courant sur Render, qui le définit par défaut) - un garde-fou
+volontairement strict pour la vraie production, quitte à devoir être explicitement contourné pour
+la démo privée documentée ci-dessus :
+
+```bash
+NODE_ENV=development node apps/api/scripts/run-migrations.js --seed
+```
+
+Ne faites cela que dans l'onglet Shell d'un environnement de démonstration au lien privé, jamais
+sur la base de données de production réelle.
+
 ## Étape 5 — Déployer le frontend
 
 ### Option A — Render (cohérent avec l'API, un seul tableau de bord)
