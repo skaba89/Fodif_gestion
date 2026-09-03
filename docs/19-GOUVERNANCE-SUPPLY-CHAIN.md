@@ -227,3 +227,42 @@ linter Dockerfile officiel) sur les deux fichiers finaux : uniquement des avis `
 (consolidation de `RUN` consécutifs, utilisateur nommé plutôt que numérique - les deux
 intentionnels) et l'avertissement déjà documenté sur la forme shell du `CMD` web (nécessaire pour
 la substitution de `${PORT}`).
+
+## DÉCISION REQUISE — 14 CVE de l'image de base acceptées dans `.trivyignore`
+
+Une fois `npm`/`npx`/`corepack` retirés, le scan Trivy suivant a confirmé que **le node_modules
+applicatif des deux images est entièrement propre** (chaque paquet de `app/node_modules/.pnpm/`
+listé avec 0 vulnérabilité). Seul reste le rapport `debian` : **24 constats (20 HIGH, 4 CRITICAL)
+sur 14 CVE uniques**, tous dans des paquets système de l'image de base `node:22-bookworm-slim`
+elle-même (`util-linux`, `perl`, `zlib1g`, `systemd`, `ncurses`, `gzip`, `libacl1`) - jamais dans
+du code de ce dépôt.
+
+Vérifié pour chacun des 24, pas supposé en bloc : **la colonne « Fixed Version » du rapport Trivy
+est vide pour les 24 constats, sans exception** - Debian lui-même n'a de correctif disponible pour
+aucun d'entre eux à ce jour (certains explicitement marqués `will_not_fix`/`fix_deferred` par
+l'équipe sécurité Debian, comme `CVE-2023-45853` sur `zlib1g` - un CVE de 2023 toujours non
+corrigé, une décision délibérée de Debian et non un simple retard). Aucune mise à jour de paquet
+`apt` ne peut donc corriger ces CVE aujourd'hui.
+
+Deux options réelles à ce stade :
+
+1. **Accepter et documenter** (ce qui a été fait ici) - `.trivyignore` liste les 14 CVE, chacune
+   avec sa propre justification individuelle (le paquet concerné, le statut Debian exact, et
+   pourquoi le code exécuté par ce dépôt n'atteint jamais le chemin vulnérable - par exemple,
+   aucune des deux applications n'invoque jamais `perl`, `gzip` ou la fonction d'écriture zip de
+   `zlib`). Chaque CVE listée a été comparée un par un à la sortie réelle du scan (`diff` exact,
+   pas un total approximatif) pour garantir que rien n'est masqué au-delà de ce qui est documenté.
+2. **Changer d'image de base** (Alpine ou une autre distribution) - éliminerait cette classe
+   précise de CVE Debian, mais reste un changement d'architecture Docker à part entière (axe E7 de
+   la roadmap), avec son propre risque de régression (compatibilité musl des binaires natifs comme
+   `sharp`/`@img/sharp-linux-x64`, déjà présents avec leurs variantes `linuxmusl` en dépendance
+   optionnelle - un signal encourageant, mais qui mérite sa propre validation dédiée plutôt qu'une
+   décision prise dans l'urgence pour débloquer ce lot).
+
+Choix fait ici : l'option 1, pour ne pas bloquer indéfiniment ce lot sur une décision d'architecture
+plus large. **Signalé explicitement plutôt que masqué** : ce dépôt accepte actuellement 4 CVE
+CRITICAL et 20 CVE HIGH réelles, non corrigées, dans l'image de base - un choix conscient et
+documenté, pas une lacune passée sous silence. `.trivyignore` porte lui-même l'instruction de
+revoir cette liste à chaque mise à jour de l'image de base (suivie par Dependabot). L'option 2
+reste ouverte comme amélioration future si le propriétaire du dépôt préfère éliminer cette classe
+de risque plutôt que la documenter.
