@@ -67,14 +67,14 @@ export default function AuditeurDashboardPage() {
     </section>
     {message && <div className={portal.notice} role="status">{message}</div>}
 
-    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`}>
+    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran">
       <div className={portal.sectionHeader}><div><h2>Portefeuille de financements</h2><p>Vue consolidée, identique à celle de la Direction, sans droit de création ni de modification.</p></div></div>
       <table className={portal.table}><thead><tr><th>Financement</th><th>Entreprise</th><th>Accordé</th><th>Décaissé</th><th>Remboursé</th><th>Impayé</th><th>Statut</th></tr></thead><tbody>{financings.items.map((item) => <tr key={item.id}><td><strong>{item.numeroFinancement}</strong><br />{item.numeroDossier}</td><td>{item.raisonSociale}<br />{item.region ?? '—'}</td><td>{item.montantAccorde.toLocaleString('fr-FR')} GNF</td><td>{item.montantDecaisse.toLocaleString('fr-FR')} GNF</td><td>{item.montantRembourse.toLocaleString('fr-FR')} GNF</td><td>{item.impaye.toLocaleString('fr-FR')} GNF</td><td><span className={portal.pill}>{item.statut}</span></td></tr>)}</tbody></table>
       {financings.items.length === 0 && <p className={portal.lead}>Aucun financement enregistré.</p>}
       <Pagination page={financings.page} limite={financings.limite} total={financings.total} onChange={loadFinancings} buttonClassName={portal.secondary} rowClassName={portal.buttonRow} />
     </section>
 
-    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`}>
+    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran">
       <div className={portal.sectionHeader}><div><h2>Journal d'audit</h2><p>Toute action journalisée par la plateforme — instruction, décision de comité, gestion des comptes, opérations de financement.</p></div></div>
       <form className={styles.filters} onSubmit={filterLogs}>
         <div className={styles.filter}><label htmlFor="entityType">Type d'entité</label><select id="entityType" value={entityType} onChange={(event) => setEntityType(event.target.value)}><option value="">Tous</option>{ENTITY_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></div>
