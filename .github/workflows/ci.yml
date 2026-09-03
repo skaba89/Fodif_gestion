@@ -84,7 +84,7 @@ jobs:
         run: pnpm --filter @fodip/api test -- --coverage --coverageReporters=text-summary --coverageReporters=json-summary --coverageReporters=lcov
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: api-coverage
@@ -272,21 +272,21 @@ jobs:
         if: always()
 
       - name: Generate SBOM (API image)
-        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: fodip-digital-api:latest
           format: cyclonedx-json
           output-file: sbom-api.cyclonedx.json
 
       - name: Generate SBOM (web image)
-        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: fodip-digital-web:latest
           format: cyclonedx-json
           output-file: sbom-web.cyclonedx.json
 
       - name: Upload SBOMs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sboms
           path: sbom-*.cyclonedx.json
@@ -311,7 +311,7 @@ jobs:
 
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
           path: apps/web/playwright-report/

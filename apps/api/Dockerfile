@@ -1,12 +1,11 @@
-FROM node:22-bookworm-slim AS dependencies
-# npm install -g, not `corepack enable && corepack prepare` - identical result on this image today
-# (node:22-bookworm-slim still bundles Corepack), but apps/web/Dockerfile hit a real CI failure
-# when an independent Dependabot base-image bump (node:22 -> node:26-bookworm-slim) landed on
-# main: Node dropped Corepack from the default install starting with Node 25, so `corepack enable`
-# started failing with "corepack: not found". A matching Dependabot PR bumping this image's base to
-# node:26-bookworm-slim is open (see docs/20-TESTS-ENTREPRISE.md) - applying the same npm-based
-# install here ahead of that merge means it lands as a clean one-line FROM bump instead of another
-# broken build. npm itself is bundled regardless of Corepack's fate, so this survives either way.
+FROM node:26-bookworm-slim AS dependencies
+# npm install -g, not `corepack enable && corepack prepare`: this image's base was bumped from
+# node:22-bookworm-slim to node:26-bookworm-slim by an independent Dependabot PR while this fix
+# was already in flight - and Node dropped Corepack from the default install starting with Node
+# 25, so `corepack enable` fails with "corepack: not found" on this base image (the exact failure
+# already hit and fixed the same way in apps/web/Dockerfile - see docs/20-TESTS-ENTREPRISE.md).
+# npm itself is bundled regardless of Corepack's fate, so this survives the next base-image bump
+# too.
 RUN npm install -g pnpm@9.15.0
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -28,15 +27,18 @@ RUN pnpm --filter @fodip/api build
 # absent - the exact class of finding Trivy's image scan caught here before this fix).
 RUN pnpm --filter @fodip/api deploy --prod /app/deploy
 
-FROM node:22-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production
-# npm and corepack ship inside the base Node.js image for building/installing - this runtime
-# stage never invokes either (CMD only ever runs `node`), yet their own bundled dependencies
-# (npm vendors its own tar, brace-expansion, etc., entirely unrelated to this app's pnpm-lock.yaml)
-# were showing up as CRITICAL/HIGH findings in the Trivy image scan - confirmed by diffing their
-# exact "Installed Version" against what ships inside a real Node 22 install's own
-# lib/node_modules/npm, not guessed. Removing what is never used at runtime is the actual fix,
-# not chasing each of npm's own transitive CVEs one at a time as they're disclosed upstream.
+# npm ships inside the base Node.js image for building/installing (corepack no longer does, as of
+# node:26-bookworm-slim - see the `dependencies` stage above) - this runtime stage never invokes
+# either (CMD only ever runs `node`), yet npm's own bundled dependencies (it vendors its own tar,
+# brace-expansion, etc., entirely unrelated to this app's pnpm-lock.yaml) were showing up as
+# CRITICAL/HIGH findings in the Trivy image scan - confirmed by diffing their exact "Installed
+# Version" against what ships inside a real Node install's own lib/node_modules/npm, not guessed.
+# Removing what is never used at runtime is the actual fix, not chasing each of npm's own
+# transitive CVEs one at a time as they're disclosed upstream. `rm -f` on corepack's binaries is a
+# harmless no-op on this base image now that it doesn't ship them - kept so this stays correct if
+# a future base image brings Corepack back.
 RUN rm -rf /usr/local/lib/node_modules && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 WORKDIR /app
 COPY --from=build /app/deploy/node_modules ./node_modules
