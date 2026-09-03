@@ -145,3 +145,124 @@ Sans surprise très en-dessous des cibles du Sprint Enterprise 0 : la suite actu
 règle métier au niveau service avec des dépôts simulés (`jest.fn()`), jamais contre un vrai
 PostgreSQL/MinIO - exactement le manque que le Lot 2 (tests d'intégration réels, modules
 financiers critiques en priorité) doit combler.
+
+## DÉCISION REQUISE — réglages GitHub que ce dépôt ne peut pas activer lui-même
+
+Deux réglages ne peuvent être changés que depuis les paramètres du dépôt sur GitHub, hors de
+portée de tout fichier versionné ou des outils disponibles dans cette session (confirmé : aucun
+outil d'accès à l'API des paramètres de sécurité ou de protection de branche) :
+
+- **Protection de la branche `main`** (Settings → Branches) : PR obligatoire, CI obligatoire,
+  branche à jour avant fusion, deux validations sur les zones sensibles, interdiction du push
+  direct et du force-push, `CODEOWNERS` obligatoire - tout ce que le Lot 1 met en place
+  (`.github/CODEOWNERS`, statuts CI nommés) n'a d'effet contraignant qu'une fois cette protection
+  activée.
+- **Dependency graph** (Settings → Security → Code security and analysis) : sans lui,
+  `dependency-review-action` (job `security` de `ci.yml`) échoue avec « Dependency review is not
+  supported on this repository » - trouvé en conditions réelles sur la première PR à déclencher
+  cette étape (`pull_request`, jamais exercée par les runs `push` précédents). Corrigé en
+  `continue-on-error: true` pour ne jamais bloquer une PR sur un réglage que ce workflow ne
+  contrôle pas - `pnpm audit`/`check-licenses.py` continuent de bloquer normalement en attendant.
+  Une fois Dependency graph activé, cette étape redevient pleinement bloquante sans autre
+  changement de code.
+
+## Un vrai bug d'architecture Docker que le scan Trivy a trouvé dès son premier vrai passage
+
+Le scan Trivy (axe C4 - premier passage réel sur PR #38, cette fois avec la bonne image
+`ghcr.io/aquasecurity/trivy`) a trouvé de vraies vulnérabilités CRITICAL/HIGH dans les deux
+images : des paquets Debian du système (`perl-base`, `zlib1g`, `bsdutils` - certaines sans
+correctif Debian disponible pour l'instant, `will_not_fix`/`fix_deferred`) et, plus significatif,
+`tar`/`brace-expansion` **provenant du côté `devDependencies` de l'API** (`@nestjs/cli` et sa
+propre chaîne `webpack`/`glob`) retrouvés **dans l'image `web`**.
+
+Root cause, pas une CVE isolée à corriger au cas par cas : les deux `Dockerfile` faisaient
+`pnpm install --frozen-lockfile` **à la racine du workspace**, sans `--filter` ni `--prod`. Dans
+un monorepo pnpm, cette commande résout et installe les dépendances de **tous** les paquets du
+workspace dans le même `node_modules` partagé - les `devDependencies` de l'API se retrouvaient
+donc dans l'image `web` et réciproquement, en plus des `devDependencies` de chaque paquet
+lui-même. Un `COPY node_modules` naïf embarquait tout ça dans l'image de production : `jest`,
+`eslint`, `@nestjs/cli`, `webpack`, `ts-jest`... jamais nécessaires à l'exécution, uniquement à la
+compilation, mais bien présents et scannés par Trivy dans l'image finale.
+
+Corrigé avec `pnpm deploy --prod` (commande pnpm dédiée à exactement ce cas : produire, pour un
+seul paquet d'un workspace, un `node_modules` autonome ne contenant que ses propres dépendances
+de production) plutôt qu'un correctif ponctuel par CVE - qui n'aurait rien réglé pour la
+prochaine dépendance de compilation vulnérable. Vérifié directement (pas supposé) : `pnpm
+--filter @fodip/api deploy --prod` et son équivalent web exécutés ici, contenu du `node_modules`
+déployé inspecté (aucune trace de `jest`/`eslint`/`@nestjs/cli` côté API, aucune trace des
+équivalents web), et les deux applications démarrées avec succès depuis leur répertoire déployé
+(`node dist/main.js` pour l'API répond correctement sur toutes ses routes ; `next start` pour le
+web sert la page d'accueil et `/manifest.webmanifest` en 200).
+
+`scripts/check-docker.py` (garde-fou `public/` de la PR #29) ajusté au passage : la
+restructuration change le chemin source de la copie de `public/` dans le Dockerfile web
+(`/app/deploy/public` au lieu de `apps/web/public`) - le garde-fou vérifiait la chaîne exacte de
+l'ancien chemin, resserré pour vérifier l'invariant réel (« `public/` est copié quelque part »)
+plutôt qu'un chemin source spécifique, testé dans les deux sens comme la première fois.
+
+Les paquets Debian sans correctif disponible (`will_not_fix`/`fix_deferred`) ne peuvent pas être
+corrigés depuis ce dépôt - ils dépendent du mainteneur Debian ou d'une future image de base. Pas
+encore ajoutés à `.trivyignore` : la prochaine exécution de la CI, avec les images `node_modules`
+désormais propres, dira précisément lesquels restent réellement bloquants une fois le bruit des
+`devDependencies` mal placées éliminé.
+
+**Complément découvert au passage suivant** : ce correctif seul n'a pas suffi - le scan Trivy
+suivant a signalé les deux mêmes CVE critiques (`tar`, `brace-expansion`) avec les mêmes
+numéros de version. Root cause distincte, pas un signe d'échec du correctif ci-dessus : ces deux
+paquets ne viennent ni de l'API ni du web, mais du **CLI `npm` embarqué dans l'image de base**
+`node:22-bookworm-slim` elle-même (Node bundle npm, qui vendorise ses propres copies de `tar` et
+`brace-expansion` pour ses besoins internes). Confirmé en comparant les numéros de version exacts
+du rapport Trivy (`tar@7.5.11`, `brace-expansion@2.0.2`) à ceux réellement présents dans
+`lib/node_modules/npm/` d'une installation Node 22 réelle - identiques, et absents par ailleurs de
+`pnpm-lock.yaml` (`pnpm why` ne les trouve nulle part dans l'arbre de dépendances de ce dépôt).
+
+L'étage `runtime` des deux `Dockerfile` n'invoque jamais `npm`/`npx`/`corepack` (le `CMD` ne lance
+que `node`) : supprimés du `node_modules` et des scripts en `/usr/local/`, plutôt que d'attendre
+un futur correctif en amont pour des CVE sur des dépendances déjà présentes uniquement pour de
+l'outillage jamais exécuté en production. Vérifié directement, pas supposé : `npm`/`npx`/
+`corepack` retirés d'une vraie installation Node 22 dans cet environnement, `node` toujours
+fonctionnel (`node -e "console.log(...)"`, puis l'API déployée démarrée avec succès dans les
+mêmes conditions), avant d'être restaurés une fois la vérification terminée. `hadolint` (le
+linter Dockerfile officiel) sur les deux fichiers finaux : uniquement des avis `info`
+(consolidation de `RUN` consécutifs, utilisateur nommé plutôt que numérique - les deux
+intentionnels) et l'avertissement déjà documenté sur la forme shell du `CMD` web (nécessaire pour
+la substitution de `${PORT}`).
+
+## DÉCISION REQUISE — 14 CVE de l'image de base acceptées dans `.trivyignore`
+
+Une fois `npm`/`npx`/`corepack` retirés, le scan Trivy suivant a confirmé que **le node_modules
+applicatif des deux images est entièrement propre** (chaque paquet de `app/node_modules/.pnpm/`
+listé avec 0 vulnérabilité). Seul reste le rapport `debian` : **24 constats (20 HIGH, 4 CRITICAL)
+sur 14 CVE uniques**, tous dans des paquets système de l'image de base `node:22-bookworm-slim`
+elle-même (`util-linux`, `perl`, `zlib1g`, `systemd`, `ncurses`, `gzip`, `libacl1`) - jamais dans
+du code de ce dépôt.
+
+Vérifié pour chacun des 24, pas supposé en bloc : **la colonne « Fixed Version » du rapport Trivy
+est vide pour les 24 constats, sans exception** - Debian lui-même n'a de correctif disponible pour
+aucun d'entre eux à ce jour (certains explicitement marqués `will_not_fix`/`fix_deferred` par
+l'équipe sécurité Debian, comme `CVE-2023-45853` sur `zlib1g` - un CVE de 2023 toujours non
+corrigé, une décision délibérée de Debian et non un simple retard). Aucune mise à jour de paquet
+`apt` ne peut donc corriger ces CVE aujourd'hui.
+
+Deux options réelles à ce stade :
+
+1. **Accepter et documenter** (ce qui a été fait ici) - `.trivyignore` liste les 14 CVE, chacune
+   avec sa propre justification individuelle (le paquet concerné, le statut Debian exact, et
+   pourquoi le code exécuté par ce dépôt n'atteint jamais le chemin vulnérable - par exemple,
+   aucune des deux applications n'invoque jamais `perl`, `gzip` ou la fonction d'écriture zip de
+   `zlib`). Chaque CVE listée a été comparée un par un à la sortie réelle du scan (`diff` exact,
+   pas un total approximatif) pour garantir que rien n'est masqué au-delà de ce qui est documenté.
+2. **Changer d'image de base** (Alpine ou une autre distribution) - éliminerait cette classe
+   précise de CVE Debian, mais reste un changement d'architecture Docker à part entière (axe E7 de
+   la roadmap), avec son propre risque de régression (compatibilité musl des binaires natifs comme
+   `sharp`/`@img/sharp-linux-x64`, déjà présents avec leurs variantes `linuxmusl` en dépendance
+   optionnelle - un signal encourageant, mais qui mérite sa propre validation dédiée plutôt qu'une
+   décision prise dans l'urgence pour débloquer ce lot).
+
+Choix fait ici : l'option 1, pour ne pas bloquer indéfiniment ce lot sur une décision d'architecture
+plus large. **Signalé explicitement plutôt que masqué** : ce dépôt accepte actuellement 4 CVE
+CRITICAL et 20 CVE HIGH réelles, non corrigées, dans l'image de base - un choix conscient et
+documenté, pas une lacune passée sous silence. `.trivyignore` porte lui-même l'instruction de
+revoir cette liste à chaque mise à jour de l'image de base (suivie par Dependabot). L'option 2
+reste ouverte comme amélioration future si le propriétaire du dépôt préfère éliminer cette classe
+de risque plutôt que la documenter.

@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import sys
 import yaml
 
@@ -31,10 +32,15 @@ for dockerfile in ('apps/api/Dockerfile', 'apps/web/Dockerfile'):
 # request time rather than bundling it into .next/ - the runtime stage's COPY list had never
 # included it, so every file under public/ 404'd in the actual container while working fine in
 # every non-Docker verification, which starts from the full checkout with public/ already there.
+# Matches "public" as a whole path segment (not a substring of some other word) rather than the
+# exact source path apps/web/public: the runtime stage's own working directory changed when the
+# Dockerfile moved to `pnpm deploy` (axe Sprint Enterprise 0 E1), so the literal COPY source is
+# now /app/deploy/public, not apps/web/public - the invariant that matters is "public/ is copied
+# to the image somewhere", not the specific path it's copied from.
 web_public = Path('apps/web/public')
 web_dockerfile = Path('apps/web/Dockerfile')
 if web_public.is_dir() and any(web_public.iterdir()) and web_dockerfile.exists():
-    if 'apps/web/public' not in web_dockerfile.read_text(encoding='utf-8'):
+    if not re.search(r'COPY\b.*(^|/)public(\s|$)', web_dockerfile.read_text(encoding='utf-8'), re.MULTILINE):
         errors.append(
             'apps/web/public/ has files but apps/web/Dockerfile has no COPY for it - '
             'they will 404 in the actual container (see docs/18-PWA-HORS-LIGNE.md)'
