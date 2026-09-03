@@ -72,7 +72,7 @@ jamais une transformation géante). Détail par lot dans son propre document une
 | Phase | Contenu | Statut |
 |---|---|---|
 | E1 | Gouvernance GitHub et supply chain : CODEOWNERS, template de PR, `SECURITY.md`, Dependabot, CodeQL, scan de secrets, audit de licences, CI parallélisée et durcie (lockfile figé, Actions épinglées par SHA), vulnérabilité lodash corrigée | **Fait** (cette itération) — `docs/19-GOUVERNANCE-SUPPLY-CHAIN.md` |
-| E2 | Tests entreprise : intégration réelle PostgreSQL/MinIO, priorité aux modules financiers critiques, matrice Playwright multi-navigateurs/mobile, régression visuelle | À faire |
+| E2 | Tests entreprise : intégration réelle PostgreSQL/MinIO, priorité aux modules financiers critiques, matrice Playwright multi-navigateurs/mobile, régression visuelle | **Partiel** (cette itération) — `docs/20-TESTS-ENTREPRISE.md` : module `financings` couvert contre un vrai PostgreSQL (verrouillage de lignes, conflits de contrainte unique, double-soumission concurrente) ; MinIO, les autres modules critiques (administration, comité, partenaires) et la matrice Playwright restent à faire |
 | E3 | Refonte UI/UX ultra premium : design system partagé, navigation mobile, états de chargement/erreur/vide systématiques, assistants PME/Agent/Comité/Direction | À faire |
 | E4 | Identité et sécurité entreprise : cycle de vie de session complet, révocation, rate limiting distribué, durcissement OIDC, séparation et rotation des clés | À faire |
 | E5 | Intégrité financière : idempotency keys, maker-checker, rapprochement bancaire, verrouillage optimiste, contraintes PostgreSQL sur montants/statuts | À faire |
