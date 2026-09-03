@@ -15,8 +15,9 @@
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { Pool } from 'pg';
+import { Client, Pool } from 'pg';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { DatabaseService } from '../../../src/database/database.service';
 
@@ -74,6 +75,63 @@ export interface IntegrationDatabase {
   stop(): Promise<void>;
 }
 
+/**
+ * True end-to-end coverage for the mission's own real-Postgres proof - a migration that evolves a
+ * view an *earlier* migration also defines (analytics.vw_financing_performance: created by 006,
+ * extended by 014, mission "présentation Directeur général") surfaced two real gaps here, neither
+ * theoretical:
+ *   1. PostgreSQL's CREATE OR REPLACE VIEW can add columns but never drop or reorder them - a
+ *      second full migration replay against a database an *earlier* call already carried through
+ *      014 tries to shrink the view back down when it re-runs 006, and fails ("cannot drop
+ *      columns from view"). Testcontainers never hits this (each spec file gets a brand-new
+ *      container - a full replay only ever happens once, against nothing); this sandbox's
+ *      TEST_DATABASE_URL escape hatch used to reuse one physical database across every spec file
+ *      in a single `pnpm test:integration` run, so it did.
+ *   2. Making that replay idempotent (DROP SCHEMA + recreate before each call) ran headlong into a
+ *      second, genuinely surprising fact observed directly against this exact setup, not
+ *      theorized: two spec files' own calls to this function can have their async work interleave
+ *      closely enough to race each other - `--runInBand` only guarantees Jest doesn't run test
+ *      *bodies* in parallel, not that one file's `beforeAll` can never overlap with the next
+ *      file's. A shared advisory lock around a shared schema reset still left a window where one
+ *      file's later reset could wipe the schema out from under another file's still-running tests.
+ * Giving every call its own uniquely-named database - real isolation, not a shared, reset-between
+ * mutable one - removes the shared state those two failure modes both depend on, matching what
+ * Testcontainers already guarantees on the other path.
+ */
+async function createIsolatedDatabase(adminUrl: string): Promise<{ url: string; name: string; drop: () => Promise<void> }> {
+  const name = `fodip_test_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+  const admin = new Client({ connectionString: adminUrl });
+  await admin.connect();
+  try {
+    await admin.query(`CREATE DATABASE "${name}"`);
+  } finally {
+    await admin.end();
+  }
+
+  const url = new URL(adminUrl);
+  url.pathname = `/${name}`;
+
+  return {
+    url: url.toString(),
+    name,
+    async drop() {
+      const dropAdmin = new Client({ connectionString: adminUrl });
+      await dropAdmin.connect();
+      try {
+        // Terminate anything still attached (the pool this database backed should already be
+        // closed by the time stop() calls this, but a defensive DROP survives a straggler too).
+        await dropAdmin.query(
+          `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`,
+          [name],
+        );
+        await dropAdmin.query(`DROP DATABASE IF EXISTS "${name}"`);
+      } finally {
+        await dropAdmin.end();
+      }
+    },
+  };
+}
+
 export async function startIntegrationDatabase(): Promise<IntegrationDatabase> {
   // Escape hatch for environments where Testcontainers itself can't reach an image registry
   // (a locked-down sandbox's egress policy, an offline machine with Postgres already installed
@@ -86,7 +144,12 @@ export async function startIntegrationDatabase(): Promise<IntegrationDatabase> {
   const container = externalUrl
     ? undefined
     : await new PostgreSqlContainer(POSTGRES_IMAGE).withDatabase('fodip_test').withUsername('fodip_test').withPassword('fodip_test').start();
-  const connectionUri = externalUrl ?? container!.getConnectionUri();
+  // On the TEST_DATABASE_URL path, never migrate directly against the database the env var names
+  // - see createIsolatedDatabase's own comment for why a dedicated, uniquely-named database per
+  // call (not a shared one, reset between calls) is what actually makes this path behave like
+  // Testcontainers' real per-file isolation instead of only resembling it.
+  const isolated = externalUrl ? await createIsolatedDatabase(externalUrl) : undefined;
+  const connectionUri = isolated?.url ?? container!.getConnectionUri();
 
   const pool = new Pool({ connectionString: connectionUri, max: 5 });
   for (const file of migrationFiles()) {
@@ -119,6 +182,7 @@ export async function startIntegrationDatabase(): Promise<IntegrationDatabase> {
       await db.onModuleDestroy();
       await pool.end();
       await container?.stop();
+      await isolated?.drop();
     },
   };
 }
