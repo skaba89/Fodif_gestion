@@ -51,6 +51,17 @@ test.describe('Accessibility (axe A6)', () => {
     await expectNoSeriousViolations(page);
 
     await page.getByRole('button', { name: /Passer au thème/ }).click();
+    // ThemeToggle.tsx sets `data-theme` synchronously in the click handler - no React effect, no
+    // async gap - so the CSS custom properties it drives (globals.css) are correct the instant the
+    // attribute changes. What isn't guaranteed the same instant is that the browser has actually
+    // repainted every element with those new values: found on webkit specifically (CI, not
+    // reproducible locally with only chromium installed to check against) - color-contrast's pixel
+    // sampling caught a header background already showing the dark surface color while a nav
+    // link's text color still read the light theme's, an impossible combination for any code path
+    // in this app to produce deliberately, so a mid-repaint snapshot rather than a real bug. Two
+    // animation frames is the standard way to wait out a pending repaint without coupling the test
+    // to a specific CSS value that would need updating every time the palette changes.
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await expectNoSeriousViolations(page);
 
     await page.getByRole('link', { name: 'Mes données' }).click();

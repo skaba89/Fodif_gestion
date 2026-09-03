@@ -569,8 +569,40 @@ Détails E2, matrice Playwright (`apps/web/playwright.config.ts`, `.github/workf
   comptes `auditeur@fodip.local`/`direction@fodip.local`/`partenaire@fodip.local` dans la même
   fenêtre, exactement le scénario que `firefox`/`webkit` vivront en CI) passe à chaque fois sans la
   moindre erreur de connexion ;
+- **un deuxième vrai bug trouvé par la CI sur ce correctif lui-même**, une fois fusionné par erreur
+  sur `main` avant que la CI n'ait fini de tourner (voir plus bas) : `webkit`, seul, faisait
+  échouer de façon déterministe (même échec à la reprise automatique, mêmes valeurs) le test du
+  portail Auditeur, sur le contrôle qui suit le basculement de thème clair/sombre. La violation
+  axe-core relevée était un mélange impossible à produire par le code applicatif lui-même : le
+  fond de l'en-tête déjà à la couleur `--surface` du thème sombre, mais le texte des liens de
+  navigation encore à la couleur `--muted` du thème clair - `ThemeToggle.tsx` pose l'attribut
+  `data-theme` de façon synchrone dans le gestionnaire de clic (aucun `useEffect`, aucun délai),
+  donc les propriétés CSS custom qu'il pilote sont correctes dès l'attribut posé ; ce qui n'est pas
+  garanti au même instant, c'est que le moteur ait fini de repeindre chaque élément avec ces
+  nouvelles valeurs - une capture à mi-repeinture côté `webkit`, pas un vrai défaut de contraste
+  que verrait un utilisateur Safari réel (qui ne perçoit jamais un état intermédiaire de quelques
+  frames). Corrigé en attendant deux frames d'animation
+  (`requestAnimationFrame` imbriqués) après le clic sur le bouton de thème, avant de relancer le
+  scan axe-core - le moyen habituel d'attendre qu'une repeinture en attente se termine, sans coupler
+  le test à une valeur de couleur précise qu'il faudrait mettre à jour à chaque évolution de la
+  palette. Revérifié réellement sur `chromium` (aucune régression, le correctif n'ajoute qu'une
+  attente) ; `webkit` n'étant pas installable dans ce bac à sable, sa confirmation reste à la charge
+  de la CI, comme pour le reste de cet axe ;
 - `pnpm lint`, `npx tsc --noEmit` (sur `apps/web`), `npx playwright test --list` (37 tests
   découverts : 17 sur `chromium`, 10 chacun sur `firefox`/`webkit`) tous verts ;
   `.github/workflows/ci.yml` (job `docker` : installation `chromium firefox webkit`, budget porté
   de 25 à 35 minutes pour absorber l'installation et l'exécution des deux moteurs supplémentaires)
   validé avec `actionlint`.
+
+### Une fusion prématurée a laissé `main` rouge pendant ~10 minutes
+
+PR #46 a été fusionnée par un mainteneur humain à 10:47:36Z, dans la même minute où le job
+`Docker Compose, Playwright et audit des images` échouait dessus (10:47:28Z) - la fusion a
+probablement eu lieu avant que le statut CI n'ait eu le temps de remonter dans l'interface GitHub.
+Conséquence réelle, pas hypothétique : le run CI sur le commit de fusion (`e7915e3`) affiche
+`conclusion: failure`. Traité comme une régression de `main` à corriger immédiatement (pas comme
+une simple continuation de PR#46, déjà fermée) : nouvelle branche redémarrée depuis `main`
+(`git checkout -B ... origin/main`), correctif du throttle appliqué par-dessus via
+`git cherry-pick`, PR #47 ouverte contre `main`. Le deuxième bug (repeinture `webkit`) a été trouvé
+par la CI de cette PR #47 elle-même, sur le premier push du correctif du throttle - preuve que la
+CI sur ce dépôt attrape ce qu'elle est censée attraper, y compris sur les correctifs eux-mêmes.
