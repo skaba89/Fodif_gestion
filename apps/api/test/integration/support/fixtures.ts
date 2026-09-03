@@ -74,3 +74,55 @@ export async function seedEligibleDossier(pool: Pool, options: EligibleDossierOp
 
   return { entrepriseId, dossierId, decisionId: decision.rows[0].id, montantApprouve, tauxInteret, dureeMois };
 }
+
+export interface DossierReadyForCommitteeOptions {
+  montantDemande?: number;
+  scoreTotal?: number;
+}
+
+export interface DossierReadyForCommittee {
+  entrepriseId: string;
+  dossierId: string;
+  montantDemande: number;
+}
+
+/**
+ * Inserts an entreprise + dossier at exactly the state CommitteeRepository.list/decide requires
+ * (statut = 'PRET_COMITE', a scored dossier - CommitteeService.decide rejects an unscored one)
+ * plus the modele_scoring + scores_dossier rows a real score needs to exist at all (scores_dossier
+ * FKs to both). Self-contained and uniquely-named per call, same reasoning as seedEligibleDossier.
+ */
+export async function seedDossierReadyForCommittee(
+  pool: Pool, options: DossierReadyForCommitteeOptions = {},
+): Promise<DossierReadyForCommittee> {
+  const unique = randomUUID().slice(0, 8);
+  const montantDemande = options.montantDemande ?? 1_000_000;
+  const scoreTotal = options.scoreTotal ?? 78;
+
+  const entreprise = await pool.query<{ id: string }>(
+    `INSERT INTO entreprises (code_fodip, raison_sociale, statut)
+     VALUES ($1, $2, 'ACTIVE') RETURNING id`,
+    [`FODIP-TEST-${unique}`, `Entreprise Test ${unique}`],
+  );
+  const entrepriseId = entreprise.rows[0].id;
+
+  const dossier = await pool.query<{ id: string }>(
+    `INSERT INTO dossiers_financement (numero_dossier, entreprise_id, montant_demande, objet_financement, statut)
+     VALUES ($1, $2, $3, 'Fonds de roulement (fixture de test)', 'PRET_COMITE') RETURNING id`,
+    [`DOS-TEST-${unique}`, entrepriseId, montantDemande],
+  );
+  const dossierId = dossier.rows[0].id;
+
+  const modele = await pool.query<{ id: string }>(
+    `INSERT INTO modeles_scoring (code, nom, version, actif) VALUES ($1, 'Modèle de test', 1, TRUE) RETURNING id`,
+    [`MODELE-TEST-${unique}`],
+  );
+
+  await pool.query(
+    `INSERT INTO scores_dossier (dossier_id, modele_id, score_total, niveau_risque, recommandation)
+     VALUES ($1, $2, $3, 'MODERE', 'FAVORABLE')`,
+    [dossierId, modele.rows[0].id, scoreTotal],
+  );
+
+  return { entrepriseId, dossierId, montantDemande };
+}

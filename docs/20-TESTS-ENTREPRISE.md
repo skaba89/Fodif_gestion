@@ -1,13 +1,13 @@
-# Étape 16 — Sprint Enterprise 0, Lot 2 (partiel) : tests entreprise, module `financings`
+# Étape 16 — Sprint Enterprise 0, Lot 2 (partiel) : tests entreprise, modules `financings` et `committee`
 
 ## Objectif et périmètre
 
-Axe E2 de `docs/14-ROADMAP-SAAS-PREMIUM.md`. Cette itération couvre un seul module — `financings`
-(financements, décaissements, remboursements, échéances), le plus critique financièrement — contre
-un vrai PostgreSQL, pas des mocks. Elle ne couvre pas encore : MinIO, les autres modules critiques
-(administration, comité, partenaires bancaires, scoring, isolation PME), la matrice Playwright
-multi-navigateurs/mobile, ni la régression visuelle — tout cela reste à faire dans des lots
-suivants, volontairement séparés (jamais une PR géante).
+Axe E2 de `docs/14-ROADMAP-SAAS-PREMIUM.md`. Couvre deux modules contre un vrai PostgreSQL, pas des
+mocks : `financings` (financements, décaissements, remboursements, échéances, le plus critique
+financièrement) et `committee` (décisions du comité de financement). Ne couvre pas encore : MinIO,
+les autres modules critiques (administration, partenaires bancaires, scoring, isolation PME), la
+matrice Playwright multi-navigateurs/mobile, ni la régression visuelle — tout cela reste à faire
+dans des lots suivants, volontairement séparés (jamais une PR géante).
 
 ## Pourquoi les tests existants ne suffisaient pas
 
@@ -38,8 +38,8 @@ rollback transactionnel — ne sont vérifiables qu'avec un vrai moteur SQL.
   Un seul conteneur par fichier de test (`beforeAll`), pas par cas de test : le démarrage prend
   plusieurs secondes, `reset()` entre chaque test est presque instantané.
 - **`fixtures.ts`** : générateurs de données minimales (entreprise + dossier + décision de comité
-  APPROUVE, utilisateur) avec identifiants uniques par appel pour ne jamais entrer en collision
-  entre tests.
+  APPROUVE, entreprise + dossier prêt pour le comité avec un score complet, utilisateur) avec
+  identifiants uniques par appel pour ne jamais entrer en collision entre tests.
 - **`jest.integration.config.js`** : configuration Jest séparée (`testRegex:
   '.*\.integration-spec\.ts$'`), **volontairement exclue** de `jest.config.js` (qui ne matche que
   `*.spec.ts` / `*.e2e-spec.ts`) — ces specs ont besoin d'un démon Docker et prennent plusieurs
@@ -70,18 +70,38 @@ PostgreSQL jetable est disponible autrement.
 | Statuts d'échéance | `PARTIELLEMENT_PAYEE` après un paiement partiel, `PAYEE` seulement une fois soldée |
 | Rollback transactionnel | Un échec au milieu de la transaction de création (date invalide dans l'échéancier) ne laisse aucun financement ni aucune échéance orpheline |
 
+### Specs (`apps/api/test/integration/committee.integration-spec.ts`, 6 tests)
+
+`committee.repository.ts` n'avait que **22,22 % de couverture de lignes** avant ces tests (mêmes
+raisons que pour `financings.repository.ts` : `test/committee.service.spec.ts` mocke entièrement le
+repository). `CommitteeRepository.decide` protège la concurrence avec un seul `UPDATE ... WHERE
+statut = 'PRET_COMITE'` atomique (pas de verrou explicite `FOR UPDATE` séparé, contrairement à
+`financings`) — un pattern différent, qui mérite sa propre vérification en conditions réelles.
+
+| Scénario demandé dans la mission | Test |
+|---|---|
+| Cas nominal | Décision `APPROUVE` : dossier passe à `APPROUVE`, historique de statut (`dossier_statuts_historique`) et entrée d'audit `COMMITTEE_DECISION` créés |
+| Règle métier | Montant approuvé au-dessus du montant demandé → `BadRequestException` ; décision `REJETE` sans commentaire motivé → `BadRequestException` |
+| Transition de statut interdite | Décider deux fois le même dossier (statut déjà changé par la première décision) → `ConflictException` la seconde fois |
+| Double-clic / double-soumission | Deux membres du comité décident le même dossier en même temps (une `APPROUVE`, une `REJETE`) → une seule réussit, une seule ligne dans `decisions_comite`, le statut final du dossier correspond exactement à la décision qui a réellement gagné la course (pas supposé être la première) |
+| Liste | Seuls les dossiers `PRET_COMITE` apparaissent dans la file du comité |
+
 ## Vérifié
 
 Chaque affirmation ci-dessous a été vérifiée réellement, pas supposée :
 
-- **Les 12 tests passent** contre un vrai PostgreSQL, exécutés 4 fois de suite sans un seul échec
-  intermittent (les tests de concurrence sont exactement le genre de test qui peut être flaky s'il
-  est mal conçu — vérifié qu'il ne l'est pas, pas juste espéré).
-- **Ces tests détectent une vraie régression, pas seulement une régression injectée pour la forme** :
-  le verrou `FOR UPDATE` de `planDisbursement` a été retiré temporairement, le test de concurrence
-  correspondant a échoué immédiatement (conflit de contrainte SQL au lieu du `ConflictException`
-  applicatif attendu), puis le fichier a été restauré à l'identique (`git diff` vide après
-  restauration) et la suite complète re-passée au vert.
+- **Les 18 tests passent** (12 `financings` + 6 `committee`) contre un vrai PostgreSQL, chacun
+  exécuté plusieurs fois de suite sans un seul échec intermittent (les tests de concurrence sont
+  exactement le genre de test qui peut être flaky s'il est mal conçu — vérifié qu'il ne l'est pas,
+  pas juste espéré).
+- **Ces tests détectent une vraie régression, pas seulement une régression injectée pour la forme**,
+  vérifié pour les deux modules séparément : le verrou `FOR UPDATE` de `planDisbursement` retiré
+  temporairement fait échouer son test de concurrence (conflit de contrainte SQL au lieu du
+  `ConflictException` applicatif attendu) ; la clause `WHERE statut = 'PRET_COMITE'` de
+  `CommitteeRepository.decide` retirée temporairement fait échouer son test de concurrence (les deux
+  décisions concurrentes réussissent, deux lignes dans `decisions_comite` au lieu d'une). Les deux
+  fichiers ont été restaurés à l'identique ensuite (`git diff` vide) et la suite complète repassée
+  au vert.
 - `pnpm --filter @fodip/api lint` : aucune erreur sur les nouveaux fichiers.
 - `pnpm --filter @fodip/api test` (suite unitaire existante, 112 tests, 23 fichiers) : toujours au
   vert, aucune régression. Couverture globale inchangée (65,51 % lignes) — attendu, les tests
@@ -90,14 +110,15 @@ Chaque affirmation ci-dessous a été vérifiée réellement, pas supposée :
   erreur.
 - `.github/workflows/ci.yml` validé avec `actionlint` : aucun avertissement.
 
-### Couverture apportée par les tests d'intégration (module `financings` seul)
+### Couverture apportée par les tests d'intégration
 
-Mesuré séparément (`--collectCoverageFrom="src/financings/**/*.ts"` sur la nouvelle config Jest
-seule, sans fusionner avec la suite unitaire) :
+Mesuré séparément (`--collectCoverageFrom` scopé à chaque module, sur la nouvelle config Jest seule,
+sans fusionner avec la suite unitaire) :
 
-| | Avant (unitaire seul, mocks) | Apporté par les tests d'intégration |
+| Repository | Avant (unitaire seul, mocks) | Apporté par les tests d'intégration |
 |---|---|---|
 | `financings.repository.ts` (lignes) | 7,84 % | 43,57 % (statements) / 51,42 % (branches) sur l'ensemble du module `financings/**` |
+| `committee.repository.ts` (lignes) | 22,22 % | 48,61 % (lignes) / 75 % (branches) sur l'ensemble du module `committee/**` |
 
 Les deux mesures ne sont pas directement fusionnées ici (rapports Istanbul distincts, deux
 configurations Jest) — un vrai chiffre combiné est un raffinement possible d'un lot suivant, pas
@@ -130,7 +151,7 @@ référence, à confirmer avant fusion de la PR.
 
 ## Prochaine étape recommandée
 
-Suite du Lot 2, chacun en PR séparée : intégration réelle des modules `administration`, `committee`
-et `partner` (isolation PME, décisions de comité, accès croisé entre banques partenaires) contre le
-même harnais ; intégration MinIO réelle pour `documents`/`document-storage` ; matrice Playwright
-multi-navigateurs (Chromium/Firefox/WebKit) et mobile (Android/iPhone) ; régression visuelle.
+Suite du Lot 2, chacun en PR séparée : intégration réelle des modules `administration` et `partner`
+(isolation PME, accès croisé entre banques partenaires) contre le même harnais ; intégration MinIO
+réelle pour `documents`/`document-storage` ; matrice Playwright multi-navigateurs
+(Chromium/Firefox/WebKit) et mobile (Android/iPhone) ; régression visuelle.
