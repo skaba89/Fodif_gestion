@@ -14,6 +14,14 @@ module.exports = {
   moduleNameMapper: {
     '^openid-client$': '<rootDir>/test/stubs/openid-client.stub.js',
   },
+  // Sprint Enterprise 0 - mission "niveau 80-85/100" Lot 2 (axe 5.1, couverture combinée) : a
+  // separate coverageDirectory from jest.config.cjs's default `coverage/` (used by the unit
+  // suite) so a full `pnpm test && pnpm test:integration --coverage` run doesn't have one suite's
+  // `--coverage` overwrite the other's raw data before scripts/merge-coverage.js combines them -
+  // see that script's own comment for why a raw per-run coverage-final.json, not each run's own
+  // rendered report, is what actually gets merged.
+  collectCoverageFrom: ['src/**/*.(t|j)s'],
+  coverageDirectory: 'coverage-integration',
   testEnvironment: 'node',
   // Container startup + real transactions/locking are slower than the mocked unit tests' default
   // 5s budget; comfortably above what a healthy run needs, still low enough that a genuinely
