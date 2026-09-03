@@ -122,7 +122,15 @@ describe('Financings lifecycle (real PostgreSQL)', () => {
       const rejected = results.filter((result) => result.status === 'rejected') as PromiseRejectedResult[];
       expect(fulfilled).toHaveLength(1);
       expect(rejected).toHaveLength(1);
-      expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+      // Either exception is a correct outcome, depending on how the two requests interleave:
+      // FinancingsService.planDisbursement reads the committed total via an unlocked this.get(id)
+      // *before* the repository's FOR UPDATE transaction - if the two calls overlap, both read the
+      // pre-write total and the loser is only caught by the transaction's authoritative re-check
+      // (ConflictException); if one call's whole round trip finishes before the other's read even
+      // starts, the loser's own outer check already sees the updated total (BadRequestException).
+      // Both are the system correctly refusing the over-limit request - the invariant that matters,
+      // checked below, is that the committed total never exceeds the accorded amount either way.
+      expect([BadRequestException, ConflictException].some((type) => rejected[0].reason instanceof type)).toBe(true);
 
       const committed = await integrationDb.pool.query(
         `SELECT COALESCE(SUM(montant), 0) AS total FROM decaissements WHERE financement_id = $1 AND statut <> 'ANNULE'`,
@@ -195,7 +203,12 @@ describe('Financings lifecycle (real PostgreSQL)', () => {
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
       const rejected = results.filter((result) => result.status === 'rejected') as PromiseRejectedResult[];
       expect(rejected).toHaveLength(1);
-      expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+      // Either exception is a correct outcome here too, for the same reason as the planDisbursement
+      // concurrency test above: FinancingsService.createRepayment's outer amount check runs against
+      // an unlocked read, so which guard actually catches the loser (the transaction's FOR UPDATE
+      // re-check vs. the outer pre-check) depends on how the two calls interleave. The invariant
+      // that matters - checked below - is that the amount paid never exceeds what's due, either way.
+      expect([BadRequestException, ConflictException].some((type) => rejected[0].reason instanceof type)).toBe(true);
 
       const paid = await integrationDb.pool.query(
         `SELECT COALESCE(SUM(montant_paye), 0) AS total FROM remboursements WHERE echeance_id = $1`, [installment.id],
