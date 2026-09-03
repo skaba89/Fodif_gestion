@@ -48,7 +48,12 @@ import { defineConfig, devices } from '@playwright/test';
  */
 // Specs that log in as agent@/pme@/admin@fodip.local enough times per run to matter for the
 // shared 5-per-60s throttle once replayed across projects - see the file-level comment above.
-const HEAVY_LOGIN_SPECS = [/login\.spec\.ts$/, /workflow\.spec\.ts$/, /mfa\.spec\.ts$/, /pii-encryption\.spec\.ts$/];
+const HEAVY_LOGIN_SPECS = [
+  /login\.spec\.ts$/, /workflow\.spec\.ts$/, /mfa\.spec\.ts$/, /pii-encryption\.spec\.ts$/,
+  // Mission "présentation Directeur général" (section 10): logs in as pme@/agent@/comite@ - the
+  // same three accounts workflow.spec.ts already uses - so it carries the same profile.
+  /executive-demo\.spec\.ts$/,
+];
 
 export default defineConfig({
   testDir: './e2e',
