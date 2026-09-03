@@ -1,78 +1,120 @@
-# FODIP Digital 2030 - Trivy image-scan exceptions (Sprint Enterprise 0, Lot 1).
+# FODIP Digital 2030 - Trivy image-scan exceptions (Sprint Enterprise 0, Lot 1 - fondations
+# entreprise, mission "niveau 80-85/100").
 #
-# Every entry below was reviewed individually against the real scan output (PR #38), not
-# batch-suppressed: for all 14, Trivy itself reports an EMPTY "Fixed Version" - no patched Debian
-# bookworm package exists yet for any of them, several explicitly marked will_not_fix/fix_deferred
-# by Debian's own security team. None come from this repository's own code or dependencies (see
-# docs/19-GOUVERNANCE-SUPPLY-CHAIN.md for how that was confirmed for the two findings that briefly
-# looked like they might be) - all fourteen are base-image-only (node:22-bookworm-slim's OS
-# packages: util-linux, perl, zlib, systemd, ncurses, gzip, acl).
+# Chaque entrée ci-dessous a été revue individuellement contre la sortie réelle du scan (PR #38),
+# jamais suspendue par lot : pour les 14, Trivy lui-même rapporte un "Fixed Version" vide - aucun
+# paquet Debian bookworm corrigé n'existe encore pour l'une d'elles, plusieurs explicitement
+# marquées will_not_fix/fix_deferred par l'équipe sécurité de Debian elle-même. Aucune ne vient du
+# code ou des dépendances de ce dépôt (voir docs/19-GOUVERNANCE-SUPPLY-CHAIN.md pour la vérification
+# des deux cas qui semblaient un temps concerner le dépôt) - les quatorze sont exclusivement des
+# paquets système de l'image de base (util-linux, perl, zlib, systemd, ncurses, gzip, acl).
 #
-# Re-review this file whenever `docker compose build` picks up a newer node:22-bookworm-slim
-# build (Dependabot tracks the base image, per .github/dependabot.yml): a line here whose fix
-# has since shipped upstream should be removed, not left stale. Never add an entry here for a
-# finding that has a real fix available - only for a genuinely unfixable base-image CVE.
+# DÉRIVE RÉELLE CORRIGÉE ICI (Lot 1, foundation) : ce fichier référençait encore
+# node:22-bookworm-slim alors que les deux Dockerfiles étaient déjà passés à
+# node:26-bookworm-slim via une PR Dependabot indépendante, sans que ce fichier ne soit re-revu à
+# cette occasion - exactement le genre de dérive silencieuse que scripts/check-node-version.py
+# (ajouté dans ce même lot) empêche désormais pour les versions Node elles-mêmes, mais qui n'avait
+# pas d'équivalent côté Trivy. Les deux Dockerfiles pointent maintenant vers node:24-bookworm-slim
+# (LTS) ; les 14 exceptions ci-dessous n'ont pas pu être re-scannées contre cette nouvelle base
+# dans ce lot (le bac à sable de développement utilisé pour ce travail bloque les pulls de
+# registre Docker - voir docs/20-TESTS-ENTREPRISE.md pour la même limitation déjà rencontrée et
+# documentée pour PostgreSQL/MinIO) : la confirmation réelle revient au job CI `docker` (étape
+# Trivy), à vérifier avant fusion de cette PR. Une exception dont le correctif serait entre-temps
+# disponible en amont doit être retirée, jamais laissée périmée.
+#
+# Champs de gouvernance (mission "niveau 80-85/100", axe P0 4.3) pour les 14 exceptions :
+#   Responsable        : skaba89 (propriétaire unique du dépôt à ce jour)
+#   Date d'acceptation  : 2026-09-03 (reconduction dans ce lot - acceptation initiale : PR #38)
+#   Date d'expiration   : 2026-12-02 (revue à 90 jours, ou plus tôt si Dependabot signale un
+#                         nouveau build de base image - .github/dependabot.yml en assure le suivi)
+#   Ticket de suivi     : cette PR, puis docs/14-ROADMAP-SAAS-PREMIUM.md (axe fondations
+#                         entreprise) jusqu'à sa fusion - ce dépôt n'a pas d'outil de tickets séparé
+#   Solution cible      : pour les 8 CVE liées à perl (jamais invoqué par ni l'API ni le web, tous
+#                         deux Node.js uniquement) - retirer perl du stage runtime des deux
+#                         Dockerfiles, sur le même principe que le nettoyage déjà fait pour
+#                         npm/npx/corepack (voir apps/api/Dockerfile et apps/web/Dockerfile) ;
+#                         proposé comme suivi séparé, pas fait à l'aveugle dans ce lot faute de
+#                         pouvoir vérifier un build Docker réel dans ce bac à sable. Pour les 6
+#                         autres (util-linux, gzip, libacl1, systemd, ncurses, zlib1g) : attendre
+#                         un correctif Debian amont (aucun n'est will_not_fix sauf zlib1g, qui
+#                         restera accepté durablement - voir sa note dédiée plus bas).
+#
+# Re-review ce fichier à chaque fois que `docker compose build` récupère un nouveau build de
+# node:24-bookworm-slim (Dependabot suit la base image, voir .github/dependabot.yml) : une ligne
+# ici dont le correctif est sorti en amont doit être retirée, pas laissée périmée. Ne jamais
+# ajouter une entrée ici pour une faille dont un vrai correctif est disponible - uniquement pour
+# une CVE d'image de base réellement non corrigeable.
 
 # util-linux (bsdutils, libblkid1, libmount1, libsmartcols1, libuuid1, mount, util-linux,
-# util-linux-extra) - TOCTOU via ancestor directory swap during mount. Debian status: affected,
-# no fixed version. This image's runtime user (`node`, non-root) never invokes `mount`.
+# util-linux-extra) - TOCTOU via ancestor directory swap during mount. Sévérité : HIGH. Debian
+# status: affected, no fixed version. This image's runtime user (`node`, non-root) never invokes
+# `mount`.
 CVE-2026-53613
 
-# gzip - information disclosure via global buffer overflow in LZH decompression. Debian status:
-# fix_deferred, no fixed version. gzip is never invoked by this image at runtime.
+# gzip - information disclosure via global buffer overflow in LZH decompression. Sévérité :
+# MEDIUM. Debian status: fix_deferred, no fixed version. gzip is never invoked by this image at
+# runtime.
 CVE-2026-41992
 
-# libacl1 - symlink traversal privilege escalation via libacl functions. Debian status: affected
-# (implicit), no fixed version. Not linked against by anything this image runs.
+# libacl1 - symlink traversal privilege escalation via libacl functions. Sévérité : HIGH. Debian
+# status: affected (implicit), no fixed version. Not linked against by anything this image runs.
 CVE-2026-54369
 
 # systemd (libsystemd0, libudev1) - local privilege escalation via systemd-homed missing
-# home-record signature verification. Debian status: affected, no fixed version. systemd-homed
-# is not present or reachable in this container (no init system, no user home records).
+# home-record signature verification. Sévérité : HIGH. Debian status: affected, no fixed version.
+# systemd-homed is not present or reachable in this container (no init system, no user home
+# records).
 CVE-2026-16742
 
 # ncurses (libtinfo6, ncurses-base, ncurses-bin) - buffer overflow, potential arbitrary code
-# execution. Debian status: affected, no fixed version. Not invoked by this image (no interactive
-# terminal UI in either the API or the Next.js server).
+# execution. Sévérité : HIGH. Debian status: affected, no fixed version. Not invoked by this image
+# (no interactive terminal UI in either the API or the Next.js server).
 CVE-2025-69720
 
-# perl-base - incorrect regular expression processing via large regular expressions. CRITICAL.
-# Debian status: affected, no fixed version. Perl is bundled with the base image but never
-# invoked by either application at runtime (Node.js only).
+# perl-base - incorrect regular expression processing via large regular expressions. Sévérité :
+# CRITICAL. Debian status: affected, no fixed version. Perl is bundled with the base image but
+# never invoked by either application at runtime (Node.js only). Solution cible : retirer perl du
+# stage runtime (voir note de gouvernance en tête de fichier).
 CVE-2026-13221
 
-# perl-Archive-Tar - path traversal via crafted symlinks. Debian status: fix_deferred, no fixed
-# version. Same reasoning as CVE-2026-13221: perl-Archive-Tar is never invoked here.
+# perl-Archive-Tar - path traversal via crafted symlinks. Sévérité : HIGH. Debian status:
+# fix_deferred, no fixed version. Same reasoning as CVE-2026-13221: perl-Archive-Tar is never
+# invoked here.
 CVE-2026-42496
 
-# perl - heap buffer overflow when compiling regular expressions, 32-bit builds only. This image
-# is amd64/x86_64 (docker-compose.yml, CI runners) - the vulnerable code path does not apply here
-# regardless of Debian's fix status, but perl is unused either way (see CVE-2026-13221).
+# perl - heap buffer overflow when compiling regular expressions, 32-bit builds only. Sévérité :
+# MEDIUM. This image is amd64/x86_64 (docker-compose.yml, CI runners) - the vulnerable code path
+# does not apply here regardless of Debian's fix status, but perl is unused either way (see
+# CVE-2026-13221).
 CVE-2026-8376
 
 # perl-Archive-Tar - arbitrary file modification via crafted hardlinks during archive extraction.
-# HIGH. Debian status: fix_deferred, no fixed version. perl-Archive-Tar never invoked here.
+# Sévérité : HIGH. Debian status: fix_deferred, no fixed version. perl-Archive-Tar never invoked
+# here.
 CVE-2026-42497
 
-# perl-IO-Compress - arbitrary code execution via attacker-controlled output glob. Debian status:
-# affected, no fixed version. perl-IO-Compress never invoked here.
+# perl-IO-Compress - arbitrary code execution via attacker-controlled output glob. Sévérité :
+# HIGH. Debian status: affected, no fixed version. perl-IO-Compress never invoked here.
 CVE-2026-48962
 
-# perl - information disclosure via integer overflow in pack/unpack. Debian status: affected, no
-# fixed version. Perl never invoked here.
+# perl - information disclosure via integer overflow in pack/unpack. Sévérité : MEDIUM. Debian
+# status: affected, no fixed version. Perl never invoked here.
 CVE-2026-57432
 
 # Storable (bundled with perl) - denial of service via signed integer overflow in
-# deserialization. Debian status: affected, no fixed version. Never invoked here.
+# deserialization. Sévérité : MEDIUM. Debian status: affected, no fixed version. Never invoked
+# here.
 CVE-2026-57433
 
-# perl-Archive-Tar - denial of service via crafted tar header with an oversized entry. Debian
-# status: fix_deferred, no fixed version. perl-Archive-Tar never invoked here.
+# perl-Archive-Tar - denial of service via crafted tar header with an oversized entry. Sévérité :
+# MEDIUM. Debian status: fix_deferred, no fixed version. perl-Archive-Tar never invoked here.
 CVE-2026-9538
 
-# zlib1g - integer overflow and heap-based buffer overflow in zipOpenNewFileInZip4_6. CRITICAL.
-# Debian status: will_not_fix (Debian's own security team has explicitly declined to patch this
-# one, not merely "not yet"). zipOpenNewFileInZip4_6 is a zlib zip-writing helper neither Node.js
-# nor either application here calls (Node's own zlib usage is read/decompress-oriented; no zip
-# file is ever created by this codebase).
+# zlib1g - integer overflow and heap-based buffer overflow in zipOpenNewFileInZip4_6. Sévérité :
+# CRITICAL. Debian status: will_not_fix (Debian's own security team has explicitly declined to
+# patch this one, not merely "not yet") - this one has no upstream fix to wait for, unlike the
+# other 13; it stays accepted durably, re-affirmed at each 90-day review rather than expected to
+# resolve itself. zipOpenNewFileInZip4_6 is a zlib zip-writing helper neither Node.js nor either
+# application here calls (Node's own zlib usage is read/decompress-oriented; no zip file is ever
+# created by this codebase).
 CVE-2023-45853

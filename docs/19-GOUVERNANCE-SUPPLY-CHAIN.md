@@ -266,3 +266,18 @@ documenté, pas une lacune passée sous silence. `.trivyignore` porte lui-même 
 revoir cette liste à chaque mise à jour de l'image de base (suivie par Dependabot). L'option 2
 reste ouverte comme amélioration future si le propriétaire du dépôt préfère éliminer cette classe
 de risque plutôt que la documenter.
+
+**Mise à jour (mission « niveau 80-85/100 », fondations entreprise Lot 1)** : l'image de base des
+deux `Dockerfile` est passée de `node:22-bookworm-slim` (ci-dessus) à `node:26-bookworm-slim` via
+une PR Dependabot indépendante, puis à `node:24-bookworm-slim` (LTS) dans ce même lot - sans que
+`.trivyignore` ne soit re-revu lors du premier de ces deux changements, une dérive silencieuse
+découverte en auditant ce fichier pour ce lot (son en-tête référençait encore `node:22` alors que
+le `FROM` réel était déjà sur `26` depuis plusieurs PR). Corrigé : `.trivyignore` porte maintenant
+des champs de gouvernance explicites par CVE (responsable, dates d'acceptation/expiration, ticket
+de suivi, solution cible - voir ce fichier directement), et une piste concrète pour éliminer 8 des
+14 CVE plutôt que les accepter indéfiniment : retirer `perl` du stage `runtime`, sur le principe
+déjà appliqué à `npm`/`npx`/`corepack` ci-dessus - proposée comme suivi séparé plutôt que faite à
+l'aveugle, faute d'environnement Docker disponible pour la vérifier dans le bac à sable où ce lot a
+été préparé. La reconfirmation réelle des 14 exceptions contre le nouveau `node:24-bookworm-slim`
+(un vrai re-scan Trivy, pas une relecture du fichier) reste le travail du job CI `docker` sur la PR
+de ce lot, comme pour toute vérification qui dépend de Docker dans ce bac à sable.

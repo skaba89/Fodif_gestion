@@ -1,11 +1,13 @@
-FROM node:26-bookworm-slim AS dependencies
+FROM node:24-bookworm-slim AS dependencies
 # `corepack enable` alone worked while this image was on node:22-bookworm-slim (which bundled
 # Corepack); a Dependabot base-image bump to node:26-bookworm-slim broke it - Node dropped
-# Corepack from the default install starting with Node 25, so `corepack enable` now fails with
-# "corepack: not found" (confirmed the hard way: PR #40's CI failed on exactly this after that
-# bump landed on main via a separate, already-merged Dependabot PR). Installing pnpm straight
-# through npm - still bundled in every Node base image regardless of Corepack's fate - sidesteps
-# the dependency on Corepack entirely, so this line survives the next base-image bump too.
+# Corepack from the default distribution starting with Node 25, so `corepack enable` failed with
+# "corepack: not found" on that line (confirmed the hard way: PR #40's CI failed on exactly this
+# after that bump landed on main via a separate, already-merged Dependabot PR). This image now
+# pins the 24.x LTS line, which still keeps Corepack as experimental
+# (https://github.com/nodejs/corepack/issues/722) - but installing pnpm straight through npm,
+# bundled on every Node line regardless of Corepack's fate, sidesteps the question entirely, so
+# this line survives whichever line the base image tracks next.
 RUN npm install -g pnpm@9.15.0
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -26,19 +28,17 @@ RUN pnpm --filter @fodip/web build
 # devDependency - the exact class of finding Trivy's image scan caught here before this fix).
 RUN pnpm --filter @fodip/web deploy --prod /app/deploy
 
-FROM node:26-bookworm-slim AS runtime
+FROM node:24-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
-# npm ships inside the base Node.js image for building/installing (corepack no longer does, as of
-# node:26-bookworm-slim - see the `dependencies` stage above) - this runtime stage never invokes
-# either (CMD only ever runs `node`), yet npm's own bundled dependencies (it vendors its own tar,
+# npm (and, on this 24.x line, Corepack too - see the `dependencies` stage above) ships inside the
+# base Node.js image for building/installing - this runtime stage never invokes any of them (CMD
+# only ever runs `node`), yet npm's own bundled dependencies (it vendors its own tar,
 # brace-expansion, etc., entirely unrelated to this app's pnpm-lock.yaml) were showing up as
 # CRITICAL/HIGH findings in the Trivy image scan - confirmed by diffing their exact "Installed
 # Version" against what ships inside a real Node install's own lib/node_modules/npm, not guessed.
 # Removing what is never used at runtime is the actual fix, not chasing each of npm's own
-# transitive CVEs one at a time as they're disclosed upstream. `rm -f` on corepack's binaries is a
-# harmless no-op on this base image now that it doesn't ship them - kept so this stays correct if
-# a future base image brings Corepack back.
+# transitive CVEs one at a time as they're disclosed upstream.
 RUN rm -rf /usr/local/lib/node_modules && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 WORKDIR /app
 COPY --from=build /app/deploy/node_modules ./node_modules
