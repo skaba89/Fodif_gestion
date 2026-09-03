@@ -235,14 +235,14 @@ jobs:
         if: always()
 
       - name: Generate SBOM (API image)
-        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: fodip-digital-api:latest
           format: cyclonedx-json
           output-file: sbom-api.cyclonedx.json
 
       - name: Generate SBOM (web image)
-        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: fodip-digital-web:latest
           format: cyclonedx-json
