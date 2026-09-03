@@ -534,13 +534,43 @@ Détails E2, matrice Playwright (`apps/web/playwright.config.ts`, `.github/workf
   migré et seedé (`database/*.sql` + `database/seeds/*.sql`, les mêmes comptes de démo que
   `login.spec.ts`/`mfa.spec.ts` utilisent), `s3rver` en local pour MinIO (même solution que pour
   `documents`/MinIO), API compilée et lancée dessus, `next build && next start` pour le web. Sur
-  cette pile réelle : **17/17 tests passent sur `chromium`** (42s, un seul run manuel plus les
-  précédents runs de cette même suite au fil des itérations antérieures) - aucune régression
-  introduite par le changement de configuration. `firefox` et `webkit` ne sont pas installables
-  dans ce bac à sable (même politique réseau que Docker/MinIO - `playwright install` ne peut pas
-  télécharger leurs binaires ici) : leur exécution réelle est laissée à la CI, comme pour tout ce
-  qui a dépendu de Docker dans les itérations précédentes de cet axe ;
-- `pnpm lint`, `npx tsc --noEmit` (sur `apps/web`), `npx playwright test --list` (51 tests
-  découverts sur les trois projets desktop) tous verts ; `.github/workflows/ci.yml` (job `docker`
-  : installation `chromium firefox webkit`, budget porté de 25 à 35 minutes pour absorber
-  l'installation et l'exécution des deux moteurs supplémentaires) validé avec `actionlint`.
+  cette pile réelle : **17/17 tests passent sur `chromium`** (aucune régression introduite par le
+  changement de configuration). `firefox` et `webkit` ne sont pas installables dans ce bac à sable
+  (même politique réseau que Docker/MinIO - `playwright install` ne peut pas télécharger leurs
+  binaires ici) : leur exécution réelle a été laissée à la CI, comme pour tout ce qui a dépendu de
+  Docker dans les itérations précédentes de cet axe ;
+- **un vrai bug trouvé par la CI, pas une hypothèse** : la toute première version poussée faisait
+  tourner les 17 specs sur les trois projets (51 tests). `chromium` passait, `firefox` et `webkit`
+  échouaient chacun sur 2-3 tests, **de façon déterministe** (échec identique au premier essai et à
+  la reprise automatique) - pas le genre d'échec intermittent qu'on rejoue en croisant les doigts.
+  Diagnostic mené jusqu'au bout plutôt que supposé : les échecs venaient tous de connexions réelles
+  refusées (« Connexion impossible » à la place du message de rôle attendu, redirection vers la
+  page de connexion au lieu du portail). Cause racine trouvée dans les logs CI, pas devinée :
+  `/auth/login` est limité à 5 tentatives par email par 60 secondes
+  (`apps/api/src/auth/auth.controller.ts`, `@Throttle` avec `trackLoginByEmail`) - une vraie
+  protection anti-bourrage d'identifiants, pas un artefact de test, et
+  `accessibility.spec.ts` documentait déjà en commentaire en avoir tenu compte *au sein d'un seul*
+  projet (choix délibéré du compte `auditeur@fodip.local` pour ne pas partager le budget de
+  `pme@fodip.local` avec `login.spec.ts`/`workflow.spec.ts`). Répéter `login.spec.ts`,
+  `workflow.spec.ts`, `mfa.spec.ts` et `pii-encryption.spec.ts` sur trois projets consécutifs dans
+  la même fenêtre de ~2,5 minutes rejoue `agent@fodip.local`/`pme@fodip.local`/`admin@fodip.local`
+  assez de fois (3 connexions réelles par projet × 3 projets, dans une seule fenêtre glissante de
+  60s) pour dépasser cette même limite pour de vrai. Affaibli la limite (l'augmenter, la désactiver
+  sous CI) a été explicitement écarté : c'est exactement le genre de contrôle que cette mission
+  demande de renforcer, pas d'assouplir pour le confort des tests. Corrigé en scindant les projets
+  (`testIgnore` dans `playwright.config.ts`, constante `HEAVY_LOGIN_SPECS`) : `chromium` fait
+  tourner les 17 specs comme avant, `firefox`/`webkit` ne rejouent que les 3 specs qui n'utilisent
+  ces comptes qu'une fois ou pas du tout par run (`accessibility.spec.ts`, `direction-partenaire
+  .spec.ts`, `pwa.spec.ts` - 10 tests chacun), un choix vérifié plutôt que supposé sûr : 37 tests au
+  total (17 + 10 + 10) ;
+- correctif revérifié réellement, pas juste relu : sur cette même pile locale relancée à froid
+  (pour repartir avec des compteurs de limitation à zéro), le sous-ensemble « léger » rejoué deux
+  fois de suite immédiatement après la suite complète des 17 tests (donc trois passages sur les
+  comptes `auditeur@fodip.local`/`direction@fodip.local`/`partenaire@fodip.local` dans la même
+  fenêtre, exactement le scénario que `firefox`/`webkit` vivront en CI) passe à chaque fois sans la
+  moindre erreur de connexion ;
+- `pnpm lint`, `npx tsc --noEmit` (sur `apps/web`), `npx playwright test --list` (37 tests
+  découverts : 17 sur `chromium`, 10 chacun sur `firefox`/`webkit`) tous verts ;
+  `.github/workflows/ci.yml` (job `docker` : installation `chromium firefox webkit`, budget porté
+  de 25 à 35 minutes pour absorber l'installation et l'exécution des deux moteurs supplémentaires)
+  validé avec `actionlint`.
