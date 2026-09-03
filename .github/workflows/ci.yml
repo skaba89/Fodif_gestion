@@ -92,7 +92,7 @@ jobs:
           retention-days: 30
 
   integration-tests:
-    name: Tests d'intégration API (PostgreSQL réel)
+    name: Tests d'intégration API (PostgreSQL + MinIO réels)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -114,15 +114,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # No `services:` block needed: apps/api/test/integration/support/database.ts starts its own
-      # disposable postgres:16.10-alpine container per spec file via Testcontainers (the same
-      # library, the same image docker-compose.yml's `postgres` service pins) - ubuntu-latest
-      # runners already have a working Docker daemon. Verified locally against a real Postgres
-      # before this was wired into CI (see docs/19-GOUVERNANCE-SUPPLY-CHAIN.md, axe E2): this
-      # sandbox's own egress policy blocks Docker Hub image pulls, so a native `postgres` install
-      # stood in for Testcontainers there via TEST_DATABASE_URL - deliberately not set here, so
-      # this job exercises the real, hermetic, disposable-container path.
-      - name: Financings integration tests (real PostgreSQL, row locking, concurrency)
+      # No `services:` block needed: apps/api/test/integration/support/database.ts and
+      # support/storage.ts each start their own disposable container per spec file via
+      # Testcontainers (postgres:16.10-alpine and minio/minio respectively - the same images
+      # docker-compose.yml's `postgres`/`minio` services pin) - ubuntu-latest runners already have
+      # a working Docker daemon. Verified locally against a real Postgres and a real S3-compatible
+      # server before this was wired into CI (see docs/20-TESTS-ENTREPRISE.md, axe E2): this
+      # sandbox's own egress policy blocks Docker Hub/registry image pulls, so a native `postgres`
+      # install and a local `s3rver` stood in for Testcontainers there via TEST_DATABASE_URL /
+      # TEST_STORAGE_ENDPOINT - deliberately not set here, so this job exercises the real,
+      # hermetic, disposable-container path for both.
+      - name: Business modules integration tests (real PostgreSQL + MinIO, locking, concurrency, storage integrity)
         run: pnpm --filter @fodip/api test:integration
 
   build:
