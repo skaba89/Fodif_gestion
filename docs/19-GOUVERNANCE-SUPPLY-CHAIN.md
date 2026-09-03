@@ -205,3 +205,25 @@ corrigés depuis ce dépôt - ils dépendent du mainteneur Debian ou d'une futur
 encore ajoutés à `.trivyignore` : la prochaine exécution de la CI, avec les images `node_modules`
 désormais propres, dira précisément lesquels restent réellement bloquants une fois le bruit des
 `devDependencies` mal placées éliminé.
+
+**Complément découvert au passage suivant** : ce correctif seul n'a pas suffi - le scan Trivy
+suivant a signalé les deux mêmes CVE critiques (`tar`, `brace-expansion`) avec les mêmes
+numéros de version. Root cause distincte, pas un signe d'échec du correctif ci-dessus : ces deux
+paquets ne viennent ni de l'API ni du web, mais du **CLI `npm` embarqué dans l'image de base**
+`node:22-bookworm-slim` elle-même (Node bundle npm, qui vendorise ses propres copies de `tar` et
+`brace-expansion` pour ses besoins internes). Confirmé en comparant les numéros de version exacts
+du rapport Trivy (`tar@7.5.11`, `brace-expansion@2.0.2`) à ceux réellement présents dans
+`lib/node_modules/npm/` d'une installation Node 22 réelle - identiques, et absents par ailleurs de
+`pnpm-lock.yaml` (`pnpm why` ne les trouve nulle part dans l'arbre de dépendances de ce dépôt).
+
+L'étage `runtime` des deux `Dockerfile` n'invoque jamais `npm`/`npx`/`corepack` (le `CMD` ne lance
+que `node`) : supprimés du `node_modules` et des scripts en `/usr/local/`, plutôt que d'attendre
+un futur correctif en amont pour des CVE sur des dépendances déjà présentes uniquement pour de
+l'outillage jamais exécuté en production. Vérifié directement, pas supposé : `npm`/`npx`/
+`corepack` retirés d'une vraie installation Node 22 dans cet environnement, `node` toujours
+fonctionnel (`node -e "console.log(...)"`, puis l'API déployée démarrée avec succès dans les
+mêmes conditions), avant d'être restaurés une fois la vérification terminée. `hadolint` (le
+linter Dockerfile officiel) sur les deux fichiers finaux : uniquement des avis `info`
+(consolidation de `RUN` consécutifs, utilisateur nommé plutôt que numérique - les deux
+intentionnels) et l'avertissement déjà documenté sur la forme shell du `CMD` web (nécessaire pour
+la substitution de `${PORT}`).
