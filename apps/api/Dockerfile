@@ -1,11 +1,10 @@
 FROM node:26-bookworm-slim AS dependencies
 # npm install -g, not `corepack enable && corepack prepare`: this image's base was bumped from
-# node:22-bookworm-slim to node:26-bookworm-slim by an independent Dependabot PR while this fix
-# was already in flight - and Node dropped Corepack from the default install starting with Node
-# 25, so `corepack enable` fails with "corepack: not found" on this base image (the exact failure
-# already hit and fixed the same way in apps/web/Dockerfile - see docs/20-TESTS-ENTREPRISE.md).
-# npm itself is bundled regardless of Corepack's fate, so this survives the next base-image bump
-# too.
+# node:22-bookworm-slim to node:26-bookworm-slim by an independent Dependabot PR - and Node dropped
+# Corepack from the default install starting with Node 25, so `corepack enable` fails with
+# "corepack: not found" on this base image (the exact failure already hit and fixed the same way
+# in apps/web/Dockerfile - see docs/20-TESTS-ENTREPRISE.md). npm itself is bundled regardless of
+# Corepack's fate, so this survives the next base-image bump too.
 RUN npm install -g pnpm@9.15.0
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
