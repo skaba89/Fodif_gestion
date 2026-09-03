@@ -1,7 +1,7 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { applyFiles, applyMigrations, checksumOf, listSqlFiles, shouldUseSsl, versionOf } from '../scripts/run-migrations.js';
+import { applyFiles, applyMigrations, checksumOf, listSqlFiles, resolveDatabaseDir, shouldUseSsl, versionOf } from '../scripts/run-migrations.js';
 
 describe('shouldUseSsl', () => {
   it('disables SSL for localhost connections (matches DatabaseService)', () => {
@@ -79,6 +79,66 @@ describe('checksumOf / versionOf', () => {
   it('extracts the 3-digit version prefix and rejects an unversioned filename', () => {
     expect(versionOf('/repo/database/007_financing_operations.sql')).toBe('007');
     expect(() => versionOf('/repo/database/README.md')).toThrow();
+  });
+});
+
+// Jest's transform pipeline only strips a shebang line for files it resolves through the normal
+// module graph - a plain fs.copyFileSync'd copy required from a temp directory still carries the
+// `#!/usr/bin/env node` line verbatim and fails to parse (`SyntaxError: Invalid or unexpected
+// token`). Strip it ourselves when writing the copy; the runner's own behavior doesn't depend on
+// that line (it's only meaningful when the file is executed directly by a shell).
+function copyRunnerWithoutShebang(destination: string): void {
+  const source = readFileSync(join(__dirname, '..', 'scripts', 'run-migrations.js'), 'utf8').replace(/^#!.*\n/, '');
+  writeFileSync(destination, source);
+}
+
+describe('resolveDatabaseDir', () => {
+  it('finds the real database/ directory from this actual repo checkout', () => {
+    // No mocking: this is the exact call `main()` makes, run from this file's real location
+    // (apps/api/test/) - proves the checkout-layout candidate still resolves correctly.
+    const dir = resolveDatabaseDir();
+    expect(listSqlFiles(dir).length).toBeGreaterThan(0);
+  });
+
+  // Regression test for a real bug this exact scenario caused (Sprint Enterprise 0, mission
+  // "niveau 80-85/100" Lot 1's own CI run): apps/api/Dockerfile's runtime stage copies `scripts/`
+  // and `database/` as siblings directly under `/app`, not the full `apps/api/scripts/` depth a
+  // checkout has - a `resolveDatabaseDir` hardcoded to only the checkout's three-levels-up path
+  // would resolve to `/database` (doesn't exist) inside that image, silently applying zero
+  // migrations and reporting success. Reproduced here by actually laying out a temp directory the
+  // same shallow way and requiring a copy of the real script from inside it - not simulated,
+  // the exact same code path `main()` uses, run from a different real location on disk.
+  it('also finds database/ one level up from scripts/ - the Docker runtime image layout', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fodip-migrations-layout-'));
+    try {
+      const scriptsDir = join(root, 'scripts');
+      const databaseDir = join(root, 'database');
+      mkdirSync(scriptsDir, { recursive: true });
+      mkdirSync(databaseDir, { recursive: true });
+      writeFileSync(join(databaseDir, '001_a.sql'), 'CREATE TABLE a ();');
+      copyRunnerWithoutShebang(join(scriptsDir, 'run-migrations.js'));
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic path, can't be a static import
+      const runnerAtDockerLayout = require(join(scriptsDir, 'run-migrations.js'));
+      expect(runnerAtDockerLayout.resolveDatabaseDir()).toBe(databaseDir);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('throws a clear error rather than silently reporting success when no candidate exists', () => {
+    const root = mkdtempSync(join(tmpdir(), 'fodip-migrations-layout-'));
+    try {
+      const scriptsDir = join(root, 'nested', 'scripts'); // neither ../database nor ../../../database exists from here
+      mkdirSync(scriptsDir, { recursive: true });
+      copyRunnerWithoutShebang(join(scriptsDir, 'run-migrations.js'));
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic path, can't be a static import
+      const runnerAtBadLayout = require(join(scriptsDir, 'run-migrations.js'));
+      expect(() => runnerAtBadLayout.resolveDatabaseDir()).toThrow(/Could not locate the database/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

@@ -61,6 +61,32 @@ function shouldUseSsl(connectionString, sslSetting) {
   return !connectionString.includes('localhost') && !connectionString.includes('127.0.0.1');
 }
 
+/**
+ * `database/` sits at a different depth relative to this file depending on which layout is
+ * running: three levels up from `apps/api/scripts/` in a full repo checkout (local dev, CI's
+ * `invariants`/`unit-tests` jobs, this file's own test suites), but only one level up from
+ * `scripts/` in the Docker runtime image (apps/api/Dockerfile's `runtime` stage copies just
+ * `scripts/` and `database/` as siblings under `/app`, not the whole `apps/api/...` tree). A fixed
+ * `path.resolve(__dirname, '..', '..', '..')` silently resolves to `/` inside that image instead
+ * of `/app` - `database/` then "doesn't exist" there, `listSqlFiles` returns an empty array (by
+ * design, for a directory that's genuinely absent), and the migration run completes as a silent,
+ * reported-successful no-op: found the hard way (Sprint Enterprise 0, mission "niveau 80-85/100",
+ * Lot 1's own CI run - `docker compose up`'s `migrations` service exited 0 with zero log output,
+ * so `seed` started against a schema that was never actually created and failed immediately on its
+ * first INSERT). Try every layout this script is known to run under rather than assuming one.
+ */
+function resolveDatabaseDir() {
+  const candidates = [
+    path.resolve(__dirname, '..', '..', '..', 'database'), // apps/api/scripts/ -> repo root (checkout)
+    path.resolve(__dirname, '..', 'database'), // scripts/ -> /app (Docker runtime image)
+  ];
+  const found = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!found) {
+    throw new Error(`Could not locate the database/ migrations directory (tried: ${candidates.join(', ')})`);
+  }
+  return found;
+}
+
 function listSqlFiles(dir) {
   if (!fs.existsSync(dir)) return [];
   return fs
@@ -185,8 +211,16 @@ async function main() {
     return;
   }
 
-  const repoRoot = path.resolve(__dirname, '..', '..', '..');
-  const databaseDir = path.join(repoRoot, 'database');
+  const databaseDir = resolveDatabaseDir();
+  const files = listSqlFiles(databaseDir);
+  // A resolved, existing database/ directory with zero numbered *.sql files in it is always a
+  // bug (missing COPY in a Docker stage, a bad path, an emptied-out checkout) - not a valid "no
+  // migrations to run yet" state for this codebase, which has had schema migrations since day
+  // one. Fail loudly instead of silently reporting success on an empty run - see
+  // resolveDatabaseDir's comment for exactly the incident this guards against.
+  if (files.length === 0) {
+    throw new Error(`${databaseDir} exists but contains no numbered migration files - refusing to report a no-op run as successful.`);
+  }
 
   // Lazily required so this module can be unit-tested (listSqlFiles/shouldUseSsl/checksumOf/...)
   // without pg needing to be resolvable from the test runner's module graph.
@@ -198,7 +232,7 @@ async function main() {
   await client.connect();
 
   try {
-    await applyMigrations(client, listSqlFiles(databaseDir));
+    await applyMigrations(client, files);
     if (applySeed) {
       await applyFiles(client, listSqlFiles(path.join(databaseDir, 'seeds')));
     }
@@ -214,4 +248,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { shouldUseSsl, listSqlFiles, applyFiles, applyMigrations, checksumOf, versionOf, ADVISORY_LOCK_KEY };
+module.exports = { shouldUseSsl, listSqlFiles, applyFiles, applyMigrations, checksumOf, versionOf, resolveDatabaseDir, ADVISORY_LOCK_KEY };

@@ -174,6 +174,37 @@ vérifier `docker compose up` réellement dans ce bac à sable ; noté comme sui
   test:integration` (58/58, y compris les 6 nouveaux), `pnpm lint`, `npx tsc --noEmit`,
   `docker compose config --quiet`, `python scripts/check-docker.py` : tous verts.
 
+### Mise à jour — bug réel trouvé par la CI (job `docker`), corrigé
+
+Exactement le genre de chose que ce bac à sable ne peut pas révéler lui-même (il n'a jamais accès à
+un vrai `docker compose up`) : le premier run CI de la PR de ce lot a fait échouer le job `docker`.
+`migrations` s'est terminé avec un code de sortie 0 sans rien logger, puis `seed` a échoué
+immédiatement (`relation "regions" does not exist`) — la base n'avait jamais été créée.
+
+**Cause réelle** : `resolveDatabaseDir` (à l'époque un simple
+`path.resolve(__dirname, '..', '..', '..')`) supposait la profondeur d'un checkout complet
+(`apps/api/scripts/` → racine du dépôt, 3 niveaux). Dans l'image Docker runtime,
+`apps/api/Dockerfile` copie `scripts/` et `database/` comme deux frères directement sous `/app` (1
+seul niveau) — le chemin calculé pointait donc vers `/database`, inexistant, `listSqlFiles`
+renvoyait `[]` (comportement correct pour un dossier absent), et `applyMigrations` s'exécutait sur
+zéro fichier : succès silencieux, rien appliqué. Un bug de production réel, invisible localement
+dans ce bac à sable (toute invocation locale utilise structurellement la mise en page « checkout »),
+révélé uniquement parce que la CI fait tourner un vrai `docker compose up`.
+
+**Corrigé** : `resolveDatabaseDir` essaie maintenant les deux mises en page connues (`../../../database`
+puis `../database`) et lève une erreur explicite si aucune n'existe — un run à zéro fichier de
+migration n'est plus jamais rapporté comme un succès silencieux (garde ajoutée dans `main()` aussi).
+Non supposé corrigé : **2 nouveaux tests unitaires** dans `run-migrations.spec.ts` reproduisent
+réellement la mise en page Docker (copie du vrai script — sans son shebang, que la chaîne de
+transformation Jest ne retire pas pour un fichier chargé hors de son graphe de résolution normal —
+dans un répertoire temporaire recréant `scripts/`+`database/` comme frères, puis `require()` de
+cette copie) et la mise en page « aucun candidat », plus un test confirmant que la mise en page
+checkout continue de fonctionner sans mock (16/16 sur ce fichier). Suite complète re-vérifiée après
+correction : `pnpm --filter @fodip/api test` (123/123, seuil de couverture toujours respecté à
+65,51/38,75/45,63/66,55 — inchangé), `pnpm --filter @fodip/api test:integration` (58/58), `pnpm lint`,
+`pnpm --filter @fodip/api build`, `pnpm --filter @fodip/web build`, `bash scripts/test-prepush.sh` :
+tous verts.
+
 ## 5.1 (partiel) — Seuil anti-régression de couverture
 
 **FAIT, scope limité à ce que demande explicitement ce lot** (point 7 de la section « Première
