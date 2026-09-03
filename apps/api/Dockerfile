@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS dependencies
+FROM node:26-bookworm-slim AS dependencies
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -20,7 +20,7 @@ RUN pnpm --filter @fodip/api build
 # absent - the exact class of finding Trivy's image scan caught here before this fix).
 RUN pnpm --filter @fodip/api deploy --prod /app/deploy
 
-FROM node:22-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production
 # npm and corepack ship inside the base Node.js image for building/installing - this runtime
 # stage never invokes either (CMD only ever runs `node`), yet their own bundled dependencies
