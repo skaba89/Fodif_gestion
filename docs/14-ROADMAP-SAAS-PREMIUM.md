@@ -72,7 +72,7 @@ jamais une transformation géante). Détail par lot dans son propre document une
 | Phase | Contenu | Statut |
 |---|---|---|
 | E1 | Gouvernance GitHub et supply chain : CODEOWNERS, template de PR, `SECURITY.md`, Dependabot, CodeQL, scan de secrets, audit de licences, CI parallélisée et durcie (lockfile figé, Actions épinglées par SHA), vulnérabilité lodash corrigée | **Fait** (cette itération) — `docs/19-GOUVERNANCE-SUPPLY-CHAIN.md` |
-| E2 | Tests entreprise : intégration réelle PostgreSQL/MinIO, priorité aux modules financiers critiques, matrice Playwright multi-navigateurs/mobile, régression visuelle | **Partiel** (cette itération) — `docs/20-TESTS-ENTREPRISE.md` : les cinq modules métier critiques (`financings`, `committee`, `administration`, `partner`, `documents`) couverts contre un vrai PostgreSQL (verrouillage de lignes, contrainte unique, `UPDATE` conditionnel, verrou consultatif global, isolation entre banques partenaires, double-soumission concurrente) et, pour `documents`, un vrai stockage compatible S3 (round-trip d'octets, contrôle d'intégrité par checksum, isolation PME) ; la matrice Playwright et la régression visuelle restent à faire |
+| E2 | Tests entreprise : intégration réelle PostgreSQL/MinIO, priorité aux modules financiers critiques, matrice Playwright multi-navigateurs/mobile, régression visuelle | **Partiel** (cette itération) — `docs/20-TESTS-ENTREPRISE.md` : les cinq modules métier critiques (`financings`, `committee`, `administration`, `partner`, `documents`) couverts contre un vrai PostgreSQL (verrouillage de lignes, contrainte unique, `UPDATE` conditionnel, verrou consultatif global, isolation entre banques partenaires, double-soumission concurrente) et, pour `documents`, un vrai stockage compatible S3 (round-trip d'octets, contrôle d'intégrité par checksum, isolation PME) ; matrice Playwright desktop (Chromium/Firefox/WebKit) faite, voir « Détails E2 » ci-dessous ; son volet mobile (Android/iPhone) bloqué par un vrai bug de navigation trouvé en l'essayant, dont la correction relève de E3 (« navigation mobile ») ; régression visuelle restante |
 | E3 | Refonte UI/UX ultra premium : design system partagé, navigation mobile, états de chargement/erreur/vide systématiques, assistants PME/Agent/Comité/Direction | À faire |
 | E4 | Identité et sécurité entreprise : cycle de vie de session complet, révocation, rate limiting distribué, durcissement OIDC, séparation et rotation des clés | À faire |
 | E5 | Intégrité financière : idempotency keys, maker-checker, rapprochement bancaire, verrouillage optimiste, contraintes PostgreSQL sur montants/statuts | À faire |
@@ -495,3 +495,52 @@ Détails D2 (`apps/web/public/manifest.webmanifest`, `apps/web/public/sw.js`,
   et un garde-fou ajouté à `scripts/check-docker.py` pour qu'un oubli similaire échoue la
   vérification pré-push au lieu de rester silencieux jusqu'au déploiement ; détail complet dans
   `docs/18-PWA-HORS-LIGNE.md`.
+
+Détails E2, matrice Playwright (`apps/web/playwright.config.ts`, `.github/workflows/ci.yml`) :
+
+- suite aux cinq modules métier de `docs/20-TESTS-ENTREPRISE.md` (PostgreSQL/MinIO réels), le
+  volet restant de l'axe E2 déjà en cours : les 17 tests e2e existants ne tournaient que sur un
+  seul projet Playwright (`chromium`) ; ajout de `firefox` et `webkit` comme projets desktop
+  supplémentaires (`devices['Desktop Firefox']`/`devices['Desktop Safari']`, viewport 1280×720
+  chacun) - même stack cible, mêmes 17 specs, exécutées sur les trois moteurs que Playwright
+  supporte (Blink, Gecko, WebKit) ;
+- `workers: 1` reste global plutôt que par projet, délibérément : chaque projet joue les mêmes
+  comptes et dossiers de démo contre un seul backend partagé (pas de réinitialisation de base par
+  test comme les specs d'intégration API) - deux projets qui tourneraient en parallèle
+  risqueraient de se marcher dessus sur les mêmes données seedées. Le comportement d'avant cette
+  matrice (tout le suite en série) est donc inchangé, juste répété trois fois ;
+- volet mobile (Android/iPhone) de la mission essayé, puis délibérément pas expédié dans cette
+  PR - pas une omission, une découverte : activer `devices['Pixel 7']` (moteur Chromium, déjà
+  installé, donc vérifiable directement dans ce bac à sable sans Docker) contre la même pile
+  locale a fait échouer 5 des 17 tests, pour deux raisons réelles et indépendantes, pas un artefact
+  de test :
+  - en dessous de ~900px (portails direction/comité, `globals.css` `.app-shell`/`.nav-list`) et de
+    ~680px/620px (portail PME, `entrepreneur/portal.module.css` `.nav`), la navigation entière
+    passe à `display: none` sans menu de repli (pas de hamburger/tiroir) - en dessous de ce seuil
+    la page reste utilisable au pixel près mais plus du tout navigable, un vrai bug produit et non
+    un souci d'assertion de test ;
+  - indépendamment, `accessibility.spec.ts` détecte une vraie violation WCAG mobile uniquement sur
+    la page `/design-system` : un conteneur `.tableCard` porteur d'un `tabindex` sans contenu
+    focalisable (règles axe-core `focusable-content`/`focusable-element`, impact « serious ») ;
+  - corriger une navigation mobile correcte (accessible, testée) sur au moins deux systèmes de
+    mise en page indépendants est un vrai chantier produit, déjà identifié comme sa propre ligne
+    de la feuille de route (E3, « navigation mobile ») - pas quelque chose à absorber dans une PR
+    d'infrastructure de test, au risque de laisser une matrice fraîchement ajoutée rouge en
+    permanence tant que personne ne la corrige. Les deux projets mobiles restent documentés dans
+    `playwright.config.ts`, prêts à être réactivés une fois E3 livré, plutôt que supprimés et
+    oubliés ;
+- vérifié réellement contre une pile locale complète, sans Docker (même limite réseau que pour les
+  modules API - `docker compose up` ne peut pas tirer `postgres`/`minio` ici) : PostgreSQL natif
+  migré et seedé (`database/*.sql` + `database/seeds/*.sql`, les mêmes comptes de démo que
+  `login.spec.ts`/`mfa.spec.ts` utilisent), `s3rver` en local pour MinIO (même solution que pour
+  `documents`/MinIO), API compilée et lancée dessus, `next build && next start` pour le web. Sur
+  cette pile réelle : **17/17 tests passent sur `chromium`** (42s, un seul run manuel plus les
+  précédents runs de cette même suite au fil des itérations antérieures) - aucune régression
+  introduite par le changement de configuration. `firefox` et `webkit` ne sont pas installables
+  dans ce bac à sable (même politique réseau que Docker/MinIO - `playwright install` ne peut pas
+  télécharger leurs binaires ici) : leur exécution réelle est laissée à la CI, comme pour tout ce
+  qui a dépendu de Docker dans les itérations précédentes de cet axe ;
+- `pnpm lint`, `npx tsc --noEmit` (sur `apps/web`), `npx playwright test --list` (51 tests
+  découverts sur les trois projets desktop) tous verts ; `.github/workflows/ci.yml` (job `docker`
+  : installation `chromium firefox webkit`, budget porté de 25 à 35 minutes pour absorber
+  l'installation et l'exécution des deux moteurs supplémentaires) validé avec `actionlint`.
