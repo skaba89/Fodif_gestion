@@ -1,0 +1,46 @@
+name: CodeQL
+
+# Sprint Enterprise 0, Lot 1. Separate from ci.yml on purpose: CodeQL's own setup/analyze/upload
+# steps are a fixed unit (github/codeql-action), unrelated to this repo's own build/test graph -
+# folding it into ci.yml would just make that workflow's job list harder to read for no benefit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Dependency-only drift (a new CodeQL query pack, a newly-disclosed pattern) can surface
+    # without any code change on our side - a weekly run catches that between pushes.
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Next.js (apps/web) and NestJS (apps/api) are both JS/TS - one CodeQL database covers
+        # the whole workspace, matching how the rest of the CI treats this as one pnpm monorepo.
+        language: [javascript-typescript]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@5ba2889ada762081db2c4f32a729827dce632c7b # v3
+        with:
+          languages: ${{ matrix.language }}
+
+      # No build step: CodeQL's JS/TS extractor works by parsing source directly (unlike a
+      # compiled-language extractor, it does not need `tsc`/`next build` to have run first).
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@5ba2889ada762081db2c4f32a729827dce632c7b # v3
+        with:
+          category: /language:${{ matrix.language }}

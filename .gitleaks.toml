@@ -1,0 +1,19 @@
+# FODIP Digital 2030 - gitleaks configuration (Sprint Enterprise 0, Lot 1).
+# Extends gitleaks' own default rule set rather than replacing it - the two allowlist entries
+# below are the only local additions, both verified false positives, not a general suppression.
+title = "FODIP Digital 2030 gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Verified false positives specific to this codebase"
+regexes = [
+  # HMAC domain-separation labels (apps/api/src/security-policy.js#deriveSecret): purpose strings
+  # combined with JWT_SECRET to derive independent per-feature keys (MFA secret encryption, PII
+  # telephone encryption, OIDC flow/delivery signing). Public by design - the label is not the
+  # secret, JWT_SECRET is, and it never appears here. Naming convention: fodip-<purpose>-v<n>,
+  # verified against every current call site with `grep -rn "deriveSecret(jwtSecret, '" apps/api/src`
+  # before writing this pattern, not guessed.
+  '''^fodip-[a-z0-9-]+-v[0-9]+$''',
+]

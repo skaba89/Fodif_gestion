@@ -1,5 +1,11 @@
 name: CI
 
+# Sprint Enterprise 0, Lot 1: split into parallel jobs instead of one 25-minute sequential job -
+# lint/tests/build/security fail fast and independently, and the expensive Docker+Playwright job
+# (`docker`) only starts once those are green, so a broken build doesn't burn 10+ minutes of
+# Docker Compose time before failing anyway. GitHub Actions pinned by immutable commit SHA
+# throughout (the `# vX.Y.Z` comment is what a human reads; the SHA is what actually runs).
+
 on:
   pull_request:
     branches: [main]
@@ -9,38 +15,101 @@ on:
 permissions:
   contents: read
 
-jobs:
-  quality:
-    name: Pre-push rules, API tests and builds
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+env:
+  PNPM_VERSION: 9.15.0
+  NODE_VERSION: 22
 
+jobs:
+  invariants:
+    name: Qualité, lint et invariants pré-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
         with:
-          version: 9.15.0
+          version: ${{ env.PNPM_VERSION }}
           run_install: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      - name: Pre-push invariant tests
+      # scripts/test-prepush.sh: policy module syntax + their node:test suites, migration/Docker
+      # topology/license invariant checks, shell syntax checks on the ops scripts, and lint for
+      # both workspaces - the exact command a contributor runs locally before pushing.
+      - name: Pre-push invariants (lint, policy tests, migration/Docker/license checks)
         run: pnpm test:prepush
 
-      - name: Static analysis
-        run: pnpm lint
+  unit-tests:
+    name: Tests unitaires API
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: API e2e tests
-        run: pnpm --filter @fodip/api test
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # No PostgreSQL/MinIO service container here on purpose: every current apps/api/test/*
+      # spec is either a mocked-repository unit test or an e2e-spec.ts that only exercises
+      # public/protected-by-default routes (never reaches the database) - verified by reading
+      # every spec file, not assumed. Real Postgres/MinIO integration tests are Sprint Enterprise
+      # 0 Lot 2 (docs/14-ROADMAP-SAAS-PREMIUM.md); this job's name will grow a second half then.
+      - name: API tests with coverage
+        run: pnpm --filter @fodip/api test -- --coverage --coverageReporters=text-summary --coverageReporters=json-summary --coverageReporters=lcov
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: api-coverage
+          path: apps/api/coverage/
+          retention-days: 30
+
+  build:
+    name: Builds (API + Web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build API
         run: pnpm --filter @fodip/api build
@@ -48,11 +117,134 @@ jobs:
       - name: Build web
         run: pnpm --filter @fodip/web build
 
+  security:
+    name: Sécurité (audit, licences, secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0 # gitleaks scans full history, not just this commit
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Fails on any severity by default; --prod scopes to what actually ships (a devDependency
+      # like @nestjs/cli's own build-tool chain never reaches the runtime image). Dev-only
+      # findings are tracked by Dependabot instead of blocking every PR on a build-tool-only
+      # ReDoS that never sees attacker input in this repo's usage.
+      - name: pnpm audit (production dependencies)
+        run: pnpm audit --prod
+
+      - name: License policy check
+        run: python3 scripts/check-licenses.py
+
+      - name: Secret scan (gitleaks)
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            zricethezav/gitleaks:v8.30.1 \
+            git /repo -c /repo/.gitleaks.toml --redact
+
+      - name: Dependency review (new/changed dependencies only)
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+          # Matches scripts/check-licenses.py's policy (see that file for the reasoning): strong
+          # copyleft and non-commercial/share-alike licenses are incompatible with an UNLICENSED/
+          # propriétaire codebase (LICENSE), weak copyleft (LGPL, MPL) is fine to consume.
+          deny-licenses: GPL-1.0-or-later, GPL-2.0-or-later, GPL-3.0-or-later, AGPL-1.0-or-later, AGPL-3.0-or-later
+
+  docker:
+    name: Docker Compose, Playwright et audit des images
+    needs: [invariants, unit-tests, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Validate Docker Compose
         run: docker compose config --quiet
 
+      - name: Build images
+        run: docker compose build
+
+      # Fails the job on a CRITICAL/HIGH finding in either image (OS packages + language deps
+      # baked into the final layer, which pnpm audit cannot see - a stale base-image package is
+      # exactly the class of finding pnpm audit structurally cannot catch) - --scanners
+      # vuln,secret so a credential accidentally baked into a layer is caught the same way.
+      - name: Scan API image (Trivy)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/.trivyignore:/root/.trivyignore:ro" \
+            aquasecurity/trivy:0.74.0 image \
+            --scanners vuln,secret --severity CRITICAL,HIGH --exit-code 1 \
+            --ignorefile /root/.trivyignore \
+            fodip-digital-api:latest
+        if: always()
+
+      - name: Scan web image (Trivy)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/.trivyignore:/root/.trivyignore:ro" \
+            aquasecurity/trivy:0.74.0 image \
+            --scanners vuln,secret --severity CRITICAL,HIGH --exit-code 1 \
+            --ignorefile /root/.trivyignore \
+            fodip-digital-web:latest
+        if: always()
+
+      - name: Generate SBOM (API image)
+        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+        with:
+          image: fodip-digital-api:latest
+          format: cyclonedx-json
+          output-file: sbom-api.cyclonedx.json
+
+      - name: Generate SBOM (web image)
+        uses: anchore/sbom-action@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+        with:
+          image: fodip-digital-web:latest
+          format: cyclonedx-json
+          output-file: sbom-web.cyclonedx.json
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sboms
+          path: sbom-*.cyclonedx.json
+          retention-days: 90
+
       - name: Start Docker platform
-        run: docker compose up --detach --build
+        run: docker compose up --detach
 
       - name: Docker smoke test
         run: bash scripts/docker-smoke.sh
@@ -70,7 +262,7 @@ jobs:
 
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-report
           path: apps/web/playwright-report/

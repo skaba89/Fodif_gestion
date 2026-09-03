@@ -1,0 +1,10 @@
+# FODIP Digital 2030 - Trivy image-scan exceptions (Sprint Enterprise 0, Lot 1).
+#
+# Empty by design: nothing has been acknowledged-and-deferred yet, and this file exists only so
+# .github/workflows/ci.yml's Trivy steps have a real file to bind-mount (a missing host path
+# would make Docker create a directory there instead, breaking --ignorefile).
+#
+# If a CI run reports a CRITICAL/HIGH finding that genuinely cannot be fixed right now (no patched
+# base image yet, upstream hasn't released a fix), add its CVE ID here on its own line with a
+# comment explaining why it is deferred and what would resolve it - never to silence a finding
+# that could instead be fixed by bumping a dependency or the base image.

@@ -1,0 +1,26 @@
+# FODIP Digital 2030 - propriétaires de code
+#
+# Une seule personne maintient ce dépôt aujourd'hui : tout passe par elle par défaut. Les zones
+# ci-dessous sont listées séparément non pas pour router vers quelqu'un d'autre (il n'y a personne
+# d'autre pour l'instant), mais pour que l'ajout d'un deuxième mainteneur n'exige qu'une ligne à
+# éditer ici plutôt qu'une réflexion sur ce qui est sensible - cette liste documente déjà ce
+# choix. Le dernier motif qui correspond gagne (règle standard de GitHub CODEOWNERS), donc les
+# zones sensibles sont volontairement placées après la règle générale.
+
+* @skaba89
+
+# Politique d'accès, RBAC, MFA, chiffrement PII et dérivation de clés - le cœur de la posture de
+# sécurité de la plateforme (docs/14-ROADMAP-SAAS-PREMIUM.md, axes B1-B5).
+/apps/api/src/security-policy.js @skaba89
+/apps/api/src/admin-policy.js @skaba89
+/apps/api/src/auth/ @skaba89
+
+# Schéma et migrations : irréversibles une fois appliquées en production, jamais destructives
+# (scripts/check-migrations.py les valide déjà en CI).
+/database/ @skaba89
+
+# Gouvernance, CI/CD et chaîne d'approvisionnement logicielle (ce Sprint Enterprise 0).
+/.github/ @skaba89
+/docker-compose.yml @skaba89
+/apps/api/Dockerfile @skaba89
+/apps/web/Dockerfile @skaba89
