@@ -12,9 +12,11 @@
  * (support/storage.ts) and exercises both unmodified.
  */
 import { createHash } from 'node:crypto';
+import { createServer, Server, Socket } from 'node:net';
 import { BadRequestException, ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { AuthenticatedUser } from '../../src/auth/auth-user.interface';
+import { ClamAvService } from '../../src/documents/clamav.service';
 import { DocumentsRepository } from '../../src/documents/documents.repository';
 import { DocumentsService } from '../../src/documents/documents.service';
 import { seedEditableDossier, seedUser } from './support/fixtures';
@@ -30,6 +32,18 @@ function multerFile(buffer: Buffer, mimetype = 'application/pdf', originalname =
   return { buffer, size: buffer.length, mimetype, originalname } as Express.Multer.File;
 }
 
+// A fake ConfigService - ClamAvService only ever calls .get(key), no other NestJS ConfigService
+// surface, so a plain object is enough to construct a real one without pulling in the whole
+// ConfigModule for a test.
+function configOf(values: Record<string, string>) {
+  return { get: (key: string) => values[key] } as never;
+}
+
+// Off (no CLAMAV_HOST), matching the local Docker demo stack's own default (docker-compose.yml) -
+// used by every test below except the ones under "ClamAV scanning" that deliberately configure a
+// (fake) daemon to exercise the real wire protocol.
+const clamavDisabled = new ClamAvService(configOf({}));
+
 describe('Secure documents (real PostgreSQL + real S3)', () => {
   let integrationDb: IntegrationDatabase;
   let integrationStorage: IntegrationStorage;
@@ -40,7 +54,7 @@ describe('Secure documents (real PostgreSQL + real S3)', () => {
   beforeAll(async () => {
     [integrationDb, integrationStorage] = await Promise.all([startIntegrationDatabase(), startIntegrationStorage()]);
     repository = new DocumentsRepository(integrationDb.db);
-    service = new DocumentsService(repository, integrationStorage.storage);
+    service = new DocumentsService(repository, integrationStorage.storage, clamavDisabled);
   }, 180_000);
 
   afterAll(async () => {
@@ -254,6 +268,122 @@ describe('Secure documents (real PostgreSQL + real S3)', () => {
         [uploaded.id],
       );
       expect(audit.rows).toHaveLength(1);
+    });
+  });
+
+  // Axe E6 (docs/14-ROADMAP-SAAS-PREMIUM.md, gestion documentaire entreprise) - a real ClamAV
+  // daemon isn't available in every environment this suite runs in, but ClamAvService's own wire
+  // protocol (clamd's INSTREAM command) is fully our own code and fully testable without one: a
+  // small in-process TCP server that speaks the real protocol (length-prefixed chunks, one-line
+  // reply) proves the implementation end to end - byte parsing included - not just its branching
+  // logic in isolation.
+  describe('ClamAV scanning (axe E6)', () => {
+    // The real, industry-standard EICAR antivirus test string (https://www.eicar.org/) - not a
+    // virus, every real antivirus (including ClamAV) is designed to flag it as
+    // "Eicar-Test-Signature", exactly so this kind of test can exist without a genuine payload.
+    // Embedded after a real `%PDF-` signature, not uploaded on its own: document-policy.js's own
+    // magic-byte check runs before the antivirus scan and would otherwise reject a bare EICAR
+    // string as UNSUPPORTED_FILE_SIGNATURE before ClamAV ever sees it (found the hard way, a
+    // first version of this test asserted the wrong rejection reason) - real ClamAV scans full
+    // file content for the signature regardless of surrounding bytes, so this is also the more
+    // realistic threat model for this endpoint (a payload embedded in what looks like a valid
+    // PDF), not merely a workaround.
+    const eicarSignature = Buffer.from('X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*');
+    const eicar = Buffer.concat([Buffer.from('%PDF-1.7\n'), eicarSignature]);
+
+    function startFakeClamd(reply: (received: Buffer) => string): Promise<{ port: number; close: () => Promise<void> }> {
+      return new Promise((resolve, reject) => {
+        const server: Server = createServer((socket: Socket) => {
+          let sawCommand = false;
+          let pending = Buffer.alloc(0);
+          const chunks: Buffer[] = [];
+          socket.on('data', (data) => {
+            pending = Buffer.concat([pending, data]);
+            if (!sawCommand) {
+              const terminator = pending.indexOf(0);
+              if (terminator === -1) return;
+              pending = pending.subarray(terminator + 1);
+              sawCommand = true;
+            }
+            for (;;) {
+              if (pending.length < 4) return;
+              const length = pending.readUInt32BE(0);
+              if (length === 0) {
+                socket.end(reply(Buffer.concat(chunks)));
+                return;
+              }
+              if (pending.length < 4 + length) return;
+              chunks.push(pending.subarray(4, 4 + length));
+              pending = pending.subarray(4 + length);
+            }
+          });
+        });
+        server.listen(0, '127.0.0.1', () => {
+          const address = server.address();
+          if (address && typeof address === 'object') resolve({ port: address.port, close: () => new Promise((res) => server.close(() => res())) });
+          else reject(new Error('failed to bind fake clamd'));
+        });
+        server.on('error', reject);
+      });
+    }
+
+    it('rejects the EICAR test file as infected, before it ever reaches object storage', async () => {
+      const fake = await startFakeClamd((received) => `stream: ${received.includes(eicarSignature) ? 'Eicar-Test-Signature FOUND' : 'OK'}\0`);
+      try {
+        const clamav = new ClamAvService(configOf({ CLAMAV_HOST: '127.0.0.1', CLAMAV_PORT: String(fake.port) }));
+        const scannedService = new DocumentsService(repository, integrationStorage.storage, clamav);
+        const dossier = await seedEditableDossier(integrationDb.pool);
+
+        await expect(scannedService.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(eicar)))
+          .rejects.toThrow(/Eicar-Test-Signature/);
+
+        // Rejected before the application-lookup/storage-write step even runs (scanForMalware
+        // is the very first thing uploadOwn does after basic file validation) - no orphan row.
+        const rows = await integrationDb.pool.query(`SELECT id FROM dossier_documents WHERE dossier_id = $1`, [dossier.dossierId]);
+        expect(rows.rows).toHaveLength(0);
+      } finally {
+        await fake.close();
+      }
+    });
+
+    it('accepts and stores a real file ClamAV reports clean', async () => {
+      const fake = await startFakeClamd(() => 'stream: OK\0');
+      try {
+        const clamav = new ClamAvService(configOf({ CLAMAV_HOST: '127.0.0.1', CLAMAV_PORT: String(fake.port) }));
+        const scannedService = new DocumentsService(repository, integrationStorage.storage, clamav);
+        const dossier = await seedEditableDossier(integrationDb.pool);
+
+        const uploaded = await scannedService.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes)) as unknown as { id: string };
+        expect(uploaded.id).toBeTruthy();
+      } finally {
+        await fake.close();
+      }
+    });
+
+    it('fails closed (does not upload) when the daemon reports a scan ERROR', async () => {
+      const fake = await startFakeClamd(() => 'stream: /tmp/x: Access denied. ERROR\0');
+      try {
+        const clamav = new ClamAvService(configOf({ CLAMAV_HOST: '127.0.0.1', CLAMAV_PORT: String(fake.port) }));
+        const scannedService = new DocumentsService(repository, integrationStorage.storage, clamav);
+        const dossier = await seedEditableDossier(integrationDb.pool);
+
+        await expect(scannedService.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes)))
+          .rejects.toBeInstanceOf(ServiceUnavailableException);
+      } finally {
+        await fake.close();
+      }
+    });
+
+    it('fails closed (does not upload) when no daemon is listening on the configured port', async () => {
+      const fake = await startFakeClamd(() => 'stream: OK\0');
+      const deadPort = fake.port;
+      await fake.close(); // now nothing is listening on deadPort
+      const clamav = new ClamAvService(configOf({ CLAMAV_HOST: '127.0.0.1', CLAMAV_PORT: String(deadPort) }));
+      const scannedService = new DocumentsService(repository, integrationStorage.storage, clamav);
+      const dossier = await seedEditableDossier(integrationDb.pool);
+
+      await expect(scannedService.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes)))
+        .rejects.toBeInstanceOf(ServiceUnavailableException);
     });
   });
 });

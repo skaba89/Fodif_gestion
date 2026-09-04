@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/auth-user.interface';
 import { canUploadDocument, isAllowedDocumentType, validateDocumentFile } from '../document-policy';
+import { ClamAvService } from './clamav.service';
 import { DocumentStorageService, StoredDocument } from './document-storage.service';
 import { DocumentsRepository } from './documents.repository';
 
@@ -20,6 +21,7 @@ export class DocumentsService {
   constructor(
     private readonly documents: DocumentsRepository,
     private readonly storage: DocumentStorageService,
+    private readonly clamav: ClamAvService,
   ) {}
 
   async listOwn(user: AuthenticatedUser, dossierId: string) {
@@ -33,6 +35,8 @@ export class DocumentsService {
 
     const validation = validateDocumentFile(file);
     if (!validation.valid) throw new BadRequestException(`Invalid document: ${validation.reason}`);
+
+    await this.scanForMalware(file.buffer);
 
     const application = await this.documents.findOwnedApplication(dossierId, entrepriseId);
     if (!application) throw new NotFoundException('Application not found');
@@ -91,6 +95,22 @@ export class DocumentsService {
     const updated = await this.documents.verify(documentId, user.sub, statut, commentaire?.trim());
     if (!updated) throw new NotFoundException('Document not found');
     return { id: documentId, statutVerification: statut, verificationComment: commentaire?.trim() ?? null };
+  }
+
+  private async scanForMalware(buffer: Buffer): Promise<void> {
+    let result;
+    try {
+      result = await this.clamav.scan(buffer);
+    } catch (error) {
+      // Configured but unreachable/failed: fail closed, not open. A security control that is
+      // silently bypassed on error is worse than temporarily refusing uploads (axe E6).
+      throw new ServiceUnavailableException(
+        `Document scan is unavailable: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    }
+    if (result.scanned && result.infected) {
+      throw new BadRequestException(`Document rejected: malware detected (${result.signature ?? 'unknown signature'})`);
+    }
   }
 
   private enterpriseId(user: AuthenticatedUser): string {

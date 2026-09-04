@@ -163,8 +163,8 @@ Oui — la navigation mobile (menu, tiroir accessible, cibles tactiles ≥44×44
 
 **« Quand est-ce disponible en production ? »**
 Voir §9 — plusieurs prérequis d'exploitation nationale restent à finaliser avant un déploiement en
-production (haute disponibilité, idempotence financière, contrôle maker-checker, antivirus
-documentaire, plan de reprise d'activité).
+production (haute disponibilité, contrôle maker-checker, plan de reprise d'activité — l'idempotence
+financière et le scan antivirus des documents ci-dessous sont désormais partiellement couverts).
 
 ## 8. Limites actuelles — honnêtement déclarées
 
@@ -200,11 +200,16 @@ Cette plateforme **n'est pas déclarée prête pour une exploitation nationale**
 suivants ne sont pas finalisés :
 
 - Haute disponibilité (réplication Postgres, plusieurs instances API/web, bascule automatique).
-- Idempotence financière de bout en bout sur les décaissements et remboursements (clés
-  d'idempotence sur chaque écriture financière, pas seulement l'unicité applicative actuelle).
+- Idempotence financière de bout en bout sur les décaissements et remboursements — **partiellement
+  fait** : clé d'idempotence (`Idempotency-Key`) sur les 4 écritures à risque de doublon réel
+  (décaissement/remboursement, Direction et Partenaire), avec claim atomique en base et rejeu de la
+  réponse déjà produite sur une même clé (voir `docs/14-ROADMAP-SAAS-PREMIUM.md`, axe E5).
 - Contrôle maker-checker sur les opérations financières sensibles (décaissement, remboursement).
-- Antivirus/scan de contenu sur les documents déposés (actuellement validés par type/taille, pas
-  par analyse de contenu).
+- Antivirus/scan de contenu sur les documents déposés — **partiellement fait** : les documents sont
+  désormais scannés en clamd (`ClamAvService`) avant d'être persistés, en échec fermé (un scan
+  indisponible refuse l'upload plutôt que de le laisser passer), désactivé par défaut comme l'OIDC
+  (voir `docs/14-ROADMAP-SAAS-PREMIUM.md`, axe E6) ; restent la quarantaine, le versioning et
+  l'upload en streaming (le fichier est encore bufferisé en mémoire à l'upload).
 - Plan de reprise d'activité (PRA) documenté et testé au-delà de la sauvegarde/restauration
   Postgres déjà couverte par `scripts/backup-postgres.sh`/`scripts/test-backup-restore.sh`.
 
