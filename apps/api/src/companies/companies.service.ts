@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/auth-user.interface';
 import { requireEnterpriseScope } from '../pme-policy';
 import { CompaniesRepository } from './companies.repository';
@@ -22,8 +22,18 @@ export class CompaniesService {
   }
 
   async updateOwn(user: AuthenticatedUser, dto: UpdateCompanyDto) {
-    const company = await this.companies.updateById(this.entrepriseId(user), dto);
-    if (!company) throw new NotFoundException('Company not found');
-    return company;
+    const result = await this.companies.updateById(this.entrepriseId(user), dto);
+    switch (result.outcome) {
+      case 'NOT_FOUND':
+        throw new NotFoundException('Company not found');
+      case 'VERSION_CONFLICT':
+        // Axe E5 (verrouillage optimiste, docs/14-ROADMAP-SAAS-PREMIUM.md): someone else's write
+        // landed after this edit was loaded - never silently overwritten.
+        throw new ConflictException(
+          'This company profile was updated by someone else since you loaded it. Reload the latest version before saving again.',
+        );
+      case 'OK':
+        return result.company;
+    }
   }
 }
