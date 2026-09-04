@@ -104,6 +104,12 @@ services:
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
+      # Antivirus document scanning (axe E6, docs/14-ROADMAP-SAAS-PREMIUM.md) - optional, like OIDC
+      # above. Unset by default (empty CLAMAV_HOST keeps ClamAvService.isEnabled() false), so the
+      # plain local demo and CI's document integration tests never require a running ClamAV daemon.
+      # Set CLAMAV_HOST=clamav (with the `antivirus` profile enabled below) to scan real uploads.
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
     ports:
       - "${API_PORT:-4000}:4000"
     healthcheck:
@@ -173,8 +179,36 @@ services:
     depends_on:
       - prometheus
 
+  # Axe E6 (docs/14-ROADMAP-SAAS-PREMIUM.md) - antivirus scanning for document uploads
+  # (apps/api/src/documents/clamav.service.ts). Behind the "antivirus" profile, same reasoning as
+  # "observability" above: excluded from a plain `docker compose up` and from CI (which never
+  # passes --profile, and whose document integration tests run their own hand-built fake clamd
+  # instead - see apps/api/test/integration/documents.integration-spec.ts), started on request with
+  # `docker compose --profile antivirus up`. Not wired as a `depends_on` of `api`: Compose starts a
+  # dependency's profile automatically, which would defeat the point of gating this service - set
+  # CLAMAV_HOST=clamav on the `api` service (see above) once this profile is enabled.
+  #
+  # Not verified with a real `docker compose up` in this sandbox (outbound Docker Hub pulls are
+  # blocked here - the same limitation already documented for docker-compose.presentation.yml);
+  # verified with `docker compose --profile antivirus config` only. Real verification is CI's.
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    profiles: ["antivirus"]
+    ports:
+      - "${CLAMAV_PORT:-3310}:3310"
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+
 volumes:
   postgres_data:
   minio_data:
   prometheus_data:
   grafana_data:
+  clamav_data:
