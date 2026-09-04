@@ -47,4 +47,13 @@ COPY --from=build /app/deploy/scripts ./scripts
 COPY database ./database
 USER node
 EXPOSE 4000
+# Sprint Enterprise 0, axe E7 (architecture Docker entreprise, docs/14-ROADMAP-SAAS-PREMIUM.md) -
+# baked into the image itself, not only into docker-compose.yml's own `api` service definition
+# (which duplicated this exact check until this change): a HEALTHCHECK here works the same way
+# for `docker run` standalone, a bare `docker inspect`/`docker ps` STATUS column, and a Kubernetes
+# liveness/readiness probe reading the image's own metadata, none of which read docker-compose.yml.
+# Same command, same timings as the compose override it replaces - no behavior change for the
+# local demo stack, just one canonical definition instead of two that could silently drift apart.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=12 \
+  CMD ["node", "-e", "fetch('http://localhost:4000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 CMD ["node", "dist/main.js"]
