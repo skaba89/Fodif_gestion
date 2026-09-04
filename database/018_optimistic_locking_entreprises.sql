@@ -1,0 +1,22 @@
+-- Sprint Enterprise 0, axe E5 (intégrité financière, docs/14-ROADMAP-SAAS-PREMIUM.md) -
+-- verrouillage optimiste, appliqué d'abord à la fiche entreprise : le seul formulaire "charger,
+-- éditer sur place, enregistrer" de ce dépôt qui possède déjà une vraie page web l'exerçant (voir
+-- docs/14-ROADMAP-SAAS-PREMIUM.md pour la même lacune, non encore corrigée, sur
+-- dossiers_financement - applications.repository.ts#updateOwned - qui n'a aujourd'hui aucune page
+-- web qui l'atteigne). Ces données alimentent directement le scoring et la décision de financement
+-- (chiffre d'affaires, effectifs...), donc leur intégrité relève bien de cet axe. `PATCH
+-- /companies/me`
+-- (apps/web/app/entrepreneur/entreprise/page.tsx) charge le formulaire, laisse la PME l'éditer sur
+-- place - potentiellement pendant que quelqu'un d'autre à la même entreprise a le même formulaire
+-- ouvert dans un autre onglet ou un autre poste - puis enregistre en écrasant purement et
+-- simplement toutes les colonnes, sans jamais savoir si la ligne avait changé entre-temps. Un
+-- verrouillage pessimiste (FOR UPDATE, déjà utilisé ailleurs dans ce dépôt pour des écritures
+-- concurrentes dans une même transaction) ne protège rien ici : les deux enregistrements
+-- successifs sont deux requêtes HTTP séparées, à des minutes ou des heures d'écart, pas deux
+-- opérations dans une même transaction.
+--
+-- `version` est incrémentée à chaque écriture réussie (companies.repository.ts#updateById) ; le
+-- client doit renvoyer la version qu'il a lue pour que l'écriture soit acceptée - sinon la ligne a
+-- changé depuis, et l'écriture est refusée (409) plutôt que d'écraser silencieusement les
+-- modifications de quelqu'un d'autre.
+ALTER TABLE entreprises ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
