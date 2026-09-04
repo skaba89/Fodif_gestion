@@ -440,6 +440,16 @@
   font-weight: 800;
 }
 
+.pillMuted {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
 .formCard {
   padding: 24px;
 }

@@ -96,11 +96,15 @@ export class AgentApplicationsRepository {
         [dossier.entrepriseId],
       ),
       this.db.query(
+        // Axe E6 (versioning, docs/14-ROADMAP-SAAS-PREMIUM.md) - only the current version of each
+        // document type: this list drives the Valider/Complément buttons on every row, so a
+        // document the PME has since replaced must never appear here as if it still needed (or
+        // could receive) a decision.
         `SELECT id, type_document AS "typeDocument", nom_fichier AS "nomFichier",
           mime_type AS "mimeType", taille_octets AS "tailleOctets",
           statut_verification AS "statutVerification",
           verification_comment AS "verificationComment", created_at AS "createdAt"
-         FROM dossier_documents WHERE dossier_id = $1 ORDER BY created_at DESC`,
+         FROM dossier_documents WHERE dossier_id = $1 AND superseded_by IS NULL ORDER BY created_at DESC`,
         [id],
       ),
       this.db.query(

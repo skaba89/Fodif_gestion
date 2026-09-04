@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { DocumentsService } from '../src/documents/documents.service';
 
 const pme = {
@@ -64,6 +64,29 @@ describe('DocumentsService security', () => {
     const service = new DocumentsService({ verify: jest.fn() } as never, {} as never, clamavDisabled as never);
     await expect(service.verify(pme, '44444444-4444-4444-8444-444444444444', 'REJETE'))
       .rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  // Axe E6 (docs/14-ROADMAP-SAAS-PREMIUM.md) - document versioning.
+  it('verify() throws NotFoundException when the document does not exist', async () => {
+    const repository = { verify: jest.fn().mockResolvedValue({ outcome: 'NOT_FOUND' }) };
+    const service = new DocumentsService(repository as never, {} as never, clamavDisabled as never);
+    await expect(service.verify(pme, '44444444-4444-4444-8444-444444444444', 'VALIDE'))
+      .rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('verify() throws ConflictException, not a silent no-op, when the document has been replaced by a newer upload', async () => {
+    const repository = { verify: jest.fn().mockResolvedValue({ outcome: 'SUPERSEDED' }) };
+    const service = new DocumentsService(repository as never, {} as never, clamavDisabled as never);
+    await expect(service.verify(pme, '44444444-4444-4444-8444-444444444444', 'VALIDE'))
+      .rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('verify() succeeds on the current version of a document', async () => {
+    const repository = { verify: jest.fn().mockResolvedValue({ outcome: 'OK', id: 'doc-1' }) };
+    const service = new DocumentsService(repository as never, {} as never, clamavDisabled as never);
+    await expect(service.verify(pme, 'doc-1', 'VALIDE')).resolves.toEqual({
+      id: 'doc-1', statutVerification: 'VALIDE', verificationComment: null,
+    });
   });
 
   // Axe E6 (docs/14-ROADMAP-SAAS-PREMIUM.md) - antivirus scanning.

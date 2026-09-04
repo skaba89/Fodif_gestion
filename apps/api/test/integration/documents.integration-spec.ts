@@ -13,7 +13,7 @@
  */
 import { createHash } from 'node:crypto';
 import { createServer, Server, Socket } from 'node:net';
-import { BadRequestException, ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { AuthenticatedUser } from '../../src/auth/auth-user.interface';
 import { ClamAvService } from '../../src/documents/clamav.service';
@@ -240,6 +240,87 @@ describe('Secure documents (real PostgreSQL + real S3)', () => {
 
       const row = await integrationDb.pool.query(`SELECT verification_comment AS "verificationComment" FROM dossier_documents WHERE id = $1`, [uploaded.id]);
       expect(row.rows[0].verificationComment).toBe('Document illisible, merci de renvoyer un scan net');
+    });
+  });
+
+  // Axe E6 (versioning, docs/14-ROADMAP-SAAS-PREMIUM.md) - closes a real bug: before this, an agent
+  // could still act (Valider/Complément) on a document the PME had since replaced, because
+  // agent-applications.repository.ts and committee.repository.ts each ran their own unfiltered
+  // query against dossier_documents. These tests prove the supersession chain end to end against a
+  // real DB, not just the mocked unit spec (test/documents.service.spec.ts).
+  describe('document versioning (axe E6)', () => {
+    it('marks the prior document of the same type as superseded when a newer one is uploaded, leaving the new one current', async () => {
+      const dossier = await seedEditableDossier(integrationDb.pool);
+      const first = await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v1.pdf')) as unknown as { id: string };
+      const second = await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v2.pdf')) as unknown as { id: string };
+
+      const rows = await integrationDb.pool.query(
+        `SELECT id, superseded_by AS "supersededBy" FROM dossier_documents WHERE dossier_id = $1 ORDER BY created_at ASC`,
+        [dossier.dossierId],
+      );
+      expect(rows.rows).toHaveLength(2);
+      expect(rows.rows[0].id).toBe(first.id);
+      expect(rows.rows[0].supersededBy).toBe(second.id);
+      expect(rows.rows[1].id).toBe(second.id);
+      expect(rows.rows[1].supersededBy).toBeNull();
+    });
+
+    it('does not touch a document of a different type or a different dossier when superseding', async () => {
+      const dossier = await seedEditableDossier(integrationDb.pool);
+      const otherDossier = await seedEditableDossier(integrationDb.pool);
+      const otherType = await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'NIF', multerFile(jpegBytes, 'image/jpeg', 'nif.jpg')) as unknown as { id: string };
+      const otherDossierDoc = await service.uploadOwn(pmeUser(otherDossier.entrepriseId), otherDossier.dossierId, 'RCCM', multerFile(pdfBytes)) as unknown as { id: string };
+
+      await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes));
+
+      const rows = await integrationDb.pool.query(
+        `SELECT superseded_by AS "supersededBy" FROM dossier_documents WHERE id = ANY($1::uuid[])`,
+        [[otherType.id, otherDossierDoc.id]],
+      );
+      expect(rows.rows.every((row) => row.supersededBy === null)).toBe(true);
+    });
+
+    it('excludes a superseded document from listForReview, keeping only the current version', async () => {
+      const dossier = await seedEditableDossier(integrationDb.pool);
+      await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v1.pdf'));
+      const second = await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v2.pdf')) as unknown as { id: string };
+
+      const pending = await service.listForReview() as unknown as Array<{ id: string; dossierId: string }>;
+      const forThisDossier = pending.filter((doc) => doc.dossierId === dossier.dossierId);
+      expect(forThisDossier).toHaveLength(1);
+      expect(forThisDossier[0].id).toBe(second.id);
+    });
+
+    it('refuses to verify a superseded document with a conflict, rather than silently recording a decision nobody will see', async () => {
+      const dossier = await seedEditableDossier(integrationDb.pool);
+      const first = await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v1.pdf')) as unknown as { id: string };
+      await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v2.pdf'));
+
+      await expect(service.verify(agentUser(), first.id, 'VALIDE')).rejects.toBeInstanceOf(ConflictException);
+
+      const row = await integrationDb.pool.query(`SELECT statut_verification AS "statutVerification" FROM dossier_documents WHERE id = $1`, [first.id]);
+      expect(row.rows[0].statutVerification).toBe('A_VERIFIER');
+    });
+
+    it('still verifies the current version normally after an older version has been superseded', async () => {
+      const dossier = await seedEditableDossier(integrationDb.pool);
+      await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v1.pdf'));
+      const second = await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v2.pdf')) as unknown as { id: string };
+
+      const result = await service.verify(agentUser(), second.id, 'VALIDE');
+      expect(result.statutVerification).toBe('VALIDE');
+
+      const row = await integrationDb.pool.query(`SELECT statut_verification AS "statutVerification" FROM dossier_documents WHERE id = $1`, [second.id]);
+      expect(row.rows[0].statutVerification).toBe('VALIDE');
+    });
+
+    it('still lists every version (current and superseded) in listOwn, so a PME can see its own upload history', async () => {
+      const dossier = await seedEditableDossier(integrationDb.pool);
+      await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v1.pdf'));
+      await service.uploadOwn(pmeUser(dossier.entrepriseId), dossier.dossierId, 'RCCM', multerFile(pdfBytes, 'application/pdf', 'rccm-v2.pdf'));
+
+      const list = await service.listOwn(pmeUser(dossier.entrepriseId), dossier.dossierId);
+      expect(list).toHaveLength(2);
     });
   });
 
