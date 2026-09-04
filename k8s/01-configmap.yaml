@@ -1,0 +1,32 @@
+# Non-secret configuration - same variables docker-compose.yml sets for `api`/`web`, minus
+# anything that's a credential (those live in 02-secret.example.yaml instead). Values here are
+# real defaults, not placeholders, except where marked CHANGE_ME - those two genuinely depend on
+# the cluster's own DNS/domain and can't be guessed generically.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fodip-config
+  namespace: fodip
+data:
+  NODE_ENV: production
+  JWT_ISSUER: fodip-digital-2030
+  JWT_AUDIENCE: fodip-web
+  JWT_ACCESS_TTL: 15m
+  STORAGE_REGION: us-east-1
+  STORAGE_BUCKET: fodip-documents
+  # Unlike docker-compose.yml's local demo (DATABASE_SSL: "false", talking to a Postgres
+  # container on the same Docker network), a real deployment's PostgreSQL is reached over the
+  # network - security-policy.js's own DatabaseService already defaults to requiring SSL unless
+  # the host is literally "localhost"/"127.0.0.1", so this is the explicit, correct production
+  # value, not merely a copy of the local default.
+  DATABASE_SSL: "true"
+  # CHANGE_ME - the public URL the browser reaches the web app at (e.g. https://app.example.org).
+  # SessionTokenService/CORS-adjacent code doesn't read this directly, but the OIDC callback flow
+  # and any absolute links the web app builds do.
+  WEB_BASE_URL: "https://CHANGE_ME"
+  # Internal cluster DNS name, not the public URL - the web pods talk to the API through the
+  # Service defined in 05-web-and-api-services.yaml, never through the public internet.
+  API_BASE_URL: http://fodip-api:4000
+  # Production cookies must be Secure (HTTPS-only) - docker-compose.yml's local demo sets this to
+  # "false" only because the local stack has no TLS in front of it.
+  COOKIE_SECURE: "true"

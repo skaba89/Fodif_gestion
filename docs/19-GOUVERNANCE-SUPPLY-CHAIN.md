@@ -89,8 +89,14 @@ Docker Compose pour être signalé, et ne coûte plus ces 20 minutes de calcul C
   dépendance nouvellement introduite avec une vulnérabilité haute ou une licence interdite avant
   même le merge) ;
 - `docker` : scan Trivy (`--scanners vuln,secret`, sévérité CRITICAL/HIGH, échoue le job) des deux
-  images construites, puis génération d'un SBOM CycloneDX par image, uploadés comme artefacts CI
-  (rétention 90 jours) ;
+  images construites, puis génération d'un SBOM CycloneDX par image, **signé** (axe E7,
+  `docs/14-ROADMAP-SAAS-PREMIUM.md`) via `cosign sign-blob` en mode « keyless » Sigstore (le job
+  échange un jeton OIDC GitHub Actions éphémère contre un certificat Fulcio de courte durée lié à
+  ce run précis - dépôt, fichier de workflow, ref, SHA du commit - sans jamais générer, stocker ni
+  faire tourner de clé privée) ; SBOM et enveloppe de signature (`*.sigstore.json`, signature +
+  certificat + preuve d'inclusion dans le journal public Rekor) uploadés ensemble comme artefacts
+  CI (rétention 90 jours) - voir « Vérifier un SBOM signé » plus bas pour la commande de
+  vérification côté consommateur ;
 - `unit-tests` : couverture collectée (`--coverage`) et uploadée comme artefact (rétention 30
   jours) - premier chiffre réel plutôt que supposé, voir plus bas.
 
@@ -281,3 +287,52 @@ l'aveugle, faute d'environnement Docker disponible pour la vérifier dans le bac
 été préparé. La reconfirmation réelle des 14 exceptions contre le nouveau `node:24-bookworm-slim`
 (un vrai re-scan Trivy, pas une relecture du fichier) reste le travail du job CI `docker` sur la PR
 de ce lot, comme pour toute vérification qui dépend de Docker dans ce bac à sable.
+
+## Mise à jour — SBOM signé (axe E7, `docs/14-ROADMAP-SAAS-PREMIUM.md`)
+
+Le SBOM CycloneDX généré par le job `docker` (`anchore/sbom-action`, une entrée par image) était
+jusqu'ici uploadé tel quel : rien n'empêchait un artefact substitué (une étape CI compromise, un
+mainteneur du dépôt d'artefacts) d'être pris pour le vrai sans que personne ne le remarque. Chaque
+SBOM est désormais signé avec `cosign sign-blob` en mode « keyless » Sigstore, ajouté au job
+`docker` (`.github/workflows/ci.yml`) : le job échange son jeton OIDC GitHub Actions (`permissions:
+id-token: write`, nouvellement accordé à ce job précis, aucun autre) contre un certificat Fulcio de
+courte durée lié à l'identité exacte de ce run (dépôt, fichier de workflow, ref, SHA du commit) -
+aucune clé privée générée, stockée en secret GitHub, ni jamais à faire tourner. `--bundle` produit
+un fichier `*.cyclonedx.json.sigstore.json` par SBOM (signature + certificat + preuve d'inclusion
+dans le journal public Rekor), uploadé à côté du SBOM lui-même comme artefact CI.
+
+### Vérifier un SBOM signé
+
+Pour quiconque télécharge les artefacts `sboms` d'un run CI et veut vérifier qu'un SBOM provient
+bien de ce dépôt, sur la branche attendue, et n'a pas été modifié depuis :
+
+```bash
+cosign verify-blob \
+  --bundle sbom-api.cyclonedx.json.sigstore.json \
+  --certificate-identity "https://github.com/<owner>/<repo>/.github/workflows/ci.yml@refs/heads/main" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  sbom-api.cyclonedx.json
+```
+
+(remplacer `<owner>/<repo>` par le dépôt réel, et l'`@refs/heads/main` par la ref exacte du run si
+ce n'est pas `main`.) Une sortie `Verified OK` confirme la chaîne complète : signature valide,
+certificat émis par Fulcio pour cette identité de workflow précise, et entrée retrouvée dans Rekor.
+
+### Non vérifié ici, à confirmer par la CI réelle
+
+Le flux `cosign sign-blob` keyless dépend de l'accès réseau au CDN TUF de Sigstore
+(`tuf-repo-cdn.sigstore.dev`) et à Fulcio/Rekor - bloqués par la même politique réseau déjà
+documentée pour Docker Hub dans ce bac à sable (confirmé en tentant un vrai `cosign sign-blob`
+localement : échec réseau, pas une erreur de syntaxe ou d'options). Vérifié à la place, sans réseau
+Sigstore :
+- la syntaxe exacte des commandes `cosign sign-blob`/`verify-blob` (binaire officiel v3.1.3,
+  téléchargé et exécuté ici) via `--help`, plutôt que devinée ;
+- `actionlint` (binaire officiel v1.7.12, téléchargé et exécuté ici, avec intégration `shellcheck`
+  active) sur `ci.yml` modifié : zéro avertissement ;
+- `permissions.id-token: write` correctement scopé au seul job `docker`, jamais au niveau du
+  workflow entier (`yaml.safe_load` + relecture) ;
+- l'action `sigstore/cosign-installer` épinglée par SHA de commit réel (`git ls-remote --tags`
+  contre le dépôt amont, comme toutes les autres actions de ce workflow), pas par tag flottant.
+
+La réussite réelle de la signature (jeton OIDC échangé, certificat Fulcio émis, entrée Rekor créée)
+reste, comme le reste de ce job, à confirmer par la CI réelle sur la PR de cet axe.

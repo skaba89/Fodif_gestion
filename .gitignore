@@ -18,6 +18,11 @@ __pycache__/
 .env.*
 !.env.example
 
+# Axe E7 (docs/14-ROADMAP-SAAS-PREMIUM.md) - a real k8s/02-secret.yaml (filled in from
+# k8s/02-secret.example.yaml, the committed template) never belongs in version control.
+k8s/*.secret.yaml
+k8s/02-secret.yaml
+
 # Logs
 *.log
 npm-debug.log*

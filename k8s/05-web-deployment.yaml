@@ -1,0 +1,83 @@
+# Apply after 04-api-deployment.yaml (the web app's own readiness doesn't depend on the API being
+# up, but there's no reason to serve it before the API is reachable in practice).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fodip-web
+  namespace: fodip
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fodip-web
+  template:
+    metadata:
+      labels:
+        app: fodip-web
+    spec:
+      containers:
+        - name: web
+          # Built from apps/web/Dockerfile - same portability note as the api image above.
+          image: CHANGE_ME/fodip-digital-web:CHANGE_ME
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: fodip-config
+          env:
+            # Browser-reachable API URL, distinct from the ConfigMap's API_BASE_URL (the
+            # cluster-internal one) - only used by the OIDC "sign in with SSO" redirect. Leave
+            # unset (remove this env entry) if OIDC is not configured for this deployment.
+            - name: API_PUBLIC_URL
+              value: "https://CHANGE_ME"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # See 04-api-deployment.yaml's identical comment - same reasoning, same caveat (not
+          # verified against a real running container in this environment).
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            # Next.js's own cache directory - unlike the api image, `next start` does write here
+            # (route/image cache) even with no application code of ours doing so.
+            - name: next-cache
+              mountPath: /app/.next/cache
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: next-cache
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fodip-web
+  namespace: fodip
+spec:
+  selector:
+    app: fodip-web
+  ports:
+    - port: 3000
+      targetPort: 3000
