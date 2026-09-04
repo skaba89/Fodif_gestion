@@ -1,7 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as client from 'openid-client';
+import { DatabaseService } from '../../database/database.service';
 import { deriveSecret, resolveJwtSecret } from '../../security-policy';
 
 export const OIDC_PORTALS = ['agent', 'comite', 'direction', 'administration', 'auditeur'] as const;
@@ -39,6 +41,10 @@ interface FlowPayload {
 
 interface DeliveryPayload {
   sub: string;
+  // Axe E4 (durcissement OIDC) - identifies this specific delivery token so it can be claimed
+  // (and rejected on a second use) via oidc_delivery_tokens_used, the same replay-protection shape
+  // as revoked_tokens (database/017_session_revocation.sql).
+  jti: string;
 }
 
 /**
@@ -56,6 +62,11 @@ interface DeliveryPayload {
  *
  * Entirely opt-in: every method throws/no-ops unless OIDC_ISSUER_URL, OIDC_CLIENT_ID,
  * OIDC_CLIENT_SECRET and OIDC_REDIRECT_URI are all configured.
+ *
+ * Axe E4 (durcissement OIDC) - the delivery token issueDeliveryToken() hands the browser (via a
+ * redirect URL query string - an exposure-prone channel: history, access logs, a shared computer)
+ * is single-use: resolveDeliveryToken() claims its jti in oidc_delivery_tokens_used on first use
+ * and rejects a second attempt, rather than accepting it repeatedly until its own 2-minute expiry.
  */
 @Injectable()
 export class OidcService {
@@ -71,6 +82,7 @@ export class OidcService {
   constructor(
     private readonly config: ConfigService,
     private readonly jwtService: JwtService,
+    private readonly db: DatabaseService,
   ) {
     const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV'));
     this.flowSecret = deriveSecret(jwtSecret, 'fodip-oidc-flow-v1');
@@ -162,9 +174,12 @@ export class OidcService {
 
   /** Short-lived, single-purpose reference handed to the browser via redirect (like an OAuth
    * authorization code): carries no session material itself, just "this user id was verified by
-   * the IdP a moment ago" - POST /auth/oidc/exchange redeems it for a real session/MFA challenge. */
+   * the IdP a moment ago" - POST /auth/oidc/exchange redeems it for a real session/MFA challenge.
+   * Axe E4 (durcissement OIDC) - tagged with a jti so resolveDeliveryToken() can enforce it is
+   * redeemed at most once, closing the replay window a token exposed via a redirect URL (browser
+   * history, access logs) would otherwise leave open until its own 2-minute expiry. */
   issueDeliveryToken(userId: string): Promise<string> {
-    const payload: DeliveryPayload = { sub: userId };
+    const payload: DeliveryPayload = { sub: userId, jti: randomUUID() };
     return this.jwtService.signAsync(payload, {
       secret: this.deliverySecret,
       expiresIn: DELIVERY_TTL_SECONDS,
@@ -173,15 +188,35 @@ export class OidcService {
   }
 
   async resolveDeliveryToken(token: string): Promise<string> {
+    let payload: DeliveryPayload;
     try {
-      const payload = await this.jwtService.verifyAsync<DeliveryPayload>(token, {
+      payload = await this.jwtService.verifyAsync<DeliveryPayload>(token, {
         secret: this.deliverySecret,
         audience: DELIVERY_AUDIENCE,
       });
-      return payload.sub;
     } catch {
       throw new UnauthorizedException('Invalid or expired sign-in session');
     }
+
+    // A token from before this axis (no jti - only possible for the handful of in-flight
+    // requests spanning a deploy, given the 2-minute TTL) has nothing to claim: fail closed
+    // rather than pass `undefined` to the query below.
+    if (!payload.jti) throw new UnauthorizedException('Invalid or expired sign-in session');
+
+    // Axe E4 (durcissement OIDC) - claims this jti now that the signature/audience/expiry are all
+    // confirmed valid. Same discipline as RevocationService#revoke: opportunistic cleanup of
+    // expired rows on the write path, no separate purge job required.
+    const claimed = await this.db.query(
+      `INSERT INTO oidc_delivery_tokens_used (jti, expires_at) VALUES ($1, NOW() + ($2 || ' seconds')::interval)
+       ON CONFLICT (jti) DO NOTHING`,
+      [payload.jti, DELIVERY_TTL_SECONDS],
+    );
+    if ((claimed.rowCount ?? 0) === 0) {
+      throw new UnauthorizedException('Invalid or expired sign-in session');
+    }
+    await this.db.query('DELETE FROM oidc_delivery_tokens_used WHERE expires_at < NOW()');
+
+    return payload.sub;
   }
 
   private async getConfiguration(): Promise<client.Configuration> {
