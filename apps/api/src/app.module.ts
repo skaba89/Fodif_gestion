@@ -13,8 +13,10 @@ import { CommitteeModule } from './committee/committee.module';
 import { AuthorizationGuard } from './common/guards/authorization.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { PostgresThrottlerStorageService } from './common/postgres-throttler-storage.service';
 import { RevocationModule } from './common/revocation/revocation.module';
 import { DatabaseModule } from './database/database.module';
+import { DatabaseService } from './database/database.service';
 import { DataRightsModule } from './data-rights/data-rights.module';
 import { DocumentsModule } from './documents/documents.module';
 import { FinancingsModule } from './financings/financings.module';
@@ -30,7 +32,18 @@ import { ScoringModule } from './scoring/scoring.module';
     ConfigModule.forRoot({ isGlobal: true, cache: true }),
     // Global request budget (defense-in-depth). Sensitive routes such as
     // /auth/login override this with a stricter per-route @Throttle().
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 300 }]),
+    // Axe E4 (docs/14-ROADMAP-SAAS-PREMIUM.md) - PostgreSQL-backed storage
+    // (postgres-throttler-storage.service.ts) instead of @nestjs/throttler's default in-memory
+    // Map, so the limit holds across multiple API instances behind a load balancer, not just
+    // within one process.
+    ThrottlerModule.forRootAsync({
+      imports: [DatabaseModule],
+      inject: [DatabaseService],
+      useFactory: (db: DatabaseService) => ({
+        throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
+        storage: new PostgresThrottlerStorageService(db),
+      }),
+    }),
     DatabaseModule,
     RevocationModule,
     AdministrationModule,
