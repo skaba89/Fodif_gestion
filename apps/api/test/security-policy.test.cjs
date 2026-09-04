@@ -5,6 +5,7 @@ const {
   hasAllPermissions,
   hasAnyRole,
   resolveJwtSecret,
+  resolveJwtSigningKeys,
   parseDurationSeconds,
   deriveSecret,
   encryptWithKey,
@@ -36,6 +37,43 @@ test('JWT secret policy blocks weak production secrets', () => {
   assert.throws(() => resolveJwtSecret('CHANGE_ME', 'production'), /JWT_SECRET/);
   assert.equal(resolveJwtSecret('', 'development').startsWith('fodip-dev-only'), true);
   assert.equal(resolveJwtSecret('x'.repeat(48), 'production'), 'x'.repeat(48));
+});
+
+// Axe E4 (docs/14-ROADMAP-SAAS-PREMIUM.md) - JWT signing key rotation.
+test('resolveJwtSigningKeys resolves a deterministic kid for the current secret alone when no previous secret is set', () => {
+  const a = resolveJwtSigningKeys('x'.repeat(48), undefined, 'production');
+  const b = resolveJwtSigningKeys('x'.repeat(48), undefined, 'production');
+  assert.equal(a.currentKid, b.currentKid); // deterministic, not random per call
+  assert.equal(Object.keys(a.keys).length, 1);
+  assert.equal(a.keys[a.currentKid], 'x'.repeat(48));
+});
+
+test('resolveJwtSigningKeys gives a different secret a different kid', () => {
+  const a = resolveJwtSigningKeys('x'.repeat(48), undefined, 'production');
+  const b = resolveJwtSigningKeys('y'.repeat(48), undefined, 'production');
+  assert.notEqual(a.currentKid, b.currentKid);
+});
+
+test('resolveJwtSigningKeys keeps the previous secret verifiable under its own kid, alongside the current one', () => {
+  const current = 'x'.repeat(48);
+  const previous = 'y'.repeat(48);
+  const { currentKid, keys } = resolveJwtSigningKeys(current, previous, 'production');
+  const previousKid = Object.keys(keys).find((kid) => kid !== currentKid);
+  assert.equal(Object.keys(keys).length, 2);
+  assert.equal(keys[currentKid], current);
+  assert.equal(keys[previousKid], previous);
+});
+
+test('resolveJwtSigningKeys never lets JWT_SECRET_PREVIOUS overwrite the current key on a matching kid', () => {
+  const secret = 'x'.repeat(48);
+  const { currentKid, keys } = resolveJwtSigningKeys(secret, secret, 'production');
+  assert.equal(Object.keys(keys).length, 1);
+  assert.equal(keys[currentKid], secret);
+});
+
+test('resolveJwtSigningKeys ignores an empty/whitespace previous secret', () => {
+  const { keys } = resolveJwtSigningKeys('x'.repeat(48), '   ', 'production');
+  assert.equal(Object.keys(keys).length, 1);
 });
 
 test('duration parser converts supported JWT TTL values to seconds', () => {

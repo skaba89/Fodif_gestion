@@ -89,6 +89,10 @@ describe('Session revocation (real PostgreSQL)', () => {
   // RevocationService records the logout - proven together, not just each piece in isolation.
   describe('JwtAuthGuard + a real signed token', () => {
     const jwtService = new JwtService({ secret: 'integration-test-secret' });
+    // Axe E4 (key rotation) - this suite's tokens are never tagged with a `kid` (signToken below
+    // doesn't set one), so the guard's real fallback-to-current-secret path is what's exercised;
+    // this stub just needs to resolve to the one secret this whole describe block signs with.
+    const jwtKeys = { resolveVerificationSecret: () => 'integration-test-secret' };
 
     async function signToken(userId: string, jti: string) {
       return jwtService.signAsync({ sub: userId, email: 'agent@fodip.test', roles: ['AGENT_FODIP'], permissions: [], jti }, { expiresIn: '15m' });
@@ -98,7 +102,7 @@ describe('Session revocation (real PostgreSQL)', () => {
       const user = await seedUser(integrationDb.pool);
       const jti = randomUUID();
       const token = await signToken(user.id, jti);
-      const guard = new JwtAuthGuard({ getAllAndOverride: jest.fn().mockReturnValue(false) } as never, jwtService, revocation);
+      const guard = new JwtAuthGuard({ getAllAndOverride: jest.fn().mockReturnValue(false) } as never, jwtService, revocation, jwtKeys as never);
 
       const { context: firstContext, request: firstRequest } = contextFor(`Bearer ${token}`);
       await expect(guard.canActivate(firstContext)).resolves.toBe(true);
@@ -115,7 +119,7 @@ describe('Session revocation (real PostgreSQL)', () => {
       const user = await seedUser(integrationDb.pool);
       const [jtiA, jtiB] = [randomUUID(), randomUUID()];
       const [tokenA, tokenB] = await Promise.all([signToken(user.id, jtiA), signToken(user.id, jtiB)]);
-      const guard = new JwtAuthGuard({ getAllAndOverride: jest.fn().mockReturnValue(false) } as never, jwtService, revocation);
+      const guard = new JwtAuthGuard({ getAllAndOverride: jest.fn().mockReturnValue(false) } as never, jwtService, revocation, jwtKeys as never);
 
       const decodedA = jwtService.decode<{ exp: number }>(tokenA);
       await revocation.revoke(jtiA, user.id, decodedA.exp);

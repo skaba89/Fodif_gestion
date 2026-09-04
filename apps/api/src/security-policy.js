@@ -59,6 +59,44 @@ function resolveJwtSecret(secret, environment) {
 }
 
 /**
+ * Axe E4 (docs/14-ROADMAP-SAAS-PREMIUM.md) - JWT signing key rotation. Resolves the current
+ * signing secret (via resolveJwtSecret, unchanged) plus an optional previous secret still
+ * accepted for VERIFICATION only, each tagged with a short key id (`kid`, the first 8 hex
+ * characters of its own SHA-256 hash - deterministic, so rotating is just "move JWT_SECRET's old
+ * value into JWT_SECRET_PREVIOUS", no `kid` to hand-manage, and one-way, so a `kid` never leaks
+ * anything about the secret it names). Access tokens are short-lived (15 minutes by default,
+ * JWT_ACCESS_TTL) and this platform has no separate refresh-token flow, so a previous secret only
+ * needs to stay accepted for that same short window after a rotation - long enough for tokens
+ * already handed out to finish their natural life, never indefinitely.
+ *
+ * Deliberately scoped to JWT signing alone, not the derived secrets from deriveSecret() below
+ * (PII-at-rest encryption, MFA TOTP secret encryption, OIDC flow/delivery tokens): rotating those
+ * would break decryption of everything already encrypted with the old derived key, which needs a
+ * versioned-ciphertext design (tag each ciphertext with the key id that encrypted it, migrate
+ * progressively) that this axis does not attempt - flagged here rather than solved partially and
+ * silently.
+ */
+function computeKeyId(secret) {
+  return crypto.createHash('sha256').update(secret).digest('hex').slice(0, 8);
+}
+
+function resolveJwtSigningKeys(secret, previousSecret, environment) {
+  const currentSecret = resolveJwtSecret(secret, environment);
+  const currentKid = computeKeyId(currentSecret);
+  const keys = { [currentKid]: currentSecret };
+
+  const normalizedPrevious = typeof previousSecret === 'string' ? previousSecret.trim() : '';
+  if (normalizedPrevious) {
+    const previousKid = computeKeyId(normalizedPrevious);
+    // Never let an unrelated-but-identical-hash edge case, or simply forgetting to clear
+    // JWT_SECRET_PREVIOUS after rotating back to the same value, overwrite the current key.
+    if (previousKid !== currentKid) keys[previousKid] = normalizedPrevious;
+  }
+
+  return { currentKid, keys };
+}
+
+/**
  * Derives a fixed-purpose 256-bit key from a base secret (e.g. JWT_SECRET) using HMAC-SHA256.
  * Lets several distinct keys (MFA secret encryption, MFA challenge signing, ...) be obtained
  * from a single already-validated secret instead of provisioning and rotating one env var per use.
@@ -96,6 +134,7 @@ module.exports = {
   hasAllPermissions,
   hasAnyRole,
   resolveJwtSecret,
+  resolveJwtSigningKeys,
   parseDurationSeconds,
   deriveSecret,
   encryptWithKey,

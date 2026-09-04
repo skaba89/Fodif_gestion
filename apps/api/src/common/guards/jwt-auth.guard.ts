@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { AuthenticatedUser } from '../../auth/auth-user.interface';
+import { JwtKeyResolverService } from '../../auth/jwt-key-resolver.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { RevocationService } from '../revocation/revocation.service';
 
@@ -16,6 +17,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
     private readonly revocation: RevocationService,
+    private readonly jwtKeys: JwtKeyResolverService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -31,7 +33,16 @@ export class JwtAuthGuard implements CanActivate {
 
     let user: AuthenticatedUser;
     try {
-      user = await this.jwtService.verifyAsync<AuthenticatedUser>(token);
+      // Axe E4 (key rotation, docs/14-ROADMAP-SAAS-PREMIUM.md) - the token's own (unverified at
+      // this point) header names which key signed it, so a token signed just before a rotation
+      // still verifies against the key that actually produced it, not only the newest one. decode()
+      // only parses the header/payload, it proves nothing about authenticity by itself - the
+      // secret resolved from that `kid` is what verifyAsync below actually checks the signature
+      // against, and an unrecognized `kid` simply falls back to the current secret (see
+      // JwtKeyResolverService), so a forged `kid` can never pick a key that isn't already ours.
+      const decoded = this.jwtService.decode<{ header: { kid?: string } }>(token, { complete: true });
+      const secret = this.jwtKeys.resolveVerificationSecret(decoded?.header?.kid);
+      user = await this.jwtService.verifyAsync<AuthenticatedUser>(token, { secret });
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
