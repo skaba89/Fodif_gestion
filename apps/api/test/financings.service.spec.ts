@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { FinancingsService } from '../src/financings/financings.service';
 
 const direction = { sub: 'direction-1', email: 'direction@fodip.local', roles: ['DIRECTION_FODIP'], permissions: [] };
@@ -48,5 +48,49 @@ describe('FinancingsService', () => {
       items: [{ id: 'f1', montantAccorde: 1000 }], total: 3, page: 1, limite: 25,
     });
     expect(repository.list).toHaveBeenCalledWith({ page: 1, limite: 25 });
+  });
+
+  // Axe E5 (docs/14-ROADMAP-SAAS-PREMIUM.md) - maker-checker on disbursement execution.
+  describe('executeDisbursement', () => {
+    const found = { id: 'f1', montantAccorde: '1000', disbursements: [], installments: [] };
+    const dto = { dateEffective: '2026-09-10', referenceBancaire: 'REF-1' };
+
+    it('rejects execution by the same user who planned the disbursement (self-approval)', async () => {
+      const repository = {
+        findById: jest.fn().mockResolvedValue(found),
+        executeDisbursement: jest.fn().mockResolvedValue({ outcome: 'SELF_APPROVAL' }),
+      };
+      const service = new FinancingsService(repository as never, idempotency as never);
+      await expect(service.executeDisbursement(direction, 'f1', 'd1', dto)).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects executing a disbursement that is no longer PREVU', async () => {
+      const repository = {
+        findById: jest.fn().mockResolvedValue(found),
+        executeDisbursement: jest.fn().mockResolvedValue({ outcome: 'INVALID_STATE' }),
+      };
+      const service = new FinancingsService(repository as never, idempotency as never);
+      await expect(service.executeDisbursement(direction, 'f1', 'd1', dto)).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('rejects executing a disbursement that does not exist', async () => {
+      const repository = {
+        findById: jest.fn().mockResolvedValue(found),
+        executeDisbursement: jest.fn().mockResolvedValue({ outcome: 'NOT_FOUND' }),
+      };
+      const service = new FinancingsService(repository as never, idempotency as never);
+      await expect(service.executeDisbursement(direction, 'f1', 'd1', dto)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('executes when a different user confirms (checker) than the one who planned (maker)', async () => {
+      const repository = {
+        findById: jest.fn().mockResolvedValue(found),
+        executeDisbursement: jest.fn().mockResolvedValue({ outcome: 'OK', id: 'd1' }),
+      };
+      const service = new FinancingsService(repository as never, idempotency as never);
+      await expect(service.executeDisbursement(direction, 'f1', 'd1', dto)).resolves.toEqual(
+        expect.objectContaining({ id: 'f1' }),
+      );
+    });
   });
 });

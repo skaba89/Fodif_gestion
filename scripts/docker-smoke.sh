@@ -132,6 +132,21 @@ direction_login=$(curl --fail --silent \
 direction_token=$(LOGIN_RESPONSE="$direction_login" python -c \
   'import json, os; print(json.loads(os.environ["LOGIN_RESPONSE"])["accessToken"])')
 
+# Axe E5 (docs/14-ROADMAP-SAAS-PREMIUM.md, intégrité financière) - maker-checker : la personne qui
+# exécute un décaissement ne peut plus être celle qui l'a planifié (voir
+# financings.repository.ts#executeDisbursement). direction@fodip.local planifie ci-dessous
+# (« maker ») ; admin@fodip.local (SUPER_ADMIN, qui porte aussi disbursement.manage - voir
+# database/007_financing_operations.sql) confirme l'exécution plus loin (« checker ») - identifiants
+# de démonstration réutilisés en avance sur le bloc d'administration qui les utilise déjà ensuite.
+admin_login=$(curl --fail --silent \
+  --request POST \
+  --header 'content-type: application/json' \
+  --data '{"email":"admin@fodip.local","password":"FodipDemo2026!"}' \
+  http://localhost:4000/api/v1/auth/login)
+
+admin_token=$(LOGIN_RESPONSE="$admin_login" python -c \
+  'import json, os; body=json.loads(os.environ["LOGIN_RESPONSE"]); assert "SUPER_ADMIN" in body["user"]["roles"]; print(body["accessToken"])')
+
 eligible_response=$(curl --fail --silent \
   --header "authorization: Bearer $direction_token" \
   http://localhost:4000/api/v1/financings/eligible-applications)
@@ -165,7 +180,7 @@ disbursement_id=$(PLANNED_RESPONSE="$planned_response" python -c \
 
 curl --fail --silent \
   --request POST \
-  --header "authorization: Bearer $direction_token" \
+  --header "authorization: Bearer $admin_token" \
   --header 'content-type: application/json' \
   --data "{\"dateEffective\":\"$current_date\",\"referenceBancaire\":\"SMOKE-DEC-001\"}" \
   "http://localhost:4000/api/v1/financings/$financing_id/disbursements/$disbursement_id/execute" \
@@ -220,15 +235,8 @@ pme_notifications_after=$(curl --fail --silent \
 PME_NOTIFICATIONS="$pme_notifications_after" python -c \
   'import json, os; body=json.loads(os.environ["PME_NOTIFICATIONS"]); assert body["unread"] == 0; assert body["items"] == []'
 
-admin_login=$(curl --fail --silent \
-  --request POST \
-  --header 'content-type: application/json' \
-  --data '{"email":"admin@fodip.local","password":"FodipDemo2026!"}' \
-  http://localhost:4000/api/v1/auth/login)
-
-admin_token=$(LOGIN_RESPONSE="$admin_login" python -c \
-  'import json, os; body=json.loads(os.environ["LOGIN_RESPONSE"]); assert "SUPER_ADMIN" in body["user"]["roles"]; print(body["accessToken"])')
-
+# admin_token: logged in earlier, above, to act as the maker-checker "checker" on the disbursement
+# execution step.
 roles_response=$(curl --fail --silent \
   --header "authorization: Bearer $admin_token" \
   http://localhost:4000/api/v1/administration/roles)

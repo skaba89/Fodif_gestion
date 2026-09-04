@@ -163,8 +163,9 @@ Oui — la navigation mobile (menu, tiroir accessible, cibles tactiles ≥44×44
 
 **« Quand est-ce disponible en production ? »**
 Voir §9 — plusieurs prérequis d'exploitation nationale restent à finaliser avant un déploiement en
-production (haute disponibilité, contrôle maker-checker, plan de reprise d'activité — l'idempotence
-financière et le scan antivirus des documents ci-dessous sont désormais partiellement couverts).
+production (haute disponibilité, rapprochement bancaire, plan de reprise d'activité — l'idempotence
+financière, le maker-checker sur l'exécution des décaissements et le scan antivirus des documents
+ci-dessous sont désormais partiellement couverts).
 
 ## 8. Limites actuelles — honnêtement déclarées
 
@@ -204,7 +205,12 @@ suivants ne sont pas finalisés :
   fait** : clé d'idempotence (`Idempotency-Key`) sur les 4 écritures à risque de doublon réel
   (décaissement/remboursement, Direction et Partenaire), avec claim atomique en base et rejeu de la
   réponse déjà produite sur une même clé (voir `docs/14-ROADMAP-SAAS-PREMIUM.md`, axe E5).
-- Contrôle maker-checker sur les opérations financières sensibles (décaissement, remboursement).
+- Contrôle maker-checker sur les opérations financières sensibles — **partiellement fait** : la
+  personne qui exécute un décaissement (confirmation bancaire, l'argent sort réellement) ne peut
+  plus être celle qui l'a planifié, imposé à la fois par l'application (rejet explicite) et par une
+  contrainte PostgreSQL (`ck_decaissements_maker_checker`) — voir `docs/14-ROADMAP-SAAS-PREMIUM.md`,
+  axe E5. Le remboursement n'a pas de flux à deux étapes équivalent (enregistrement direct d'un
+  paiement déjà reçu) : le maker-checker ne s'y applique pas de la même façon et reste à évaluer.
 - Antivirus/scan de contenu sur les documents déposés — **partiellement fait** : les documents sont
   désormais scannés en clamd (`ClamAvService`) avant d'être persistés, en échec fermé (un scan
   indisponible refuse l'upload plutôt que de le laisser passer), désactivé par défaut comme l'OIDC

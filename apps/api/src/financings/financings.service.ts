@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/auth-user.interface';
 import { IdempotencyService } from '../common/idempotency.service';
 import { buildAmortizationSchedule, validateAvailableAmount, validateImpact } from '../finance-policy';
@@ -91,9 +91,22 @@ export class FinancingsService {
 
   async executeDisbursement(user: AuthenticatedUser, id: string, disbursementId: string, dto: ExecuteDisbursementDto) {
     await this.get(id);
-    const updated = await this.financings.executeDisbursement(id, disbursementId, user.sub, dto);
-    if (!updated) throw new ConflictException('Disbursement is not in PREVU status');
-    return this.get(id);
+    const result = await this.financings.executeDisbursement(id, disbursementId, user.sub, dto);
+    switch (result.outcome) {
+      case 'NOT_FOUND':
+        throw new NotFoundException('Disbursement not found');
+      case 'INVALID_STATE':
+        throw new ConflictException('Disbursement is not in PREVU status');
+      case 'SELF_APPROVAL':
+        // Maker-checker (axe E5, docs/14-ROADMAP-SAAS-PREMIUM.md): the person who planned this
+        // disbursement cannot also be the one who executes it - money never leaves on a single
+        // person's decision. A different DIRECTION_FODIP user must confirm it.
+        throw new ForbiddenException(
+          'Maker-checker: a disbursement cannot be executed by the same user who planned it',
+        );
+      case 'OK':
+        return this.get(id);
+    }
   }
 
   async createRepayment(user: AuthenticatedUser, id: string, dto: CreateRepaymentDto, idempotencyKey?: string) {
