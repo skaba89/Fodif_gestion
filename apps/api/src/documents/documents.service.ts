@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -92,9 +93,20 @@ export class DocumentsService {
     if (statut !== 'VALIDE' && !commentaire?.trim()) {
       throw new BadRequestException('A comment is required when a document is not validated');
     }
-    const updated = await this.documents.verify(documentId, user.sub, statut, commentaire?.trim());
-    if (!updated) throw new NotFoundException('Document not found');
-    return { id: documentId, statutVerification: statut, verificationComment: commentaire?.trim() ?? null };
+    const result = await this.documents.verify(documentId, user.sub, statut, commentaire?.trim());
+    switch (result.outcome) {
+      case 'NOT_FOUND':
+        throw new NotFoundException('Document not found');
+      case 'SUPERSEDED':
+        // Axe E6 (versioning, docs/14-ROADMAP-SAAS-PREMIUM.md): the PME uploaded a newer version
+        // of this document since it was loaded - verifying this one would leave the actually
+        // current one unreviewed.
+        throw new ConflictException(
+          'This document has been replaced by a newer version since it was loaded. Review the current version instead.',
+        );
+      case 'OK':
+        return { id: documentId, statutVerification: statut, verificationComment: commentaire?.trim() ?? null };
+    }
   }
 
   private async scanForMalware(buffer: Buffer): Promise<void> {

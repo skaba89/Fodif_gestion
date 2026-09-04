@@ -65,9 +65,11 @@ export class CommitteeRepository {
         [id],
       ),
       this.db.query(
+        // Axe E6 (versioning, docs/14-ROADMAP-SAAS-PREMIUM.md) - only the current version, same
+        // reasoning as agent-applications.repository.ts's identical query.
         `SELECT id, type_document AS "typeDocument", nom_fichier AS "nomFichier",
           statut_verification AS "statutVerification"
-         FROM dossier_documents WHERE dossier_id = $1 ORDER BY created_at DESC`,
+         FROM dossier_documents WHERE dossier_id = $1 AND superseded_by IS NULL ORDER BY created_at DESC`,
         [id],
       ),
       this.db.query(

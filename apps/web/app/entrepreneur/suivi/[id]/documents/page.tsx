@@ -11,6 +11,10 @@ type Document = {
   tailleOctets: string | number;
   statutVerification: string;
   verificationComment?: string | null;
+  // Axe E6 (docs/14-ROADMAP-SAAS-PREMIUM.md) - set once a later upload of the same type replaces
+  // this document. This page intentionally keeps showing every version (unlike the agent/comité
+  // views, which only ever see the current one) so a PME can see its own upload history.
+  supersededBy?: string | null;
 };
 
 const documentTypes = [
@@ -81,7 +85,10 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
       <table className={styles.table}><thead><tr><th>Type</th><th>Fichier</th><th>Taille</th><th>Statut</th><th>Contrôle</th><th>Action</th></tr></thead>
         <tbody>{documents.map((document) => <tr key={document.id}>
           <td>{document.typeDocument}</td>
-          <td><strong>{document.nomFichier}</strong></td>
+          <td>
+            <strong>{document.nomFichier}</strong>
+            {document.supersededBy && <> <span className={styles.pillMuted}>Remplacé</span></>}
+          </td>
           <td>{(Number(document.tailleOctets) / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} Ko</td>
           <td><span className={styles.pill}>{document.statutVerification}</span></td>
           <td>{document.verificationComment ?? '—'}</td>
