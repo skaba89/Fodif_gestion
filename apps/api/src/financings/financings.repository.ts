@@ -21,6 +21,15 @@ interface PaymentContextRow extends QueryResultRow {
   montantPaye: string;
 }
 
+// Axe E5 (docs/14-ROADMAP-SAAS-PREMIUM.md) - maker-checker on disbursement execution. A
+// discriminated result rather than null/throw: three distinct reasons nothing happened need three
+// distinct HTTP responses (404/409/403), and FinancingsService is where that translation belongs.
+export type ExecuteDisbursementOutcome =
+  | { outcome: 'NOT_FOUND' }
+  | { outcome: 'INVALID_STATE' }
+  | { outcome: 'SELF_APPROVAL' }
+  | { outcome: 'OK'; id: string };
+
 @Injectable()
 export class FinancingsRepository {
   constructor(private readonly db: DatabaseService) {}
@@ -210,22 +219,36 @@ export class FinancingsRepository {
     });
   }
 
-  async executeDisbursement(financingId: string, disbursementId: string, userId: string, dto: ExecuteDisbursementDto) {
-    const result = await this.db.query(
-      `WITH updated AS (
-        UPDATE decaissements SET statut = 'EFFECTUE', date_effective = $4, reference_bancaire = $5
-        WHERE id = $2 AND financement_id = $1 AND statut = 'PREVU'
-        RETURNING id, montant
-      ), audit AS (
-        INSERT INTO audit_logs (utilisateur_id, action, entity_type, entity_id, old_values, new_values)
-        SELECT $3, 'EXECUTE_DISBURSEMENT', 'DECAISSEMENT', id,
-          jsonb_build_object('statut', 'PREVU'),
-          jsonb_build_object('financementId', $1, 'statut', 'EFFECTUE', 'montant', montant, 'reference', $5)
-        FROM updated
-      ) SELECT id FROM updated`,
-      [financingId, disbursementId, userId, dto.dateEffective, dto.referenceBancaire.trim()],
-    );
-    return result.rows[0] ?? null;
+  async executeDisbursement(
+    financingId: string, disbursementId: string, userId: string, dto: ExecuteDisbursementDto,
+  ): Promise<ExecuteDisbursementOutcome> {
+    return this.db.transaction(async (client) => {
+      // Locked and read first, rather than folding everything into one UPDATE ... WHERE, so the
+      // service layer can tell apart *why* nothing happened: not found, already executed/cancelled,
+      // or the maker-checker rule itself (same person cannot plan and execute the same
+      // disbursement - axe E5, docs/14-ROADMAP-SAAS-PREMIUM.md) - three different HTTP responses,
+      // not one generic conflict.
+      const locked = await client.query<{ createdBy: string | null; statut: string }>(
+        `SELECT created_by AS "createdBy", statut FROM decaissements
+         WHERE id = $1 AND financement_id = $2 FOR UPDATE`,
+        [disbursementId, financingId],
+      );
+      if (!locked.rows[0]) return { outcome: 'NOT_FOUND' };
+      if (locked.rows[0].statut !== 'PREVU') return { outcome: 'INVALID_STATE' };
+      if (locked.rows[0].createdBy && locked.rows[0].createdBy === userId) return { outcome: 'SELF_APPROVAL' };
+
+      const updated = await client.query<{ id: string; montant: string }>(
+        `UPDATE decaissements SET statut = 'EFFECTUE', date_effective = $3, reference_bancaire = $4, executed_by = $5
+         WHERE id = $1 AND financement_id = $2
+         RETURNING id, montant`,
+        [disbursementId, financingId, dto.dateEffective, dto.referenceBancaire.trim(), userId],
+      );
+      const row = updated.rows[0];
+      await this.audit(client, userId, 'EXECUTE_DISBURSEMENT', 'DECAISSEMENT', row.id,
+        { statut: 'PREVU' },
+        { financementId: financingId, statut: 'EFFECTUE', montant: row.montant, reference: dto.referenceBancaire.trim() });
+      return { outcome: 'OK', id: row.id };
+    });
   }
 
   async createRepayment(financingId: string, userId: string, dto: CreateRepaymentDto) {

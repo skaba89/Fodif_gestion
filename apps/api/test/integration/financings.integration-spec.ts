@@ -7,7 +7,7 @@
  * out. Every test here runs the real FinancingsService + FinancingsRepository + DatabaseService
  * against a disposable postgres:16.10-alpine container (see support/database.ts).
  */
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { AuthenticatedUser } from '../../src/auth/auth-user.interface';
 import { IdempotencyService } from '../../src/common/idempotency.service';
 import { FinancingsRepository } from '../../src/financings/financings.repository';
@@ -142,6 +142,13 @@ describe('Financings lifecycle (real PostgreSQL)', () => {
   });
 
   describe('executeDisbursement', () => {
+    let checker: AuthenticatedUser;
+
+    beforeEach(async () => {
+      const agent = await seedUser(integrationDb.pool);
+      checker = { sub: agent.id, email: 'checker@fodip.test', roles: ['DIRECTION_FODIP'], permissions: [] };
+    });
+
     async function planReadyDisbursement(montantAccorde: number, montant: number) {
       const dossier = await seedEligibleDossier(integrationDb.pool, { montantApprouve: montantAccorde });
       const financing = await service.createFromApplication(user, dossier.dossierId, { dateSignature: '2026-09-02', dateDebut: '2026-10-01' });
@@ -150,11 +157,14 @@ describe('Financings lifecycle (real PostgreSQL)', () => {
       return { financingId: financing.id, disbursementId: disbursement.id };
     }
 
+    // Axe E5 (docs/14-ROADMAP-SAAS-PREMIUM.md) - maker-checker: the person who planned this
+    // disbursement (`user`) is not the one confirming it below (`checker`) in any of these tests
+    // except the two dedicated to the rule itself.
     it('forbidden transition: executing an already-EFFECTUE disbursement is rejected', async () => {
       const { financingId, disbursementId } = await planReadyDisbursement(1_000_000, 300_000);
-      await service.executeDisbursement(user, financingId, disbursementId, { dateEffective: '2026-10-06', referenceBancaire: 'REF-1' });
+      await service.executeDisbursement(checker, financingId, disbursementId, { dateEffective: '2026-10-06', referenceBancaire: 'REF-1' });
 
-      await expect(service.executeDisbursement(user, financingId, disbursementId, { dateEffective: '2026-10-07', referenceBancaire: 'REF-2' }))
+      await expect(service.executeDisbursement(checker, financingId, disbursementId, { dateEffective: '2026-10-07', referenceBancaire: 'REF-2' }))
         .rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -162,8 +172,8 @@ describe('Financings lifecycle (real PostgreSQL)', () => {
       const { financingId, disbursementId } = await planReadyDisbursement(1_000_000, 300_000);
 
       const results = await Promise.allSettled([
-        service.executeDisbursement(user, financingId, disbursementId, { dateEffective: '2026-10-06', referenceBancaire: 'REF-A' }),
-        service.executeDisbursement(user, financingId, disbursementId, { dateEffective: '2026-10-06', referenceBancaire: 'REF-B' }),
+        service.executeDisbursement(checker, financingId, disbursementId, { dateEffective: '2026-10-06', referenceBancaire: 'REF-A' }),
+        service.executeDisbursement(checker, financingId, disbursementId, { dateEffective: '2026-10-06', referenceBancaire: 'REF-B' }),
       ]);
 
       expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
@@ -174,6 +184,47 @@ describe('Financings lifecycle (real PostgreSQL)', () => {
       );
       expect(executed.rows).toHaveLength(1);
       expect(['REF-A', 'REF-B']).toContain(executed.rows[0].reference_bancaire);
+    });
+
+    it('maker-checker: the user who planned the disbursement cannot also execute it', async () => {
+      const { financingId, disbursementId } = await planReadyDisbursement(1_000_000, 300_000);
+
+      await expect(service.executeDisbursement(user, financingId, disbursementId, { dateEffective: '2026-10-06', referenceBancaire: 'REF-1' }))
+        .rejects.toBeInstanceOf(ForbiddenException);
+
+      // Refused before any write - still PREVU, no executed_by recorded, no audit trail for a
+      // self-approved execution that never actually happened.
+      const row = await integrationDb.pool.query(
+        `SELECT statut, executed_by AS "executedBy" FROM decaissements WHERE id = $1`, [disbursementId],
+      );
+      expect(row.rows[0]).toEqual({ statut: 'PREVU', executedBy: null });
+    });
+
+    it('maker-checker: a different user (checker) can execute what another user (maker) planned, and it is recorded', async () => {
+      const { financingId, disbursementId } = await planReadyDisbursement(1_000_000, 300_000);
+
+      await service.executeDisbursement(checker, financingId, disbursementId, { dateEffective: '2026-10-06', referenceBancaire: 'REF-1' });
+
+      const row = await integrationDb.pool.query(
+        `SELECT statut, executed_by AS "executedBy", created_by AS "createdBy" FROM decaissements WHERE id = $1`, [disbursementId],
+      );
+      expect(row.rows[0].statut).toBe('EFFECTUE');
+      expect(row.rows[0].executedBy).toBe(checker.sub);
+      expect(row.rows[0].createdBy).toBe(user.sub);
+      expect(row.rows[0].executedBy).not.toBe(row.rows[0].createdBy);
+    });
+
+    it('the database itself enforces maker-checker (ck_decaissements_maker_checker), not just the application', async () => {
+      const { disbursementId } = await planReadyDisbursement(1_000_000, 300_000);
+      const planner = await integrationDb.pool.query(`SELECT created_by AS "createdBy" FROM decaissements WHERE id = $1`, [disbursementId]);
+
+      await expect(
+        integrationDb.pool.query(
+          `UPDATE decaissements SET statut = 'EFFECTUE', date_effective = '2026-10-06', reference_bancaire = 'REF-X', executed_by = $2
+           WHERE id = $1`,
+          [disbursementId, planner.rows[0].createdBy],
+        ),
+      ).rejects.toThrow(/ck_decaissements_maker_checker/);
     });
   });
 
