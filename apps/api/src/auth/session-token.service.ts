@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -23,6 +24,10 @@ export class SessionTokenService {
       permissions: user.permissions,
       entrepriseId: user.entrepriseId,
       partenaireBancaireId: user.partenaireBancaireId,
+      // Axe E4 (session revocation, docs/14-ROADMAP-SAAS-PREMIUM.md) - identifies this specific
+      // token so POST /auth/logout can revoke it individually, without affecting any other active
+      // session for the same account.
+      jti: randomUUID(),
     };
 
     const accessToken = await this.jwtService.signAsync(payload);

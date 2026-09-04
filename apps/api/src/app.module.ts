@@ -13,6 +13,7 @@ import { CommitteeModule } from './committee/committee.module';
 import { AuthorizationGuard } from './common/guards/authorization.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { RevocationModule } from './common/revocation/revocation.module';
 import { DatabaseModule } from './database/database.module';
 import { DataRightsModule } from './data-rights/data-rights.module';
 import { DocumentsModule } from './documents/documents.module';
@@ -31,6 +32,7 @@ import { ScoringModule } from './scoring/scoring.module';
     // /auth/login override this with a stricter per-route @Throttle().
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 300 }]),
     DatabaseModule,
+    RevocationModule,
     AdministrationModule,
     AuthModule,
     CompaniesModule,
