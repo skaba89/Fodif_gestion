@@ -89,6 +89,10 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-fodip}:${POSTGRES_PASSWORD:-fodip_local_dev}@postgres:5432/${POSTGRES_DB:-fodip}
       DATABASE_SSL: "false"
       JWT_SECRET: ${JWT_SECRET:-fodip-local-docker-jwt-secret-change-before-hosting}
+      # Optional, axis E4 (key rotation) - set to JWT_SECRET's previous value while rotating so
+      # tokens already handed out keep verifying; unset once the rotation window is over. See
+      # .env.example.
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
       JWT_ISSUER: fodip-digital-2030
       JWT_AUDIENCE: fodip-web
       JWT_ACCESS_TTL: 15m
