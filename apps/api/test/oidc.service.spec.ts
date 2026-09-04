@@ -24,9 +24,27 @@ const ENABLED_ENV: Record<string, string> = {
   OIDC_REDIRECT_URI: 'https://api.example.org/api/v1/auth/oidc/callback',
 };
 
-function makeService(env: Record<string, string> = ENABLED_ENV) {
+// Axe E4 (durcissement OIDC) - a minimal in-memory stand-in for oidc_delivery_tokens_used's
+// claim-once behavior (INSERT ... ON CONFLICT DO NOTHING): the real concurrency-safety guarantee
+// (a real UNIQUE constraint under real concurrent claims) is proven separately against a real
+// database in test/integration/oidc.integration-spec.ts.
+function fakeDb() {
+  const claimed = new Set<string>();
+  const query = jest.fn(async (sql: string, values: unknown[] = []) => {
+    if (sql.startsWith('INSERT INTO oidc_delivery_tokens_used')) {
+      const jti = values[0] as string;
+      if (claimed.has(jti)) return { rowCount: 0 };
+      claimed.add(jti);
+      return { rowCount: 1 };
+    }
+    return { rowCount: 0 };
+  });
+  return { query };
+}
+
+function makeService(env: Record<string, string> = ENABLED_ENV, db: { query: jest.Mock } = fakeDb()) {
   const config = { get: (key: string) => env[key] } as ConfigService;
-  return new OidcService(config, new JwtService());
+  return new OidcService(config, new JwtService(), db as never);
 }
 
 describe('OidcService', () => {
@@ -135,6 +153,42 @@ describe('OidcService', () => {
         return (await service.beginAuthorization('direction')).flowCookie;
       })();
       await expect(service.resolveDeliveryToken(flowCookie)).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    // Axe E4 (durcissement OIDC) - the delivery token travels via a redirect URL query string
+    // (browser history, access logs) - a genuinely exposed channel, so redemption must be
+    // single-use, not just signature/expiry-checked.
+    describe('replay protection', () => {
+      it('rejects a second exchange of the same token, even though it has not expired', async () => {
+        const db = fakeDb();
+        const service = makeService(ENABLED_ENV, db);
+        const token = await service.issueDeliveryToken('user-42');
+
+        await expect(service.resolveDeliveryToken(token)).resolves.toBe('user-42');
+        await expect(service.resolveDeliveryToken(token)).rejects.toBeInstanceOf(UnauthorizedException);
+      });
+
+      it('claims the jti in oidc_delivery_tokens_used exactly once', async () => {
+        const db = fakeDb();
+        const service = makeService(ENABLED_ENV, db);
+        const token = await service.issueDeliveryToken('user-42');
+
+        await service.resolveDeliveryToken(token).catch(() => undefined);
+        await service.resolveDeliveryToken(token).catch(() => undefined);
+
+        const claims = db.query.mock.calls.filter(([sql]) => (sql as string).startsWith('INSERT INTO oidc_delivery_tokens_used'));
+        expect(claims).toHaveLength(2); // attempted twice
+      });
+
+      it('lets two different delivery tokens for the same user each be redeemed once', async () => {
+        const db = fakeDb();
+        const service = makeService(ENABLED_ENV, db);
+        const tokenA = await service.issueDeliveryToken('user-42');
+        const tokenB = await service.issueDeliveryToken('user-42');
+
+        await expect(service.resolveDeliveryToken(tokenA)).resolves.toBe('user-42');
+        await expect(service.resolveDeliveryToken(tokenB)).resolves.toBe('user-42');
+      });
     });
   });
 
