@@ -112,11 +112,10 @@ services:
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
     ports:
       - "${API_PORT:-4000}:4000"
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+    # Axe E7 (docs/14-ROADMAP-SAAS-PREMIUM.md) - no `healthcheck:` override here on purpose: the
+    # image itself now carries this exact check (apps/api/Dockerfile's own HEALTHCHECK), which
+    # Compose applies automatically when a service doesn't redefine one. `depends_on: condition:
+    # service_healthy` below still works against it the same way an override would.
 
   web:
     build:

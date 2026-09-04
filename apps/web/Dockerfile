@@ -54,6 +54,17 @@ COPY --chown=node:node --from=build /app/deploy/.next ./.next
 COPY --chown=node:node --from=build /app/deploy/public ./public
 USER node
 EXPOSE 3000
+# Sprint Enterprise 0, axe E7 (architecture Docker entreprise, docs/14-ROADMAP-SAAS-PREMIUM.md) -
+# unlike the api service, docker-compose.yml never gave `web` a healthcheck at all - baked in here
+# instead, so it works the same way for `docker run` standalone, `docker ps`'s STATUS column, and
+# a Kubernetes liveness/readiness probe, none of which read docker-compose.yml. Reads PORT from
+# the process environment itself (JSON/exec form CMD, not shell form - no ${...} shell
+# substitution happens here), so it checks whatever port the container is actually bound to,
+# Render's own assigned PORT included, not a value hardcoded independently of the CMD below.
+# `/` (the public landing page - accueil institutionnel) rather than an API route: this image
+# serves no API of its own to check, and `/` needs no session/cookie to load successfully.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=12 \
+  CMD ["node", "-e", "fetch('http://localhost:'+(process.env.PORT||3000)+'/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 # Shell form (not exec/JSON form) so ${PORT} is actually substituted: docker-compose never sets
 # it (falls back to 3000, unchanged), but a host like Render assigns its own PORT and expects the
 # container to bind to it.
