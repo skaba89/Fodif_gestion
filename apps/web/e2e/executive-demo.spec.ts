@@ -58,6 +58,17 @@ async function login(page: Page, path: string, email: string, password: string):
   return secret;
 }
 
+/** Waits out whatever remains of the current 30s TOTP step, so the next generated code both
+ * matches the server's real clock (no forward-skew tolerance to rely on) and is guaranteed to be
+ * on a step nothing has used yet - the only fix that holds for any number of loginWithMfa calls on
+ * the same account, unlike guessing a fixed number of steps ahead (a code more than one step in
+ * the future is simply invalid, not merely "already used" - found the hard way, projecting further
+ * into the future to dodge a replay broke verification outright instead). */
+async function waitForFreshTotpStep(page: Page) {
+  const period = 30_000;
+  await page.waitForTimeout(period - (Date.now() % period) + 250);
+}
+
 /** Logs back in as an already-enrolled account (verification challenge, not enrollment). */
 async function loginWithMfa(page: Page, path: string, email: string, password: string, secret: string) {
   await page.goto(path);
@@ -65,9 +76,11 @@ async function loginWithMfa(page: Page, path: string, email: string, password: s
   await page.getByLabel('Mot de passe').fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.getByText('Saisissez le code à 6 chiffres')).toBeVisible();
-  // A code is single-use (mfa_last_used_step) - the enrollment code already consumed its 30s
-  // step, so force one from the next step rather than waiting out a real 30s window.
-  await page.getByLabel('Code à 6 chiffres').fill(codeFor(secret, Date.now() + 30_000));
+  // The enrollment code (codeFor(secret), i.e. the step at enrollment time) already consumed its
+  // step - wait for a genuinely new one rather than assuming a fixed number of steps have or
+  // haven't already elapsed since enrollment or since this account's last verification.
+  await waitForFreshTotpStep(page);
+  await page.getByLabel('Code à 6 chiffres').fill(codeFor(secret));
   await page.getByRole('button', { name: 'Se connecter' }).click();
 }
 
@@ -77,14 +90,22 @@ async function logout(page: Page) {
 
 test.describe('Scénario de démonstration Direction générale', () => {
   test('accueil, connexion Direction + MFA, cockpit filtré, cycle complet PME -> financement -> impact', async ({ page, baseURL }) => {
+    // Axe E5 (maker-checker, docs/14-ROADMAP-SAAS-PREMIUM.md) added a second Direction officer and
+    // an extra MFA verification mid-scenario (see waitForFreshTotpStep above) - each
+    // loginWithMfa call now genuinely waits out up to one real 30s TOTP step, on top of this
+    // scenario's own already-substantial real workload (11 steps, 5 accounts). The default 30s
+    // suite-wide timeout (playwright.config.ts) was already tight for this one test before that.
+    test.setTimeout(150_000);
     const admin = await playwrightRequest.newContext({ baseURL });
     const adminLogin = await admin.post('/api/session/login', { data: { email: 'admin@fodip.local', password: DEMO_PASSWORD } });
     expect(adminLogin.ok(), 'admin login for test setup').toBeTruthy();
 
     const stamp = Date.now();
     const password = 'DemoE2E!Scenario2026';
-    async function createDemoUser(roleCode: string, nom: string, extra: Record<string, unknown> = {}) {
-      const email = `demo.${roleCode.toLowerCase()}.${stamp}@fodip.local`;
+    // emailTag defaults to the role code, but two demo accounts sharing the same role (direction
+    // and direction2 below, for maker-checker) need distinct emails despite the same stamp.
+    async function createDemoUser(roleCode: string, nom: string, extra: Record<string, unknown> = {}, emailTag = roleCode.toLowerCase()) {
+      const email = `demo.${emailTag}.${stamp}@fodip.local`;
       const created = await admin.post('/api/administration/users', {
         data: { email, nom, password, roles: [roleCode], ...extra },
       });
@@ -94,10 +115,14 @@ test.describe('Scénario de démonstration Direction générale', () => {
     }
 
     const direction = await createDemoUser('DIRECTION_FODIP', 'Démo Direction');
+    // Axe E5 (maker-checker, docs/14-ROADMAP-SAAS-PREMIUM.md) - a second Direction officer, used
+    // below to confirm the disbursement `direction` plans: financings.repository.ts
+    // #executeDisbursement now refuses to let the same user do both.
+    const direction2 = await createDemoUser('DIRECTION_FODIP', 'Démo Direction (contrôle)', {}, 'direction_fodip_checker');
     const pme = await createDemoUser('PME', 'Démo PME', { entrepriseId: DEMO_ENTREPRISE_ID });
     const agent = await createDemoUser('AGENT_FODIP', 'Démo Agent');
     const comite = await createDemoUser('COMITE_FINANCEMENT', 'Démo Comité');
-    const userIds = [direction.id, pme.id, agent.id, comite.id];
+    const userIds = [direction.id, direction2.id, pme.id, agent.id, comite.id];
 
     try {
       // --- 1. Accueil institutionnel ---
@@ -187,15 +212,34 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await page.locator('tr', { hasText: numeroDossier }).getByRole('link', { name: 'Gérer' }).click();
       await expect(page).toHaveURL(/\/direction\/financements\/[0-9a-f-]+$/);
       await expect(page.getByRole('heading', { name: /^FIN-/ })).toBeVisible();
+      const financingUrl = page.url();
 
       // --- 9. Décaissements ---
       await page.getByLabel(/Montant à planifier/).fill('150000000');
       await page.getByRole('button', { name: 'Planifier' }).click();
       await expect(page.getByText('Décaissement planifié et audité.')).toBeVisible();
-      const disbursementRow = page.locator('tbody tr', { hasText: 'PREVU' }).first();
-      await disbursementRow.getByLabel('Référence').fill('DEMO-DG-DEC-001');
-      await disbursementRow.getByRole('button', { name: 'Confirmer aujourd’hui' }).click();
+
+      // Maker-checker (axe E5): `direction` planned this disbursement, so `direction` cannot also
+      // confirm it - a second Direction officer must. Switch to `direction2` for this one action,
+      // then switch back to continue the rest of the demo as `direction`.
+      await logout(page);
+      await expect(page).toHaveURL(/\/direction\/connexion$/);
+      const direction2Secret = await login(page, '/direction/connexion', direction2.email, password);
+      expect(direction2Secret, 'DIRECTION_FODIP is a privileged role - MFA enrollment was expected').toBeTruthy();
+      await expect(page).toHaveURL(/\/direction\/tableau-de-bord$/);
+      await page.goto(financingUrl);
+      await expect(page.getByRole('heading', { name: /^FIN-/ })).toBeVisible();
+      const disbursementRowAsChecker = page.locator('tbody tr', { hasText: 'PREVU' }).first();
+      await disbursementRowAsChecker.getByLabel('Référence').fill('DEMO-DG-DEC-001');
+      await disbursementRowAsChecker.getByRole('button', { name: 'Confirmer aujourd’hui' }).click();
       await expect(page.getByText('Décaissement confirmé et intégré au cockpit.')).toBeVisible();
+      await logout(page);
+      await expect(page).toHaveURL(/\/direction\/connexion$/);
+
+      await loginWithMfa(page, '/direction/connexion', direction.email, password, directionSecret!);
+      await expect(page).toHaveURL(/\/direction\/tableau-de-bord$/);
+      await page.goto(financingUrl);
+      await expect(page.getByRole('heading', { name: /^FIN-/ })).toBeVisible();
 
       // --- 10. Remboursements ---
       await page.getByLabel('Montant payé').fill('5000000');
