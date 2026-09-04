@@ -10,6 +10,7 @@
  */
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { AuthenticatedUser } from '../../src/auth/auth-user.interface';
+import { IdempotencyService } from '../../src/common/idempotency.service';
 import { FinancingsRepository } from '../../src/financings/financings.repository';
 import { FinancingsService } from '../../src/financings/financings.service';
 import { PartnerRepository } from '../../src/partner/partner.repository';
@@ -28,9 +29,9 @@ describe('Partner bank portal (real PostgreSQL)', () => {
   beforeAll(async () => {
     integrationDb = await startIntegrationDatabase();
     financingsRepository = new FinancingsRepository(integrationDb.db);
-    financingsService = new FinancingsService(financingsRepository);
+    financingsService = new FinancingsService(financingsRepository, new IdempotencyService(integrationDb.db));
     repository = new PartnerRepository(integrationDb.db);
-    service = new PartnerService(repository);
+    service = new PartnerService(repository, new IdempotencyService(integrationDb.db));
   }, 120_000);
 
   afterAll(async () => {
@@ -168,6 +169,25 @@ describe('Partner bank portal (real PostgreSQL)', () => {
       expect(audit.rows).toHaveLength(1);
       expect(audit.rows[0].action).toBe('PARTNER_DECLARE_DISBURSEMENT');
       expect(audit.rows[0].newValues.partenaireId).toBe(bank.id);
+    });
+
+    // Axe E5 - same protection as financings.integration-spec.ts's own "idempotency key
+    // protection" block, verified here too since PartnerService has its own separate write path
+    // (partner.repository.ts), not a thin wrapper around FinancingsService.
+    it('idempotency key protection: the same key resent creates exactly one decaissement, not two', async () => {
+      const bank = await seedPartnerBank(integrationDb.pool);
+      const financing = await createRealFinancing(1_000_000);
+      await scopeAsCorrespondentBank(financing.id, bank.id);
+      const dto = { montant: 300_000, dateEffective: '2026-10-05', referenceBancaire: 'REF-IDEMPOTENT' };
+
+      const first = await service.createDisbursement(partnerUser(bank.id), financing.id, dto, 'partner-retry-1');
+      const second = await service.createDisbursement(partnerUser(bank.id), financing.id, dto, 'partner-retry-1');
+
+      expect(JSON.parse(JSON.stringify(second))).toEqual(JSON.parse(JSON.stringify(first)));
+      const rows = await integrationDb.pool.query(
+        `SELECT COUNT(*)::int AS total FROM decaissements WHERE financement_id = $1`, [financing.id],
+      );
+      expect(rows.rows[0].total).toBe(1);
     });
   });
 

@@ -23,6 +23,20 @@ export function publicBackendUrl(path: string): string {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
+/**
+ * Sprint Enterprise 0, axe E5 (intégrité financière, docs/14-ROADMAP-SAAS-PREMIUM.md) - forwards
+ * the browser's `Idempotency-Key` header to the backend API, which enforces the actual dedup
+ * (apps/api/src/common/idempotency.service.ts). Without this, a route handler that doesn't
+ * explicitly pass it through `proxyWithSession`'s `init.headers` would silently drop it - the
+ * header would exist on the incoming Next.js request but never reach the API, leaving the
+ * protection wired server-side but inert for every browser call. Only forwards the one header
+ * this axis defined; not a general passthrough of arbitrary incoming headers.
+ */
+export function idempotencyKeyHeaders(request: Request): HeadersInit | undefined {
+  const key = request.headers.get('idempotency-key');
+  return key ? { 'idempotency-key': key } : undefined;
+}
+
 export async function proxyWithSession(path: string, init: RequestInit = {}): Promise<NextResponse> {
   const store = await cookies();
   const token = store.get(ACCESS_COOKIE)?.value;

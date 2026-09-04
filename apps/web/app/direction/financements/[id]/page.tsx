@@ -39,6 +39,14 @@ export default function FinancingDetailPage({ params }: { params: Promise<{ id: 
   const [jobsCreated, setJobsCreated] = useState('');
   const [jobsMaintained, setJobsMaintained] = useState('');
   const [revenue, setRevenue] = useState('');
+  // Axe E5 (docs/14-ROADMAP-SAAS-PREMIUM.md, intégrité financière) - one Idempotency-Key per
+  // submission intent, sent as a header (see lib/backend.ts#idempotencyKeyHeaders and
+  // apps/api/src/common/idempotency.service.ts for the actual enforcement). Regenerated only
+  // after a successful submission, so a double-click or a network retry of the same in-flight
+  // request reuses the same key and cannot create a second décaissement/remboursement, while a
+  // genuinely new submission (after the previous one succeeded) gets a fresh one.
+  const [disbursementKey, setDisbursementKey] = useState(() => crypto.randomUUID());
+  const [repaymentKey, setRepaymentKey] = useState(() => crypto.randomUUID());
 
   const load = useCallback(async () => {
     const response = await fetch(`/api/direction/financements/${id}`, { cache: 'no-store' });
@@ -50,18 +58,24 @@ export default function FinancingDetailPage({ params }: { params: Promise<{ id: 
 
   useEffect(() => { load().catch((error) => setMessage(error.message)); }, [load]);
 
-  async function post(path: string, payload: Record<string, unknown>, success: string) {
+  async function post(path: string, payload: Record<string, unknown>, success: string, idempotencyKey?: string) {
     setMessage('');
-    const response = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
+    const response = await fetch(path, { method: 'POST', headers, body: JSON.stringify(payload) });
     const body = await response.json();
     if (!response.ok) return setMessage(Array.isArray(body.message) ? body.message.join(', ') : body.message ?? 'Opération impossible');
     setFinancing(body); setMessage(success);
+    return true;
   }
 
   async function planDisbursement(event: FormEvent) {
     event.preventDefault();
-    await post(`/api/direction/financements/${id}/decaissements`, { montant: Number(disbursementAmount), datePrevue: plannedDate }, 'Décaissement planifié et audité.');
-    setDisbursementAmount('');
+    const done = await post(
+      `/api/direction/financements/${id}/decaissements`, { montant: Number(disbursementAmount), datePrevue: plannedDate },
+      'Décaissement planifié et audité.', disbursementKey,
+    );
+    if (done) { setDisbursementAmount(''); setDisbursementKey(crypto.randomUUID()); }
   }
 
   async function executeDisbursement(event: FormEvent, disbursementId: string) {
@@ -73,11 +87,11 @@ export default function FinancingDetailPage({ params }: { params: Promise<{ id: 
 
   async function createRepayment(event: FormEvent) {
     event.preventDefault();
-    await post(`/api/direction/financements/${id}/remboursements`, {
+    const done = await post(`/api/direction/financements/${id}/remboursements`, {
       echeanceId: installmentId, montant: Number(repaymentAmount), datePaiement: repaymentDate,
       referencePaiement: repaymentRef || undefined, moyenPaiement: paymentMethod,
-    }, 'Remboursement enregistré et échéance actualisée.');
-    setRepaymentAmount(''); setRepaymentRef('');
+    }, 'Remboursement enregistré et échéance actualisée.', repaymentKey);
+    if (done) { setRepaymentAmount(''); setRepaymentRef(''); setRepaymentKey(crypto.randomUUID()); }
   }
 
   async function saveImpact(event: FormEvent) {
