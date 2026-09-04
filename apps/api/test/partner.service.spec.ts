@@ -6,10 +6,11 @@ const bankUser = {
   permissions: [], partenaireBancaireId: 'bank-1',
 };
 const scopelessUser = { sub: 'x', email: 'x@fodip.local', roles: ['PARTENAIRE_BANCAIRE'], permissions: [] };
+const idempotency = { run: (_scope: string, _key: string | undefined, _user: string, _payload: unknown, handler: () => Promise<unknown>) => handler() };
 
 describe('PartnerService', () => {
   it('rejects any call from an account without a partner bank scope', async () => {
-    const service = new PartnerService({} as never);
+    const service = new PartnerService({} as never, idempotency as never);
     await expect(service.list(scopelessUser, { page: 1, limite: 25 })).rejects.toBeInstanceOf(ForbiddenException);
   });
 
@@ -18,7 +19,7 @@ describe('PartnerService', () => {
       list: jest.fn().mockResolvedValue({ items: [{ id: 'f1', montantAccorde: '1000' }], total: 1, page: 1, limite: 25 }),
       findById: jest.fn().mockResolvedValue({ id: 'f1', montantAccorde: '1000', disbursements: [], installments: [] }),
     };
-    const service = new PartnerService(repository as never);
+    const service = new PartnerService(repository as never, idempotency as never);
 
     await service.list(bankUser, { page: 1, limite: 25 });
     expect(repository.list).toHaveBeenCalledWith('bank-1', { page: 1, limite: 25 });
@@ -30,7 +31,7 @@ describe('PartnerService', () => {
 
   it('throws not found for a financing outside the partner scope (repository returns null)', async () => {
     const repository = { findById: jest.fn().mockResolvedValue(null) };
-    const service = new PartnerService(repository as never);
+    const service = new PartnerService(repository as never, idempotency as never);
     await expect(service.get(bankUser, 'not-mine')).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -38,7 +39,7 @@ describe('PartnerService', () => {
     const repository = { findById: jest.fn().mockResolvedValue({
       id: 'f1', montantAccorde: '1000', disbursements: [{ montant: '800', statut: 'EFFECTUE' }], installments: [],
     }) };
-    const service = new PartnerService(repository as never);
+    const service = new PartnerService(repository as never, idempotency as never);
     await expect(service.createDisbursement(bankUser, 'f1', { montant: 300, dateEffective: '2026-09-10', referenceBancaire: 'REF-1' }))
       .rejects.toBeInstanceOf(BadRequestException);
   });
@@ -48,7 +49,7 @@ describe('PartnerService', () => {
       findById: jest.fn().mockResolvedValue({ id: 'f1', montantAccorde: '1000', disbursements: [], installments: [] }),
       createDisbursement: jest.fn().mockResolvedValue(null),
     };
-    const service = new PartnerService(repository as never);
+    const service = new PartnerService(repository as never, idempotency as never);
     await expect(service.createDisbursement(bankUser, 'f1', { montant: 300, dateEffective: '2026-09-10', referenceBancaire: 'REF-1' }))
       .rejects.toBeInstanceOf(ConflictException);
     expect(repository.createDisbursement).toHaveBeenCalledWith('bank-1', 'f1', 'bank-user-1', expect.objectContaining({ montant: 300 }));
@@ -59,7 +60,7 @@ describe('PartnerService', () => {
       id: 'f1', montantAccorde: '1000', disbursements: [],
       installments: [{ id: 'e1', montantPaye: 90, montantTotalDu: 100 }],
     }) };
-    const service = new PartnerService(repository as never);
+    const service = new PartnerService(repository as never, idempotency as never);
     await expect(service.createRepayment(bankUser, 'f1', { echeanceId: 'e1', montant: 50, datePaiement: '2026-09-10' }))
       .rejects.toBeInstanceOf(BadRequestException);
   });
@@ -68,7 +69,7 @@ describe('PartnerService', () => {
     const repository = { findById: jest.fn().mockResolvedValue({
       id: 'f1', montantAccorde: '1000', disbursements: [], installments: [],
     }) };
-    const service = new PartnerService(repository as never);
+    const service = new PartnerService(repository as never, idempotency as never);
     await expect(service.createRepayment(bankUser, 'f1', { echeanceId: 'not-e1', montant: 10, datePaiement: '2026-09-10' }))
       .rejects.toBeInstanceOf(NotFoundException);
   });

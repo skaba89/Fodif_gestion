@@ -1,6 +1,8 @@
-import { proxyWithSession } from '../../../../../../lib/backend';
+import { idempotencyKeyHeaders, proxyWithSession } from '../../../../../../lib/backend';
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  return proxyWithSession(`/partner/financings/${id}/disbursements`, { method: 'POST', body: await request.text() });
+  return proxyWithSession(`/partner/financings/${id}/disbursements`, {
+    method: 'POST', body: await request.text(), headers: idempotencyKeyHeaders(request),
+  });
 }

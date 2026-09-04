@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/auth-user.interface';
+import { IdempotencyService } from '../common/idempotency.service';
 import { validateAvailableAmount } from '../finance-policy';
 import { CreateRepaymentDto } from '../financings/dto/create-repayment.dto';
 import { CreatePartnerDisbursementDto } from './dto/create-partner-disbursement.dto';
@@ -28,7 +29,10 @@ function normalize<T>(value: T): T {
 
 @Injectable()
 export class PartnerService {
-  constructor(private readonly partner: PartnerRepository) {}
+  constructor(
+    private readonly partner: PartnerRepository,
+    private readonly idempotency: IdempotencyService,
+  ) {}
 
   private partnerId(user: AuthenticatedUser): string {
     if (!user.partenaireBancaireId) throw new ForbiddenException('Partner bank scope is required');
@@ -45,28 +49,32 @@ export class PartnerService {
     return normalize(financing) as unknown as PartnerFinancingDetail;
   }
 
-  async createDisbursement(user: AuthenticatedUser, id: string, dto: CreatePartnerDisbursementDto) {
+  async createDisbursement(user: AuthenticatedUser, id: string, dto: CreatePartnerDisbursementDto, idempotencyKey?: string) {
     const partnerId = this.partnerId(user);
-    const financing = await this.get(user, id);
-    const committed = financing.disbursements
-      .filter((item) => item.statut !== 'ANNULE')
-      .reduce((sum, item) => sum + item.montant, 0);
-    const error = validateAvailableAmount(dto.montant, committed, financing.montantAccorde, 'Disbursement');
-    if (error) throw new BadRequestException(error);
-    const inserted = await this.partner.createDisbursement(partnerId, id, user.sub, dto);
-    if (!inserted) throw new ConflictException('Financing balance changed before disbursement declaration');
-    return this.get(user, id);
+    return this.idempotency.run('partner.create_disbursement', idempotencyKey, user.sub, { id, dto }, async () => {
+      const financing = await this.get(user, id);
+      const committed = financing.disbursements
+        .filter((item) => item.statut !== 'ANNULE')
+        .reduce((sum, item) => sum + item.montant, 0);
+      const error = validateAvailableAmount(dto.montant, committed, financing.montantAccorde, 'Disbursement');
+      if (error) throw new BadRequestException(error);
+      const inserted = await this.partner.createDisbursement(partnerId, id, user.sub, dto);
+      if (!inserted) throw new ConflictException('Financing balance changed before disbursement declaration');
+      return this.get(user, id);
+    });
   }
 
-  async createRepayment(user: AuthenticatedUser, id: string, dto: CreateRepaymentDto) {
+  async createRepayment(user: AuthenticatedUser, id: string, dto: CreateRepaymentDto, idempotencyKey?: string) {
     const partnerId = this.partnerId(user);
-    const financing = await this.get(user, id);
-    const installment = financing.installments.find((item) => item.id === dto.echeanceId);
-    if (!installment) throw new NotFoundException('Installment not found for this financing');
-    const error = validateAvailableAmount(dto.montant, installment.montantPaye, installment.montantTotalDu, 'Repayment');
-    if (error) throw new BadRequestException(error);
-    const inserted = await this.partner.createRepayment(partnerId, id, user.sub, dto);
-    if (!inserted) throw new ConflictException('Installment balance changed before repayment declaration');
-    return this.get(user, id);
+    return this.idempotency.run('partner.create_repayment', idempotencyKey, user.sub, { id, dto }, async () => {
+      const financing = await this.get(user, id);
+      const installment = financing.installments.find((item) => item.id === dto.echeanceId);
+      if (!installment) throw new NotFoundException('Installment not found for this financing');
+      const error = validateAvailableAmount(dto.montant, installment.montantPaye, installment.montantTotalDu, 'Repayment');
+      if (error) throw new BadRequestException(error);
+      const inserted = await this.partner.createRepayment(partnerId, id, user.sub, dto);
+      if (!inserted) throw new ConflictException('Installment balance changed before repayment declaration');
+      return this.get(user, id);
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AuthenticatedUser } from '../auth/auth-user.interface';
@@ -50,7 +50,8 @@ export class FinancingsController {
     @Req() request: AuthenticatedRequest,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: PlanDisbursementDto,
-  ) { return this.financings.planDisbursement(request.user, id, dto); }
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) { return this.financings.planDisbursement(request.user, id, dto, idempotencyKey); }
 
   @Post(':id/disbursements/:disbursementId/execute')
   @RequirePermissions('disbursement.manage')
@@ -67,7 +68,8 @@ export class FinancingsController {
     @Req() request: AuthenticatedRequest,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: CreateRepaymentDto,
-  ) { return this.financings.createRepayment(request.user, id, dto); }
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) { return this.financings.createRepayment(request.user, id, dto, idempotencyKey); }
 
   @Post(':id/impact')
   @RequirePermissions('impact.manage')

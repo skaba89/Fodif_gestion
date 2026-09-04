@@ -9,6 +9,7 @@
  */
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { AuthenticatedUser } from '../../src/auth/auth-user.interface';
+import { IdempotencyService } from '../../src/common/idempotency.service';
 import { FinancingsRepository } from '../../src/financings/financings.repository';
 import { FinancingsService } from '../../src/financings/financings.service';
 import { seedEligibleDossier, seedUser } from './support/fixtures';
@@ -23,7 +24,7 @@ describe('Financings lifecycle (real PostgreSQL)', () => {
   beforeAll(async () => {
     integrationDb = await startIntegrationDatabase();
     repository = new FinancingsRepository(integrationDb.db);
-    service = new FinancingsService(repository);
+    service = new FinancingsService(repository, new IdempotencyService(integrationDb.db));
   }, 120_000);
 
   afterAll(async () => {
@@ -228,6 +229,102 @@ describe('Financings lifecycle (real PostgreSQL)', () => {
       const afterSecond = await service.createRepayment(user, financingId, { echeanceId: installment.id, montant: remaining, datePaiement: '2026-11-02' });
       const secondInstallment = afterSecond.installments.find((item) => item.id === installment.id) as { statut?: string };
       expect(secondInstallment?.statut).toBe('PAYEE');
+    });
+  });
+
+  // Axe E5 (docs/14-ROADMAP-SAAS-PREMIUM.md, intégrité financière) - distinct from the "concurrent
+  // requests" tests above, which cover two DIFFERENT legitimate submissions racing each other over
+  // a shared balance. These cover the other real risk: the SAME submission (same Idempotency-Key)
+  // arriving twice - a double click, or a browser retrying a POST after a timeout that actually
+  // reached the server. Without this, both calls above would each create their own row as long as
+  // the combined total still fit under the ceiling: a real double-spend, not a business rejection.
+  describe('idempotency key protection', () => {
+    it('planDisbursement: the same key resent sequentially creates exactly one decaissement and replays the first response', async () => {
+      const dossier = await seedEligibleDossier(integrationDb.pool, { montantApprouve: 1_000_000, dureeMois: 12 });
+      const financing = await service.createFromApplication(user, dossier.dossierId, { dateSignature: '2026-09-02', dateDebut: '2026-10-01' });
+      const dto = { montant: 400_000, datePrevue: '2026-10-05' };
+
+      const first = await service.planDisbursement(user, financing.id, dto, 'retry-key-1');
+      const second = await service.planDisbursement(user, financing.id, dto, 'retry-key-1');
+
+      // JSON-normalized comparison, not toEqual(first) directly: the real response is what an
+      // HTTP client actually receives - always JSON over the wire, replayed or not. The replayed
+      // response really did round-trip through the idempotency_keys.corps_reponse JSONB column
+      // (Date -> ISO string), while `first` still holds the freshly-computed in-process Date
+      // objects; comparing those directly would fail for a reason that never reaches a real
+      // caller, since Nest's own response pipeline JSON-serializes every response identically.
+      expect(JSON.parse(JSON.stringify(second))).toEqual(JSON.parse(JSON.stringify(first)));
+      const rows = await integrationDb.pool.query(
+        `SELECT COUNT(*)::int AS total FROM decaissements WHERE financement_id = $1`, [financing.id],
+      );
+      expect(rows.rows[0].total).toBe(1);
+    });
+
+    it('planDisbursement: the same key sent concurrently still only creates one decaissement', async () => {
+      const dossier = await seedEligibleDossier(integrationDb.pool, { montantApprouve: 1_000_000, dureeMois: 12 });
+      const financing = await service.createFromApplication(user, dossier.dossierId, { dateSignature: '2026-09-02', dateDebut: '2026-10-01' });
+      const dto = { montant: 400_000, datePrevue: '2026-10-05' };
+
+      const results = await Promise.allSettled([
+        service.planDisbursement(user, financing.id, dto, 'retry-key-2'),
+        service.planDisbursement(user, financing.id, dto, 'retry-key-2'),
+      ]);
+      // The loser of the race is a correct, expected ConflictException ("already being processed")
+      // here - not a business rejection like the unkeyed concurrency test above, but the same real
+      // invariant: never two rows for one intent. A genuine client retries after that 409 and gets
+      // the first call's real response once it has completed (proven by the sequential test above).
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+
+      const rows = await integrationDb.pool.query(
+        `SELECT COUNT(*)::int AS total FROM decaissements WHERE financement_id = $1`, [financing.id],
+      );
+      expect(rows.rows[0].total).toBe(1);
+    });
+
+    it('planDisbursement: reusing the same key with a genuinely different payload is refused, not silently executed', async () => {
+      const dossier = await seedEligibleDossier(integrationDb.pool, { montantApprouve: 1_000_000, dureeMois: 12 });
+      const financing = await service.createFromApplication(user, dossier.dossierId, { dateSignature: '2026-09-02', dateDebut: '2026-10-01' });
+
+      await service.planDisbursement(user, financing.id, { montant: 400_000, datePrevue: '2026-10-05' }, 'retry-key-3');
+      await expect(
+        service.planDisbursement(user, financing.id, { montant: 999_999, datePrevue: '2026-10-06' }, 'retry-key-3'),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      const rows = await integrationDb.pool.query(
+        `SELECT COUNT(*)::int AS total FROM decaissements WHERE financement_id = $1`, [financing.id],
+      );
+      expect(rows.rows[0].total).toBe(1);
+    });
+
+    it('createRepayment: the same key resent creates exactly one remboursement and replays the first response', async () => {
+      const dossier = await seedEligibleDossier(integrationDb.pool, { montantApprouve: 1_000_000, dureeMois: 1 });
+      const financing = await service.createFromApplication(user, dossier.dossierId, { dateSignature: '2026-09-02', dateDebut: '2026-10-01' });
+      const installment = financing.installments[0] as { id: string };
+      const dto = { echeanceId: installment.id, montant: 250_000, datePaiement: '2026-11-01' };
+
+      const first = await service.createRepayment(user, financing.id, dto, 'repay-key-1');
+      const second = await service.createRepayment(user, financing.id, dto, 'repay-key-1');
+
+      // See the planDisbursement replay test above for why this compares JSON, not raw objects.
+      expect(JSON.parse(JSON.stringify(second))).toEqual(JSON.parse(JSON.stringify(first)));
+      const rows = await integrationDb.pool.query(
+        `SELECT COUNT(*)::int AS total FROM remboursements WHERE echeance_id = $1`, [installment.id],
+      );
+      expect(rows.rows[0].total).toBe(1);
+    });
+
+    it('a request without an Idempotency-Key behaves exactly as before this axis existed (no dedup)', async () => {
+      const dossier = await seedEligibleDossier(integrationDb.pool, { montantApprouve: 1_000_000, dureeMois: 12 });
+      const financing = await service.createFromApplication(user, dossier.dossierId, { dateSignature: '2026-09-02', dateDebut: '2026-10-01' });
+      const dto = { montant: 100_000, datePrevue: '2026-10-05' };
+
+      await service.planDisbursement(user, financing.id, dto);
+      await service.planDisbursement(user, financing.id, dto);
+
+      const rows = await integrationDb.pool.query(
+        `SELECT COUNT(*)::int AS total FROM decaissements WHERE financement_id = $1`, [financing.id],
+      );
+      expect(rows.rows[0].total).toBe(2);
     });
   });
 

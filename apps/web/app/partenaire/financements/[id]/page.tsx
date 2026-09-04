@@ -29,6 +29,10 @@ export default function PartnerFinancingDetailPage({ params }: { params: Promise
   const [repaymentDate, setRepaymentDate] = useState(today());
   const [repaymentRef, setRepaymentRef] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('VIREMENT');
+  // Axe E5 (docs/14-ROADMAP-SAAS-PREMIUM.md, intégrité financière) - see the direction portal's
+  // own financing detail page for the full rationale; same mechanism here.
+  const [disbursementKey, setDisbursementKey] = useState(() => crypto.randomUUID());
+  const [repaymentKey, setRepaymentKey] = useState(() => crypto.randomUUID());
 
   const load = useCallback(async () => {
     const response = await fetch(`/api/partenaire/financements/${id}`, { cache: 'no-store' });
@@ -40,29 +44,32 @@ export default function PartnerFinancingDetailPage({ params }: { params: Promise
 
   useEffect(() => { load().catch((error) => setMessage(error.message)); }, [load]);
 
-  async function post(path: string, payload: Record<string, unknown>, success: string) {
+  async function post(path: string, payload: Record<string, unknown>, success: string, idempotencyKey?: string) {
     setMessage('');
-    const response = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
+    const response = await fetch(path, { method: 'POST', headers, body: JSON.stringify(payload) });
     const body = await response.json();
     if (!response.ok) return setMessage(Array.isArray(body.message) ? body.message.join(', ') : body.message ?? 'Opération impossible');
     setFinancing(body); setMessage(success);
+    return true;
   }
 
   async function declareDisbursement(event: FormEvent) {
     event.preventDefault();
-    await post(`/api/partenaire/financements/${id}/decaissements`, {
+    const done = await post(`/api/partenaire/financements/${id}/decaissements`, {
       montant: Number(disbursementAmount), dateEffective: disbursementDate, referenceBancaire: disbursementRef,
-    }, 'Décaissement déclaré et audité.');
-    setDisbursementAmount(''); setDisbursementRef('');
+    }, 'Décaissement déclaré et audité.', disbursementKey);
+    if (done) { setDisbursementAmount(''); setDisbursementRef(''); setDisbursementKey(crypto.randomUUID()); }
   }
 
   async function declareRepayment(event: FormEvent) {
     event.preventDefault();
-    await post(`/api/partenaire/financements/${id}/remboursements`, {
+    const done = await post(`/api/partenaire/financements/${id}/remboursements`, {
       echeanceId: installmentId, montant: Number(repaymentAmount), datePaiement: repaymentDate,
       referencePaiement: repaymentRef || undefined, moyenPaiement: paymentMethod,
-    }, 'Remboursement déclaré et échéance actualisée.');
-    setRepaymentAmount(''); setRepaymentRef('');
+    }, 'Remboursement déclaré et échéance actualisée.', repaymentKey);
+    if (done) { setRepaymentAmount(''); setRepaymentRef(''); setRepaymentKey(crypto.randomUUID()); }
   }
 
   if (!financing) return <main className={portal.main}><h1 className={portal.title}>Financement</h1><p className={portal.lead}>{message || 'Chargement…'}</p></main>;

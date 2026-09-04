@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AuthenticatedUser } from '../auth/auth-user.interface';
@@ -49,8 +49,9 @@ export class PartnerController {
     @Req() request: AuthenticatedRequest,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: CreatePartnerDisbursementDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.partner.createDisbursement(request.user, id, dto);
+    return this.partner.createDisbursement(request.user, id, dto, idempotencyKey);
   }
 
   @Post(':id/repayments')
@@ -59,7 +60,8 @@ export class PartnerController {
     @Req() request: AuthenticatedRequest,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: CreateRepaymentDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.partner.createRepayment(request.user, id, dto);
+    return this.partner.createRepayment(request.user, id, dto, idempotencyKey);
   }
 }
