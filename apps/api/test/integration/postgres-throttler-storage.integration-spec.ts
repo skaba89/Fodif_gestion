@@ -4,7 +4,8 @@
  * fake client; what only a real database can prove is the actual point of this axis - that state
  * is genuinely shared across separate `PostgresThrottlerStorageService` instances (standing in for
  * separate API processes behind a load balancer, each with its own in-memory nothing to share) and
- * that concurrent increments for the same key are never lost to a lost-update race.
+ * that concurrent increments for the same key are never lost to a lost-update race, serialized by
+ * a real `pg_advisory_xact_lock` rather than a mocked one.
  */
 import { PostgresThrottlerStorageService } from '../../src/common/postgres-throttler-storage.service';
 import { IntegrationDatabase, startIntegrationDatabase } from './support/database';
@@ -40,7 +41,7 @@ describe('PostgresThrottlerStorageService (real PostgreSQL)', () => {
     expect(r4.isBlocked).toBe(true);
   });
 
-  it('never loses a hit under real concurrent increments for the same key (FOR UPDATE serializes the race)', async () => {
+  it('never loses a hit under real concurrent increments for the same key (the advisory lock serializes the race)', async () => {
     const storage = new PostgresThrottlerStorageService(integrationDb.db);
 
     const results = await Promise.all(
@@ -50,7 +51,7 @@ describe('PostgresThrottlerStorageService (real PostgreSQL)', () => {
     const totals = results.map((r) => r.totalHits).sort((a, b) => a - b);
     expect(totals).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
-    const row = await integrationDb.pool.query(`SELECT total_hits AS "totalHits" FROM rate_limit_hits WHERE key = 'concurrent:key'`);
+    const row = await integrationDb.pool.query(`SELECT COUNT(*)::INT AS "totalHits" FROM rate_limit_hits WHERE key = 'concurrent:key'`);
     expect(row.rows[0].totalHits).toBe(10);
   });
 
@@ -67,14 +68,15 @@ describe('PostgresThrottlerStorageService (real PostgreSQL)', () => {
     expect(blockedCount).toBe(3);
   });
 
-  it('persists an independent row per (key, throttlerName) pair, real rows in rate_limit_hits', async () => {
+  it('persists an independent set of hit rows per (key, throttlerName) pair, real rows in rate_limit_hits', async () => {
     const storage = new PostgresThrottlerStorageService(integrationDb.db);
 
     await storage.increment('shared-key', 60_000, 3, 300_000, 'default');
     await storage.increment('shared-key', 60_000, 3, 300_000, 'login');
 
     const rows = await integrationDb.pool.query(
-      `SELECT throttler_name AS "throttlerName", total_hits AS "totalHits" FROM rate_limit_hits WHERE key = 'shared-key' ORDER BY throttler_name`,
+      `SELECT throttler_name AS "throttlerName", COUNT(*)::INT AS "totalHits"
+       FROM rate_limit_hits WHERE key = 'shared-key' GROUP BY throttler_name ORDER BY throttler_name`,
     );
     expect(rows.rows).toEqual([
       { throttlerName: 'default', totalHits: 1 },
@@ -82,7 +84,18 @@ describe('PostgresThrottlerStorageService (real PostgreSQL)', () => {
     ]);
   });
 
-  it('unblocks and starts a fresh window once the block duration has genuinely elapsed', async () => {
+  it('a hit genuinely ages out of the count ttl after it happened, against real PostgreSQL timestamps', async () => {
+    const storage = new PostgresThrottlerStorageService(integrationDb.db);
+    await storage.increment('sliding:real', 300, 10, 60_000, 'default'); // ttl=300ms
+
+    await new Promise((resolve) => setTimeout(resolve, 400)); // outlast the 300ms ttl
+
+    const afterExpiry = await storage.increment('sliding:real', 300, 10, 60_000, 'default');
+    // The first hit aged out - only this new one is active, not 2.
+    expect(afterExpiry.totalHits).toBe(1);
+  });
+
+  it('unblocks and wipes the slate clean once the block duration has genuinely elapsed', async () => {
     const storage = new PostgresThrottlerStorageService(integrationDb.db);
     await storage.increment('short-block', 60_000, 1, 50, 'default'); // hit 1, under the limit
     const blocked = await storage.increment('short-block', 60_000, 1, 50, 'default'); // hit 2, exceeds limit=1

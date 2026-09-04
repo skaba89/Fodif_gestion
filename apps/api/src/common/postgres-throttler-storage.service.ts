@@ -22,21 +22,22 @@ interface ThrottlerStorageRecord {
  * repo has against distributed credential stuffing.
  *
  * This implementation stores the shared state in PostgreSQL instead (database/
- * 020_distributed_rate_limiting.sql, table `rate_limit_hits`) - the one dependency every API
- * instance already has, so no new infrastructure component (Redis, ...) is introduced. It is a
- * standard fixed-window-with-block counter (increment a per-window count, block for
- * `blockDuration` once the count exceeds `limit`, reset on the next window or once the block
- * expires) - the same shape used by most distributed throttler backends. It is NOT a bit-for-bit
- * reimplementation of @nestjs/throttler's in-memory algorithm, which decays each hit individually
- * on its own per-hit timer (closer to a sliding window) - that per-hit timer model doesn't
- * translate to a stateless, horizontally-scaled backend without per-hit rows and a background
- * sweeper, which is a materially larger and slower design for the same practical guarantee this
- * axis needs: nobody exceeds `limit` requests per `ttl`, and an offender stays blocked for
- * `blockDuration`. Concurrency safety comes from `SELECT ... FOR UPDATE` inside a transaction (the
- * same lock-then-decide pattern used throughout this codebase - maker-checker, optimistic locking,
- * document verification), not from an atomic single-statement UPSERT, trading a little latency for
- * the same clarity and provable correctness as the rest of this codebase's concurrency-sensitive
- * code; a rate limiter is not a latency-critical hot path.
+ * 020_distributed_rate_limiting.sql) - the one dependency every API instance already has, so no
+ * new infrastructure component (Redis, ...) is introduced. It is a genuine SLIDING window, one row
+ * per counted request (`rate_limit_hits`, each row live for exactly `ttl` after its own request),
+ * not a fixed window with one aggregate counter per key - a fixed-window version was tried first
+ * and found wanting for real, not by inspection: the CI job "Docker Compose, Playwright et audit
+ * des images" failed `company-profile.spec.ts` on the Pixel 7/iPhone 14 projects, because
+ * `playwright.config.ts` (see its `HEAVY_LOGIN_SPECS` comment) deliberately relies on the true
+ * sliding decay of the original in-memory storage so that logins spread out across a long test run
+ * never pile up inside one window - a fixed window's "everything since the window opened counts
+ * together" is a materially different, stricter guarantee than the sliding one this whole platform
+ * (this test suite included) was built against, not an equivalent reimplementation. Concurrency
+ * safety for a given key comes from a transaction-scoped PostgreSQL advisory lock
+ * (`pg_advisory_xact_lock`, keyed by a hash of `key`+`throttlerName`) rather than `SELECT ... FOR
+ * UPDATE` on a row (there is no single row representing a key here, only however many hit rows are
+ * currently live for it) - held only for the duration of one `increment()` transaction, released
+ * automatically on commit/rollback, and cheap even under contention since it never touches disk.
  *
  * `ThrottlerGuard` is a global `APP_GUARD` (app.module.ts) - every single request, on every route,
  * calls `increment()` before reaching its controller. That makes this storage's failure mode a
@@ -81,71 +82,80 @@ export class PostgresThrottlerStorageService implements ThrottlerStorage {
   ): Promise<ThrottlerStorageRecord> {
     return this.db.transaction(async (client) => {
       const now = Date.now();
-      // `SELECT ... FOR UPDATE` only locks a row that already exists - on a brand-new key there is
-      // nothing to lock yet, so two concurrent first requests would both read "no row" and race to
-      // insert, each computing totalHits=1 independently (a lost update). Guaranteeing the row
-      // exists first closes that gap: `ON CONFLICT DO NOTHING` is safe under concurrency (the
-      // loser waits on the winner's row lock, then no-ops), so by the time the SELECT below runs
-      // there is always a real row to lock and serialize on.
-      await client.query(
-        `INSERT INTO rate_limit_hits (key, throttler_name, total_hits, expires_at, is_blocked, block_expires_at)
-         VALUES ($1, $2, 0, NOW(), FALSE, NULL)
-         ON CONFLICT (key, throttler_name) DO NOTHING`,
-        [key, throttlerName],
-      );
-      const locked = await client.query<{ totalHits: number; expiresAt: Date; isBlocked: boolean; blockExpiresAt: Date | null }>(
-        `SELECT total_hits AS "totalHits", expires_at AS "expiresAt", is_blocked AS "isBlocked", block_expires_at AS "blockExpiresAt"
-         FROM rate_limit_hits WHERE key = $1 AND throttler_name = $2 FOR UPDATE`,
-        [key, throttlerName],
-      );
-      const row = locked.rows[0];
-      const rowBlockExpiresAt = row?.blockExpiresAt ? row.blockExpiresAt.getTime() : 0;
-      const stillBlocked = Boolean(row?.isBlocked) && rowBlockExpiresAt > now;
+      // Serializes every increment() for this exact (key, throttlerName) pair - held only for this
+      // transaction, released automatically on commit/rollback. No row to lock (there may be zero,
+      // one, or many live hit rows for this key), so a row lock doesn't apply here the way it does
+      // elsewhere in this codebase's lock-then-decide code.
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`${throttlerName}::${key}`]);
 
-      let totalHits: number;
-      let expiresAt: number;
-      let isBlocked: boolean;
-      let blockExpiresAt: number;
+      const blockRow = await client.query<{ blockExpiresAt: Date }>(
+        'SELECT block_expires_at AS "blockExpiresAt" FROM rate_limit_blocks WHERE key = $1 AND throttler_name = $2',
+        [key, throttlerName],
+      );
+      const blockExpiresAt = blockRow.rows[0]?.blockExpiresAt.getTime() ?? 0;
+      const stillBlocked = blockExpiresAt > now;
 
       if (stillBlocked) {
-        // Already blocked and the block hasn't lapsed yet: report the existing state without
-        // counting another hit - mirrors the in-memory storage, which stops accumulating hits
-        // for a key it has already blocked.
-        totalHits = row!.totalHits;
-        expiresAt = row!.expiresAt.getTime();
-        isBlocked = true;
-        blockExpiresAt = rowBlockExpiresAt;
-      } else {
-        // A block that just lapsed starts a fresh window too (matches the in-memory storage's
-        // resetBlockdRequest + fireHitCount: it zeroes the hit count before counting this
-        // request), not one more hit piled onto the stale, already-over-limit count.
-        const blockJustExpired = Boolean(row?.isBlocked) && !stillBlocked;
-        // totalHits === 0 also covers the placeholder row the ON CONFLICT DO NOTHING insert above
-        // just created for a brand-new key: its expires_at is PostgreSQL's own NOW(), captured a
-        // few milliseconds after the JS `now` above (network round trip) - comparing timestamps
-        // alone could occasionally judge that placeholder "not yet expired" and keep its
-        // already-elapsed expires_at instead of opening a real ttl-long window.
-        const windowExpired = !row || row.totalHits === 0 || row.expiresAt.getTime() <= now || blockJustExpired;
-        totalHits = (windowExpired ? 0 : row!.totalHits) + 1;
-        expiresAt = windowExpired ? now + ttl : row!.expiresAt.getTime();
-        isBlocked = totalHits > limit;
-        blockExpiresAt = isBlocked ? now + blockDuration : 0;
+        // Already blocked and the block hasn't lapsed: report the current sliding count without
+        // adding a new hit - mirrors the in-memory storage, which stops accumulating hits for a
+        // key it has already blocked (existing hits still age out on their own below).
+        const activeHits = await client.query<{ totalHits: string; oldestExpiresAt: Date | null }>(
+          `SELECT COUNT(*) AS "totalHits", MIN(expires_at) AS "oldestExpiresAt"
+           FROM rate_limit_hits WHERE key = $1 AND throttler_name = $2 AND expires_at > NOW()`,
+          [key, throttlerName],
+        );
+        const totalHits = Number(activeHits.rows[0].totalHits);
+        const oldestExpiresAt = activeHits.rows[0].oldestExpiresAt?.getTime() ?? now;
+        return {
+          totalHits,
+          timeToExpire: Math.max(0, Math.ceil((oldestExpiresAt - now) / 1000)),
+          isBlocked: true,
+          timeToBlockExpire: Math.max(0, Math.ceil((blockExpiresAt - now) / 1000)),
+        };
       }
 
-      await client.query(
-        `INSERT INTO rate_limit_hits (key, throttler_name, total_hits, expires_at, is_blocked, block_expires_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())
-         ON CONFLICT (key, throttler_name) DO UPDATE SET
-           total_hits = EXCLUDED.total_hits, expires_at = EXCLUDED.expires_at,
-           is_blocked = EXCLUDED.is_blocked, block_expires_at = EXCLUDED.block_expires_at, updated_at = NOW()`,
-        [key, throttlerName, totalHits, new Date(expiresAt), isBlocked, blockExpiresAt ? new Date(blockExpiresAt) : null],
+      if (blockExpiresAt > 0) {
+        // A block that just lapsed wipes this key's slate clean entirely, not just its expired
+        // hits - mirrors the in-memory storage's resetBlockdRequest, which zeroes the hit count
+        // outright once a block ends rather than letting pre-block hits keep sliding-decaying.
+        // Without this, hits from just before the block (still within ttl) would immediately
+        // re-trigger it the moment the block itself lapses.
+        await client.query('DELETE FROM rate_limit_blocks WHERE key = $1 AND throttler_name = $2', [key, throttlerName]);
+        await client.query('DELETE FROM rate_limit_hits WHERE key = $1 AND throttler_name = $2', [key, throttlerName]);
+      } else {
+        // Sweep this key's own already-expired hits before counting - keeps the table from
+        // growing unbounded without needing a separate purge job for the common case (see the
+        // migration's comment for the one gap this doesn't cover: a key that stops being hit
+        // entirely).
+        await client.query('DELETE FROM rate_limit_hits WHERE key = $1 AND throttler_name = $2 AND expires_at <= NOW()', [key, throttlerName]);
+      }
+      await client.query('INSERT INTO rate_limit_hits (key, throttler_name, expires_at) VALUES ($1, $2, $3)', [
+        key,
+        throttlerName,
+        new Date(now + ttl),
+      ]);
+
+      const activeHits = await client.query<{ totalHits: string; oldestExpiresAt: Date }>(
+        `SELECT COUNT(*) AS "totalHits", MIN(expires_at) AS "oldestExpiresAt" FROM rate_limit_hits WHERE key = $1 AND throttler_name = $2`,
+        [key, throttlerName],
       );
+      const totalHits = Number(activeHits.rows[0].totalHits);
+      const oldestExpiresAt = activeHits.rows[0].oldestExpiresAt.getTime();
+      const isBlocked = totalHits > limit;
+
+      if (isBlocked) {
+        await client.query(
+          `INSERT INTO rate_limit_blocks (key, throttler_name, block_expires_at) VALUES ($1, $2, $3)
+           ON CONFLICT (key, throttler_name) DO UPDATE SET block_expires_at = EXCLUDED.block_expires_at`,
+          [key, throttlerName, new Date(now + blockDuration)],
+        );
+      }
 
       return {
         totalHits,
-        timeToExpire: Math.max(0, Math.ceil((expiresAt - now) / 1000)),
+        timeToExpire: Math.max(0, Math.ceil((oldestExpiresAt - now) / 1000)),
         isBlocked,
-        timeToBlockExpire: isBlocked ? Math.max(0, Math.ceil((blockExpiresAt - now) / 1000)) : 0,
+        timeToBlockExpire: isBlocked ? Math.max(0, Math.ceil(blockDuration / 1000)) : 0,
       };
     });
   }
