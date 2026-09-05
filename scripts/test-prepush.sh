@@ -13,6 +13,7 @@ python scripts/check-node-version.py
 python scripts/check-migrations.py
 python scripts/check-docker.py
 python scripts/check-k8s.py
+python scripts/check-release-workflow.py
 python scripts/check-licenses.py
 python scripts/check-institutional-readiness.py
 python scripts/test-release-evidence.py
