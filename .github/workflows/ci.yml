@@ -31,6 +31,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Render and validate Kubernetes manifests against schemas
+        run: bash scripts/validate-k8s-schemas.sh
+
       - name: Setup pnpm
         uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
         with:

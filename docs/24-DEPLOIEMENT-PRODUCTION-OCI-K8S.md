@@ -119,9 +119,13 @@ les intégrations existantes. Le web conserve `GET /` pour ses deux probes.
 
 ## Vérifié
 
-- Les manifestes initiaux ont été validés contre le schéma Kubernetes avec `kubeconform` v0.6.7.
-  Le contrôle `scripts/check-k8s.py`, désormais exécuté à chaque pré-push/CI, interdit la régression
-  des invariants de sécurité, disponibilité, probes et exclusion des gabarits.
+- La CI rend réellement la base avec Kustomize v5.8.1, puis valide chaque ressource en mode strict
+  avec kubeconform v0.8.0 contre les schémas Kubernetes 1.35.0. Ce niveau représente le plus ancien
+  minor de la fenêtre institutionnelle retenue au 5 septembre 2026 ; une évolution de cette fenêtre
+  doit modifier explicitement le script et repasser la CI.
+- Les archives officielles Kustomize/kubeconform sont contrôlées par SHA-256 avant exécution. Le
+  contrôle local `scripts/check-k8s.py`, également exécuté à chaque pré-push/CI, interdit en plus
+  la régression des invariants de sécurité, disponibilité, probes et exclusion des gabarits.
 - Les routes de sonde (`/api/v1/health`, `/`) et les ports (4000, 3000) confirmés directement
   contre `apps/api/Dockerfile`/`apps/web/Dockerfile`/`docker-compose.yml`, pas devinés.
 - La liste de variables d'environnement de `01-configmap.yaml`/`02-secret.example.yaml` confirmée
@@ -132,9 +136,8 @@ les intégrations existantes. Le web conserve `GET /` pour ses deux probes.
 
 ## Non vérifié ici, à confirmer par un vrai cluster
 
-Aucun démon Docker ni cluster Kubernetes n'est disponible dans ce bac à sable (même limitation
-déjà documentée ailleurs dans ce dépôt pour tout travail dépendant de Docker). N'ont donc **pas**
-été vérifiés ici, contrairement à ce que `kubeconform` peut confirmer (la forme des manifestes) :
+Aucun cluster Kubernetes cible n'est disponible dans ce bac à sable. N'ont donc **pas** été
+vérifiés ici, contrairement au rendu Kustomize et aux schémas que la CI peut confirmer :
 
 - que les images tournent réellement avec `readOnlyRootFilesystem: true` sans erreur au démarrage
   (l'analyse de code n'a trouvé aucune écriture sur disque applicative - voir les commentaires de
