@@ -397,3 +397,36 @@ jobs:
       - name: Stop Docker platform
         if: always()
         run: docker compose down --volumes
+
+  evidence:
+    name: Dossier de preuves institutionnel
+    if: always()
+    needs: [invariants, unit-tests, integration-tests, build, security, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # This job runs even after a failed dependency so it preserves a negative evidence file too.
+      # --require-success makes the job itself fail after writing the manifest when any required
+      # control is not green; the following always() upload still retains that manifest.
+      - name: Generate and validate institutional evidence
+        env:
+          RESULT_INVARIANTS: ${{ needs.invariants.result }}
+          RESULT_UNIT_TESTS: ${{ needs['unit-tests'].result }}
+          RESULT_INTEGRATION_TESTS: ${{ needs['integration-tests'].result }}
+          RESULT_BUILD: ${{ needs.build.result }}
+          RESULT_SECURITY: ${{ needs.security.result }}
+          RESULT_DOCKER: ${{ needs.docker.result }}
+        run: python3 scripts/generate-release-evidence.py --output-dir release-evidence --require-success
+
+      - name: Upload institutional evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: institutional-evidence-${{ github.run_id }}
+          path: release-evidence/
+          retention-days: 90

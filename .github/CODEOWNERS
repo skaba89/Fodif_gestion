@@ -24,6 +24,9 @@
 /CONTRIBUTING.md @skaba89
 /docs/26-CADRE-INSTITUTIONNEL.md @skaba89
 /docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md @skaba89
+/docs/28-REGISTRE-DECISIONS-HOMOLOGATION.md @skaba89
+/docs/templates/ @skaba89
+/scripts/generate-release-evidence.py @skaba89
 /docker-compose.yml @skaba89
 /k8s/ @skaba89
 /apps/api/Dockerfile @skaba89

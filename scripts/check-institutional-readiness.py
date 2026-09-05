@@ -22,6 +22,10 @@ required_files = [
     "docs/25-RAPPROCHEMENT-BANCAIRE.md",
     "docs/26-CADRE-INSTITUTIONNEL.md",
     "docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md",
+    "docs/28-REGISTRE-DECISIONS-HOMOLOGATION.md",
+    "docs/templates/DECISION-INSTITUTIONNELLE.md",
+    "docs/templates/PV-RECETTE-INSTITUTIONNELLE.md",
+    "docs/templates/PV-GO-NO-GO.md",
 ]
 for relative_path in required_files:
     if not (ROOT / relative_path).is_file():
@@ -32,6 +36,7 @@ expectations = {
         "Statut : plateforme institutionnelle en qualification",
         "docs/26-CADRE-INSTITUTIONNEL.md",
         "docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md",
+        "docs/28-REGISTRE-DECISIONS-HOMOLOGATION.md",
     ],
     "apps/api/README.md": ["Backend transactionnel institutionnel"],
     ".github/pull_request_template.md": ["Impact institutionnel"],
@@ -59,6 +64,15 @@ for relative_path, fragments in forbidden.items():
     for fragment in fragments:
         if fragment in content:
             errors.append(f"{relative_path}: mention obsolète interdite: {fragment}")
+
+ci_workflow = read(".github/workflows/ci.yml")
+for fragment in [
+    "Dossier de preuves institutionnel",
+    "scripts/generate-release-evidence.py",
+    "institutional-evidence-${{ github.run_id }}",
+]:
+    if fragment not in ci_workflow:
+        errors.append(f".github/workflows/ci.yml: preuve institutionnelle absente: {fragment}")
 
 numbers: dict[str, list[str]] = {}
 for path in (ROOT / "docs").glob("[0-9][0-9]-*.md"):

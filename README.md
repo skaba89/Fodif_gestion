@@ -161,6 +161,8 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/25-RAPPROCHEMENT-BANCAIRE.md` — contrôle des relevés et rapprochement des opérations financières
 - `docs/26-CADRE-INSTITUTIONNEL.md` — qualification, homologation, responsabilités et critères de mise en production
 - `docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md` — note de décision pour autoriser l'homologation pilote
+- `docs/28-REGISTRE-DECISIONS-HOMOLOGATION.md` — suivi auditable des arbitrages DEC-001 à DEC-007
+- `docs/templates/` — modèles de décision, recette institutionnelle et comité Go/No-Go
 - `CONTRIBUTING.md` — gouvernance des changements et conditions de fusion
 
 ## Sécurité
@@ -187,6 +189,7 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 25 — rapprochement bancaire contrôlé et audité
 - [x] Étape 26 — cadre de qualification institutionnelle
 - [x] Étape 27 — note de décision pour le lancement de l'homologation pilote
+- [x] Étape 28 — registre de décisions, modèles de PV et dossier de preuves CI automatisé
 
 ## Licence
 
