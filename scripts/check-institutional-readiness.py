@@ -31,6 +31,7 @@ required_files = [
     "k8s/kustomization.yaml",
     ".github/workflows/release-oci.yml",
     "docs/29-CHAINE-RELEASE-OCI.md",
+    "scripts/validate-k8s-schemas.sh",
 ]
 for relative_path in required_files:
     if not (ROOT / relative_path).is_file():
@@ -75,6 +76,7 @@ for fragment in [
     "Dossier de preuves institutionnel",
     "scripts/generate-release-evidence.py",
     "institutional-evidence-${{ github.run_id }}",
+    "scripts/validate-k8s-schemas.sh",
 ]:
     if fragment not in ci_workflow:
         errors.append(f".github/workflows/ci.yml: preuve institutionnelle absente: {fragment}")

@@ -193,6 +193,7 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 28 — registre de décisions, modèles de PV et dossier de preuves CI automatisé
 - [x] Étape 29 — socle Kubernetes durci : disponibilité, segmentation réseau et sondes de dépendances
 - [x] Étape 30 — chaîne de release OCI avec digests, SBOM, provenance et signatures vérifiables
+- [x] Étape 31 — rendu Kustomize et validation stricte des schémas Kubernetes en CI
 
 ## Licence
 
