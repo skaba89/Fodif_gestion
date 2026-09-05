@@ -23,4 +23,5 @@ bash -n scripts/docker-smoke.sh
 bash -n scripts/backup-postgres.sh
 bash -n scripts/restore-postgres.sh
 bash -n scripts/test-backup-restore.sh
+bash -n apps/api/scripts/start-render.sh
 pnpm -r lint
