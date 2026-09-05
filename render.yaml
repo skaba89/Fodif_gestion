@@ -15,7 +15,6 @@ services:
     # migrations and optional one-time admin bootstrap before starting the API process.
     dockerCommand: /bin/bash -c "node scripts/run-migrations.js && node scripts/bootstrap-super-admin.js && exec node dist/main.js"
     healthCheckPath: /api/v1/health/ready
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: NODE_ENV
         value: production
@@ -63,7 +62,6 @@ services:
     dockerfilePath: ./apps/web/Dockerfile
     dockerContext: .
     healthCheckPath: /
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: NODE_ENV
         value: production
