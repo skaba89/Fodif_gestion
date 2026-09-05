@@ -6,8 +6,11 @@ import { expect, request as playwrightRequest, test } from '@playwright/test';
 // the second save must be told, not silently overwritten. Uses two throwaway PME accounts attached
 // to pme@fodip.local's own enterprise (database/seeds/001_docker_demo.sql) - the same "second user,
 // same enterprise" pattern executive-demo.spec.ts already uses, so this adds no load on
-// pme@fodip.local's own login-throttle budget. Not in HEAVY_LOGIN_SPECS (playwright.config.ts):
-// these are fresh, single-use accounts, same as accessibility.spec.ts/direction-partenaire.spec.ts.
+// pme@fodip.local's own login-throttle budget. The test is nevertheless in HEAVY_LOGIN_SPECS
+// (playwright.config.ts): it must authenticate the same seeded administrator once per project to
+// create those users, so five sequential projects would exhaust admin@'s real 5-per-60s budget
+// once retries are included. Chromium exercises the full concurrency scenario; the mobile and
+// secondary-engine projects retain their dedicated navigation/accessibility coverage elsewhere.
 const DEMO_PASSWORD = 'FodipDemo2026!';
 const DEMO_ENTREPRISE_ID = '30000000-0000-4000-8000-000000000001';
 

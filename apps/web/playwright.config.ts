@@ -50,6 +50,10 @@ import { defineConfig, devices } from '@playwright/test';
 // shared 5-per-60s throttle once replayed across projects - see the file-level comment above.
 const HEAVY_LOGIN_SPECS = [
   /login\.spec\.ts$/, /workflow\.spec\.ts$/, /mfa\.spec\.ts$/, /pii-encryption\.spec\.ts$/,
+  // Creates fresh PME users, but must first authenticate the same seeded administrator once per
+  // project. Replaying it across all five projects therefore exhausts admin@'s real 5-per-60s
+  // budget even though the throwaway PME accounts themselves never reuse a login identity.
+  /company-profile\.spec\.ts$/,
   // Mission "présentation Directeur général" (section 10): logs in as pme@/agent@/comite@ - the
   // same three accounts workflow.spec.ts already uses - so it carries the same profile.
   /executive-demo\.spec\.ts$/,
