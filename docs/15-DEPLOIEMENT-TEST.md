@@ -23,11 +23,10 @@ de mise en production :
 Navigateur
     │
     ▼
-Frontend Next.js (Render ou Netlify) ──API_BASE_URL──▶ API NestJS (Render, service Docker)
+Frontend Next.js (Render) ──API_BASE_URL──▶ API NestJS (Render, service Docker)
                                                               │
-                                                              ├──▶ PostgreSQL géré (Neon ou Supabase)
-                                                              └──▶ Stockage S3 compatible (Cloudflare R2,
-                                                                    ou stockage S3 de Supabase)
+                                                              ├──▶ PostgreSQL Neon (pooled)
+                                                              └──▶ Neon Object Storage (S3)
 ```
 
 L'API et le frontend sont chacun déployés depuis leur `Dockerfile` existant
@@ -36,114 +35,93 @@ maintenir séparément du reste du dépôt.
 
 ## Prérequis
 
-- Un compte [Render](https://render.com) (API, et frontend si vous ne préférez pas Netlify).
-- Un compte [Netlify](https://netlify.com) (frontend, alternative à Render).
-- Un compte [Neon](https://neon.tech) **ou** [Supabase](https://supabase.com) (PostgreSQL géré).
-- Un compte [Cloudflare](https://cloudflare.com) pour R2 (stockage S3 compatible), ou activer le
-  stockage S3 compatible de Supabase si vous utilisez déjà Supabase pour la base.
+- Un compte [Render](https://render.com) pour l'API et le frontend.
+- Un compte [Neon](https://neon.com) pour PostgreSQL et le stockage documentaire.
 - Le dépôt poussé sur GitHub (déjà le cas).
+
+Cette variante reste volontairement sur deux fournisseurs. Neon Object Storage est encore en
+**bêta publique** et disponible uniquement en `us-east-2` au moment de la rédaction : elle convient
+à la qualification avec données fictives, pas à l'hébergement institutionnel définitif.
 
 ## Étape 1 — Base de données PostgreSQL
 
-**Neon** ou **Supabase** conviennent tous les deux : `DatabaseService` et
-`scripts/run-migrations.js` détectent automatiquement qu'une connexion n'est pas locale et
-activent TLS (`sslmode`) — aucune configuration TLS manuelle nécessaire.
-
-1. Créez un projet, récupérez la chaîne de connexion (`postgresql://user:password@host/db`).
-   - Neon : utilisez la chaîne de connexion « pooled » (PgBouncer) fournie par défaut.
-   - Supabase : `Project Settings → Database → Connection string → URI`.
-2. Gardez cette valeur de côté : ce sera `DATABASE_URL` à l'étape 3.
+1. Créez le projet Neon dans la région **AWS US East (Ohio) / `us-east-2`**. Cette région est
+   obligatoire pour utiliser Neon Object Storage dans la même plateforme.
+2. Dans **Connect**, récupérez les deux chaînes de connexion :
+   - la chaîne **pooled** (hôte contenant `-pooler`) → `DATABASE_URL`, trafic normal de l'API ;
+   - la chaîne **directe** (sans `-pooler`) → `DATABASE_URL_UNPOOLED`, migrations et amorçage.
+3. Ne copiez jamais ces valeurs dans GitHub, un ticket ou un document partagé. Elles seront saisies
+   uniquement comme secrets Render. `DATABASE_SSL=true` impose TLS des deux côtés.
 
 ## Étape 2 — Stockage documentaire (S3 compatible)
 
-`DocumentStorageService` ne nécessite qu'un point de terminaison compatible S3 — n'importe lequel
-convient. Deux options simples :
+1. Activez **Object Storage** sur la branche Neon de test et créez le bucket privé
+   `fodip-documents`.
+2. Relevez les variables S3 de la branche et reportez-les dans Render selon ce mapping :
 
-- **Cloudflare R2** (recommandé, gratuit jusqu'à 10 Go) : créez un bucket, une clé d'API R2
-  (accès S3), notez `Account ID`, `Access Key ID`, `Secret Access Key` et l'URL du point de
-  terminaison S3 (`https://<account-id>.r2.cloudflarestorage.com`).
-- **Supabase Storage** (si vous utilisez déjà Supabase) : activez le point de terminaison S3
-  compatible dans `Project Settings → Storage → S3 Connection`.
+   | Neon | Render / FODIP |
+   |---|---|
+   | `AWS_ENDPOINT_URL_S3` | `STORAGE_ENDPOINT` |
+   | `AWS_REGION` | `STORAGE_REGION` |
+   | nom du bucket | `STORAGE_BUCKET` |
+   | `AWS_ACCESS_KEY_ID` | `STORAGE_ACCESS_KEY` |
+   | `AWS_SECRET_ACCESS_KEY` | `STORAGE_SECRET_KEY` |
+
+Le bucket reste privé. Le backend utilise déjà l'adressage S3 « path-style » requis par Neon et ne
+rend jamais les clés accessibles au navigateur.
 
 ## Étape 3 — Déployer l'API sur Render
 
-1. Render → **New → Web Service** → connectez le dépôt GitHub.
-2. Runtime : **Docker**. Dockerfile : `apps/api/Dockerfile`. Contexte de build : racine du dépôt
-   (`.`) — important, car le Dockerfile copie `pnpm-lock.yaml` et `apps/web/package.json` depuis
-   la racine du monorepo.
-3. Health check path : `/api/v1/health`.
-4. Variables d'environnement (Render → service → Environment) :
+1. Render → **New → Blueprint** → connectez `skaba89/Fodif_gestion` et sélectionnez `render.yaml`.
+   Le Blueprint crée les deux services gratuits en région Ohio et ne déploie les nouveaux commits
+   de `main` qu'après réussite des contrôles GitHub.
+2. Renseignez les secrets demandés pour `fodip-api` :
 
    | Variable | Valeur |
    |---|---|
    | `NODE_ENV` | `production` |
-   | `DATABASE_URL` | la chaîne de connexion de l'étape 1 |
-   | `JWT_SECRET` | **une vraie valeur aléatoire ≥ 32 caractères** — `openssl rand -base64 32` ; jamais la valeur de démonstration du dépôt |
+   | `DATABASE_URL` | chaîne Neon pooled (`-pooler`) |
+   | `DATABASE_URL_UNPOOLED` | chaîne Neon directe |
+   | `JWT_SECRET` | généré automatiquement par Render |
    | `JWT_ISSUER` | `fodip-digital-2030` |
    | `JWT_AUDIENCE` | `fodip-web` |
    | `JWT_ACCESS_TTL` | `15m` |
-   | `STORAGE_ENDPOINT` | point de terminaison S3 de l'étape 2 |
-   | `STORAGE_REGION` | `auto` (R2) ou la région Supabase |
+   | `STORAGE_ENDPOINT` | `AWS_ENDPOINT_URL_S3` Neon |
+   | `STORAGE_REGION` | `AWS_REGION` Neon (`us-east-2`) |
    | `STORAGE_BUCKET` | nom du bucket créé à l'étape 2 |
-   | `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` | clés de l'étape 2 |
+   | `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` | clés S3 Neon |
    | `WEB_BASE_URL` | laissez un espace réservé pour l'instant (ex. `https://fodip-web.onrender.com`) ; à corriger à l'étape 6 une fois l'URL réelle du frontend connue — c'est l'origine autorisée par CORS |
+   | `BOOTSTRAP_ADMIN_EMAIL` | adresse nominative de l'administrateur initial |
+   | `BOOTSTRAP_ADMIN_NOM` / `BOOTSTRAP_ADMIN_PRENOM` | identité de l'administrateur initial |
+   | `BOOTSTRAP_ADMIN_PASSWORD` | secret unique conforme à la politique (12+ caractères, majuscule, minuscule, chiffre, caractère spécial) |
 
    `PORT` n'a pas besoin d'être défini : Render l'injecte automatiquement et `main.ts` le lit déjà.
 
-5. Déployez. Notez l'URL publique attribuée par Render (ex. `https://fodip-api.onrender.com`).
+3. Déployez. Notez les deux URLs publiques attribuées par Render.
 
-## Étape 4 — Appliquer les migrations
+## Étape 4 — Migrations et premier administrateur
 
-Une fois l'API déployée (même si elle échoue à démarrer faute de schéma, ce n'est pas grave à ce
-stade), ouvrez l'onglet **Shell** du service Render et lancez :
+L'offre Render gratuite ne prend pas en charge la commande de pré-déploiement. Le `dockerCommand`
+du Blueprint exécute donc, avant l'API :
 
-```bash
-node apps/api/scripts/run-migrations.js
-```
+1. les migrations versionnées, verrouillées et contrôlées par checksum via la connexion directe ;
+2. l'amorçage idempotent du premier `SUPER_ADMIN`, avec mot de passe bcrypt et MFA obligatoire ;
+3. le serveur NestJS uniquement si les deux étapes précédentes réussissent.
 
-Ajoutez `--seed` **uniquement** pour un environnement de démonstration dont le lien reste privé —
-cela charge les comptes de démonstration documentés dans le `README.md`, avec un mot de passe
-partagé connu de quiconque lit ce dépôt. Ne jamais `--seed` un environnement dont l'URL est
-partagée publiquement ou durablement.
-
-Depuis l'axe fondations entreprise (Lot 1), `run-migrations.js` refuse `--seed` d'emblée quand
-`NODE_ENV=production` (le cas courant sur Render, qui le définit par défaut) - un garde-fou
-volontairement strict pour la vraie production, quitte à devoir être explicitement contourné pour
-la démo privée documentée ci-dessus :
-
-```bash
-NODE_ENV=development node apps/api/scripts/run-migrations.js --seed
-```
-
-Ne faites cela que dans l'onglet Shell d'un environnement de démonstration au lien privé, jamais
-sur la base de données de production réelle.
+Dès le premier déploiement réussi, supprimez les quatre variables `BOOTSTRAP_ADMIN_*` dans Render
+et redéployez. L'administrateur existant est conservé. Aucun seed ni mot de passe public du dépôt
+n'est chargé sur cet environnement.
 
 ## Étape 5 — Déployer le frontend
 
-### Option A — Render (cohérent avec l'API, un seul tableau de bord)
-
-Mêmes étapes qu'à l'étape 3 : **New → Web Service**, runtime **Docker**,
-Dockerfile `apps/web/Dockerfile`, contexte `.`. Variables d'environnement :
+Le Blueprint a déjà créé `fodip-web`. Renseignez ses variables :
 
 | Variable | Valeur |
 |---|---|
 | `NODE_ENV` | `production` |
 | `API_BASE_URL` | l'URL Render de l'API (étape 3) |
 | `COOKIE_SECURE` | `true` — **obligatoire dès que le site est servi en HTTPS** (le cas sur Render/Netlify) ; à `false` le cookie de session n'est jamais envoyé par le navigateur et la connexion semble silencieusement échouer |
-
-### Option B — Netlify
-
-Netlify build son propre runtime Next.js (pas le `Dockerfile`) via son plugin Next.js, détecté
-automatiquement dans la plupart des cas. Pour ce monorepo pnpm :
-
-- **Base directory** : `apps/web`
-- **Build command** : `pnpm install --frozen-lockfile && pnpm --filter @fodip/web build` (exécuté
-  depuis la racine — ajustez si Netlify se place déjà dans `apps/web`)
-- **Publish directory** : `apps/web/.next`
-- Variables d'environnement : mêmes `API_BASE_URL` / `COOKIE_SECURE` que ci-dessus.
-
-Un `netlify.toml` de départ est fourni à la racine — vérifiez-le contre la documentation Netlify
-au moment du déploiement (le schéma évolue).
+| `DEMO_MODE` | `true` — affiche explicitement « données de démonstration » |
 
 ## Étape 6 — Reboucler les URLs
 
@@ -153,19 +131,20 @@ correction, le frontend reçoit des réponses bloquées par CORS.
 
 ## Étape 7 — Vérification
 
-1. `curl https://<api>/api/v1/health` → `{"status":"ok", ...}`.
-2. Ouvrez le frontend, connectez-vous avec un compte créé via `run-migrations.js --seed`, ou créez
-   un compte `SUPER_ADMIN` directement en base pour piloter l'environnement depuis
-   `/administration/utilisateurs`.
-3. Vérifiez qu'un dépôt de document (portail PME) fonctionne bout en bout — cela confirme que le
+1. `curl https://<api>/api/v1/health/ready` → HTTP 200 avec PostgreSQL et S3 disponibles.
+2. Ouvrez le frontend, connectez-vous avec le compte initial, puis terminez immédiatement
+   l'enrôlement MFA.
+3. Depuis `/administration/utilisateurs`, créez des comptes nominatifs de test pour les rôles
+   Direction, Agent, Comité, PME, Banque et Auditeur ; n'utilisez pas de comptes partagés.
+4. Vérifiez qu'un dépôt de document (portail PME) fonctionne bout en bout — cela confirme que le
    stockage S3 compatible est correctement configuré.
 
 ## Sécurité — avant de partager le lien
 
 - `JWT_SECRET` réellement aléatoire, jamais la valeur de démonstration.
 - `COOKIE_SECURE=true` sur le frontend.
-- Pas de `--seed` (comptes de démonstration à mot de passe connu) sur un lien partagé au-delà
-  d'un test privé immédiat.
+- Variables `BOOTSTRAP_ADMIN_*` supprimées après l'amorçage et MFA activé.
+- Aucun `--seed` ni compte partagé à mot de passe connu.
 - Considérez cet environnement comme jetable : aucune donnée réelle de PME ou de dossier de
   financement ne doit y être saisie tant que B5/B7/B8 (`docs/14-ROADMAP-SAAS-PREMIUM.md`) ne sont
   pas traités.
