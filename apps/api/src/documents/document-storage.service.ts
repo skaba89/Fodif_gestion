@@ -60,6 +60,12 @@ export class DocumentStorageService {
     await this.requireClient().send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
+  async ping(): Promise<boolean> {
+    if (!this.client) return false;
+    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    return true;
+  }
+
   private requireClient(): S3Client {
     if (!this.client) {
       throw new ServiceUnavailableException('S3-compatible document storage is not configured');

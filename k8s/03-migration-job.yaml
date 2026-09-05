@@ -16,9 +16,14 @@ metadata:
   namespace: fodip
 spec:
   backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
   template:
     spec:
       restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: migrate
           # Same image as 04-api-deployment.yaml - keep both tags in sync, the migrations this Job
@@ -33,3 +38,12 @@ spec:
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

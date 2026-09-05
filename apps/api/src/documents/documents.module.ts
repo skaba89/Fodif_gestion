@@ -8,5 +8,6 @@ import { DocumentsService } from './documents.service';
 @Module({
   controllers: [DocumentsController],
   providers: [DocumentsRepository, DocumentStorageService, DocumentsService, ClamAvService],
+  exports: [DocumentStorageService],
 })
 export class DocumentsModule {}

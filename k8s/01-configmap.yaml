@@ -9,6 +9,8 @@ metadata:
   namespace: fodip
 data:
   NODE_ENV: production
+  # The local synthetic-data experience is explicitly forbidden in an institutional runtime.
+  DEMO_MODE: "false"
   JWT_ISSUER: fodip-digital-2030
   JWT_AUDIENCE: fodip-web
   JWT_ACCESS_TTL: 15m

@@ -27,6 +27,15 @@ describe('FODIP API', () => {
     expect(response.body.service).toBe('fodip-api');
   });
 
+  it('exposes separate public liveness and dependency-aware readiness endpoints', async () => {
+    const live = await request(app.getHttpServer()).get('/api/v1/health/live').expect(200);
+    expect(live.body.status).toBe('ok');
+
+    const ready = await request(app.getHttpServer()).get('/api/v1/health/ready').expect(503);
+    expect(ready.body.status).toBe('unavailable');
+    expect(ready.body.checks).toEqual({ database: 'down', objectStorage: 'down' });
+  });
+
   it('GET /api/v1/metrics remains public and exposes a Prometheus scrape (axe C3b)', async () => {
     // Public for the same reason as /health: Prometheus never carries a bearer token.
     const response = await request(app.getHttpServer()).get('/api/v1/metrics').expect(200);

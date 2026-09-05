@@ -7,6 +7,13 @@ metadata:
   namespace: fodip
 spec:
   replicas: 2
+  minReadySeconds: 10
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: fodip-web
@@ -15,6 +22,11 @@ spec:
       labels:
         app: fodip-web
     spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: web
           # Built from apps/web/Dockerfile - same portability note as the api image above.
@@ -51,6 +63,8 @@ spec:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: tmp
               mountPath: /tmp

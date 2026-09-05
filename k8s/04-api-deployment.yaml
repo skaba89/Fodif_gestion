@@ -12,6 +12,13 @@ spec:
   # every rate-limited route and let a revoked token still verify against whichever replica
   # didn't see the revocation.
   replicas: 2
+  minReadySeconds: 10
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: fodip-api
@@ -20,6 +27,11 @@ spec:
       labels:
         app: fodip-api
     spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
           # Built from apps/api/Dockerfile - a standard OCI image, buildable and pushable to any
@@ -33,21 +45,18 @@ spec:
                 name: fodip-config
             - secretRef:
                 name: fodip-secrets
-          # Same check the image's own HEALTHCHECK runs (apps/api/Dockerfile) - GET /api/v1/health,
-          # a public route needing no session/cookie. Kubernetes reads this directly rather than
-          # docker's own HEALTHCHECK status (a plain `docker run` or `docker ps` would use that
-          # one instead - see apps/api/Dockerfile's own comment on why the check now lives in the
-          # image, not only in docker-compose.yml).
+          # Readiness checks PostgreSQL and S3; liveness only checks the process. A dependency
+          # outage therefore removes this pod from service without causing a restart loop.
           readinessProbe:
             httpGet:
-              path: /api/v1/health
+              path: /api/v1/health/ready
               port: 4000
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5
           livenessProbe:
             httpGet:
-              path: /api/v1/health
+              path: /api/v1/health/live
               port: 4000
             initialDelaySeconds: 15
             periodSeconds: 15
@@ -67,6 +76,8 @@ spec:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: tmp
               mountPath: /tmp
