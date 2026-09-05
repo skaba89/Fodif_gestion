@@ -69,6 +69,7 @@ Les opérations d’écriture sont réservées à `DIRECTION_FODIP` et `SUPER_AD
 
 - `/direction/financements` : portefeuille, décisions éligibles et création du financement ;
 - `/direction/financements/:id` : contrat, décaissements, échéancier, remboursements, impact et audit.
+- `/direction/rapprochements` : mouvements des relevés bancaires, file de contrôle et rapprochements audités.
 
 Le navigateur ne reçoit jamais le JWT. Toutes les requêtes passent par les routes serveur Next.js et le cookie HttpOnly existant.
 

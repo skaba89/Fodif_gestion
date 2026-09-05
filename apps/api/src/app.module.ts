@@ -8,6 +8,7 @@ import { AgentApplicationsModule } from './agent-applications/agent-applications
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { BankReconciliationsModule } from './reconciliations/bank-reconciliations.module';
 import { CompaniesModule } from './companies/companies.module';
 import { CommitteeModule } from './committee/committee.module';
 import { AuthorizationGuard } from './common/guards/authorization.guard';
@@ -48,6 +49,7 @@ import { ScoringModule } from './scoring/scoring.module';
     RevocationModule,
     AdministrationModule,
     AuthModule,
+    BankReconciliationsModule,
     CompaniesModule,
     CommitteeModule,
     ApplicationsModule,
