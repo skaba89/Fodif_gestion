@@ -2,7 +2,8 @@
 'use strict';
 
 /**
- * Applies database/*.sql migrations (and optionally database/seeds/*.sql) against DATABASE_URL,
+ * Applies database/*.sql migrations (and optionally database/seeds/*.sql) against
+ * DATABASE_URL_UNPOOLED when provided, otherwise DATABASE_URL,
  * in numeric filename order - the same files and order docker-compose's `migrations` service
  * applies, just without requiring a psql binary in the runtime image (this uses the `pg` package
  * already a dependency of @fodip/api).
@@ -32,7 +33,7 @@
  * docker-compose `migrations` service's command - see docs/15-DEPLOIEMENT-TEST.md.
  *
  * Usage:
- *   DATABASE_URL=postgresql://... node apps/api/scripts/run-migrations.js
+ *   DATABASE_URL_UNPOOLED=postgresql://... node apps/api/scripts/run-migrations.js
  *   DATABASE_URL=postgresql://... node apps/api/scripts/run-migrations.js --seed
  *   DATABASE_URL=postgresql://... DATABASE_SSL=false node apps/api/scripts/run-migrations.js
  */
@@ -197,9 +198,12 @@ async function applyMigrations(client, files, log = console.log) {
 }
 
 async function main() {
-  const connectionString = process.env.DATABASE_URL;
+  // Neon and other PgBouncer-backed providers expose a direct connection specifically for
+  // migrations. Keep DATABASE_URL pooled for normal API traffic, and prefer the direct URL here
+  // because advisory locks and migration/session semantics must stay on one backend connection.
+  const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
   if (!connectionString) {
-    console.error('DATABASE_URL is required.');
+    console.error('DATABASE_URL_UNPOOLED or DATABASE_URL is required.');
     process.exitCode = 1;
     return;
   }

@@ -1,22 +1,30 @@
-# Render Blueprint - best-effort starting point for docs/15-DEPLOIEMENT-TEST.md.
-#
-# Render's Blueprint schema does change over time; if importing this fails, follow the manual
-# dashboard steps in docs/15-DEPLOIEMENT-TEST.md instead (they don't depend on this file and are
-# the source of truth). Secrets (sync: false) must still be filled in by hand after import -
+# Render Blueprint for the Neon-backed qualification environment documented in
+# docs/15-DEPLOIEMENT-TEST.md. Secrets (sync: false) must be filled in by hand after import;
 # nothing sensitive belongs in this file.
 
 services:
   - type: web
     name: fodip-api
     runtime: docker
+    plan: free
+    region: ohio # same geography as Neon's us-east-2, required for Neon Object Storage beta
+    autoDeployTrigger: checksPass
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: .
-    healthCheckPath: /api/v1/health
+    # Render pre-deploy commands are paid-only. On the free plan, run the locked/checksummed
+    # migrations and optional one-time admin bootstrap before starting the API process.
+    dockerCommand: /bin/bash -c "node scripts/run-migrations.js && node scripts/bootstrap-super-admin.js && exec node dist/main.js"
+    healthCheckPath: /api/v1/health/ready
+    maxShutdownDelaySeconds: 30
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false # Neon or Supabase connection string - see docs/15 étape 1
+        sync: false # Neon pooled connection string (-pooler hostname)
+      - key: DATABASE_URL_UNPOOLED
+        sync: false # Neon direct connection string, migrations/bootstrap only
+      - key: DATABASE_SSL
+        value: "true"
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_ISSUER
@@ -25,6 +33,14 @@ services:
         value: fodip-web
       - key: JWT_ACCESS_TTL
         value: 15m
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false # remove all BOOTSTRAP_* values immediately after first successful deploy
+      - key: BOOTSTRAP_ADMIN_NOM
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PRENOM
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
       - key: STORAGE_ENDPOINT
         sync: false # S3-compatible endpoint - see docs/15 étape 2
       - key: STORAGE_REGION
@@ -41,12 +57,19 @@ services:
   - type: web
     name: fodip-web
     runtime: docker
+    plan: free
+    region: ohio
+    autoDeployTrigger: checksPass
     dockerfilePath: ./apps/web/Dockerfile
     dockerContext: .
+    healthCheckPath: /
+    maxShutdownDelaySeconds: 30
     envVars:
       - key: NODE_ENV
         value: production
       - key: COOKIE_SECURE
+        value: "true"
+      - key: DEMO_MODE
         value: "true"
       - key: API_BASE_URL
         sync: false # the api service's public URL - see docs/15 étape 3
