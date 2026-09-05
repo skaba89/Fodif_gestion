@@ -1,10 +1,12 @@
-# Étape 1 — Périmètre fonctionnel du MVP
+# Étape 1 — Socle fonctionnel initial (référence historique)
+
+> **Statut du document : historique.** Ce fichier conserve le cadrage de la première version et ne décrit plus le positionnement actuel du produit. FODIP Digital 2030 est une plateforme institutionnelle en qualification ; le référentiel courant est `docs/26-CADRE-INSTITUTIONNEL.md`.
 
 ## Objectif
 
-Le MVP de FODIP Digital 2030 doit couvrir le cycle principal de financement et de suivi d'une PME, sans chercher à implémenter dès la première version l'ensemble des fonctions nationales avancées.
+Le socle initial de FODIP Digital 2030 devait couvrir le cycle principal de financement et de suivi d'une PME, sans chercher à implémenter dès la première version l'ensemble des fonctions nationales avancées.
 
-## Modules du MVP
+## Modules du socle initial
 
 1. Référentiel PME
 2. Demandes de financement
@@ -110,7 +112,7 @@ CLOTURE
 - répartition par secteur
 - performance par programme
 
-## Hors périmètre MVP initial
+## Hors périmètre du socle initial
 
 Les fonctions suivantes sont prévues mais peuvent être activées en phase 2 ou nationale :
 

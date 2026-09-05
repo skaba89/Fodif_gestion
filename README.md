@@ -1,8 +1,8 @@
 # FODIP Digital 2030
 
-Plateforme numérique de gestion, de financement, de suivi et de pilotage des PME accompagnées par le FODIP en Guinée.
+Plateforme institutionnelle nationale de gestion, de financement, de suivi et de pilotage des PME accompagnées par le FODIP en Guinée.
 
-> Statut : MVP en développement — parcours PME, instruction Agent, scoring, Comité, cockpit Direction et cycle financier disponibles sur Docker.
+> **Statut : plateforme institutionnelle en qualification.** Le socle métier est opérationnel ; l'ouverture en production reste soumise aux portes d'homologation, de sécurité, d'exploitation et de gouvernance décrites dans `docs/26-CADRE-INSTITUTIONNEL.md`.
 
 ## Vision
 
@@ -19,7 +19,7 @@ FODIP Digital 2030 vise à fournir une infrastructure numérique unifiée couvra
 - cockpit de pilotage pour la Direction ;
 - socle Data Platform pour l'Observatoire des PME.
 
-## Architecture cible
+## Architecture de référence
 
 ```text
 Utilisateurs
@@ -50,7 +50,7 @@ Snowflake
 
 ## Principes d'architecture
 
-- monolithe modulaire pour le MVP ;
+- monolithe modulaire institutionnel, stateless et réplicable ;
 - PostgreSQL comme système transactionnel de référence ;
 - stockage documentaire hors base ;
 - RBAC et MFA pour les profils sensibles ;
@@ -60,7 +60,17 @@ Snowflake
 - Data Platform séparée du transactionnel ;
 - aucun secret dans le dépôt Git.
 
-## Modules métier prévus
+## Qualification institutionnelle
+
+Le dépôt distingue explicitement trois réalités :
+
+- le **produit institutionnel**, destiné aux agents, comités, partenaires, PME et décideurs ;
+- les **environnements homologués**, séparés en DEV, REC, PPD et PROD ;
+- le **jeu de démonstration local**, synthétique et interdit en production.
+
+Le terme « institutionnel » ne vaut pas autorisation de mise en production. Un passage en PROD exige un Go/No-Go documenté couvrant notamment la sécurité, le cadre juridique, la continuité d'activité, l'exploitation et la validation financière. Voir le [cadre de qualification institutionnelle](docs/26-CADRE-INSTITUTIONNEL.md).
+
+## Modules métier couverts
 
 1. Référentiel PME
 2. Utilisateurs, rôles et permissions
@@ -136,7 +146,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 
 ## Documentation
 
-- `docs/01-MVP.md` — périmètre fonctionnel du MVP
+- `docs/01-SOCLE-FONCTIONNEL-INITIAL.md` — archive du périmètre fonctionnel initial
 - `docs/02-DATA-MODEL.md` — modèle de données cible
 - `docs/03-ARCHITECTURE.md` — architecture technique cible
 - `docs/08-GESTION-DOCUMENTAIRE.md` — stockage, sécurité, intégrité et audit des documents
@@ -145,17 +155,21 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/11-DATA-DASHBOARD.md` — vues analytiques PostgreSQL, définitions KPI et cockpit Direction
 - `docs/12-CYCLE-FINANCIER.md` — financements, décaissements, échéances, remboursements, impact et audit
 - `docs/13-NOTIFICATIONS-ADMINISTRATION.md` — notifications métier, utilisateurs, rôles et protections administratives
-- `docs/14-ROADMAP-SAAS-PREMIUM.md` — feuille de route identité visuelle, conformité étatique, fiabilité SaaS
+- `docs/14-ROADMAP-SAAS-PREMIUM.md` — feuille de route institutionnelle, conformité et fiabilité
 - `docs/15-DEPLOIEMENT-TEST.md` — déployer un environnement de test sur Render/Netlify avec Neon ou Supabase
-- `docs/24-RAPPROCHEMENT-BANCAIRE.md` — contrôle des relevés et rapprochement des opérations financières
+- `docs/24-DEPLOIEMENT-PRODUCTION-OCI-K8S.md` — cible technique OCI/Kubernetes
+- `docs/25-RAPPROCHEMENT-BANCAIRE.md` — contrôle des relevés et rapprochement des opérations financières
+- `docs/26-CADRE-INSTITUTIONNEL.md` — qualification, homologation, responsabilités et critères de mise en production
+- `docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md` — note de décision pour autoriser l'homologation pilote
+- `CONTRIBUTING.md` — gouvernance des changements et conditions de fusion
 
 ## Sécurité
 
 Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune donnée personnelle réelle et aucun secret d'infrastructure. Les valeurs incluses dans Docker Compose sont strictement réservées à la démonstration locale et doivent être remplacées dans tout environnement hébergé.
 
-## Roadmap
+## Trajectoire livrée
 
-- [x] Étape 1 — Périmètre MVP
+- [x] Étape 1 — Socle fonctionnel initial
 - [x] Étape 2 — Modèle de données
 - [x] Étape 3 — Architecture technique
 - [x] Étape 4 — UX/UI et cockpit DG
@@ -169,7 +183,10 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 12 — Cycle financier opérationnel
 - [x] Étape 13 — Notifications et administration
 - [x] Étape 14a — MFA (TOTP) pour les comptes `mfa_required`
-- [x] Étape 14b — dossier de déploiement (environnement de test ; la mise en production réelle reste conditionnée aux décisions B4/B5/B7/B8 de `docs/14-ROADMAP-SAAS-PREMIUM.md`)
+- [x] Étape 14b — dossier de déploiement (environnement de test ; la production reste conditionnée aux décisions B5/B6/B7b/B8 de `docs/14-ROADMAP-SAAS-PREMIUM.md`)
+- [x] Étape 25 — rapprochement bancaire contrôlé et audité
+- [x] Étape 26 — cadre de qualification institutionnelle
+- [x] Étape 27 — note de décision pour le lancement de l'homologation pilote
 
 ## Licence
 

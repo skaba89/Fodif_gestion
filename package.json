@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "UNLICENSED",
-  "description": "FODIP Digital 2030 - plateforme de gestion, financement, suivi et pilotage des PME",
+  "description": "FODIP Digital 2030 - plateforme institutionnelle nationale de financement et de pilotage des PME",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=24 <25",

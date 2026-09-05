@@ -17,6 +17,17 @@ probablement trop large - voir la méthode de travail par lots (docs/14-ROADMAP-
 risque identifié" est une réponse valide si c'est vraiment le cas - jamais une case cochée sans
 y avoir réfléchi. -->
 
+## Impact institutionnel
+
+<!-- Indiquer les impacts sur : sécurité/RBAC, données personnelles, règles financières,
+exploitation, migration, sauvegarde/restauration et retour arrière. Écrire « Sans objet » avec une
+justification lorsque l'axe n'est réellement pas concerné. -->
+
+- [ ] Aucun secret ni donnée réelle n'est ajouté au dépôt.
+- [ ] Les contrôles d'accès et traces d'audit restent appliqués côté backend.
+- [ ] La migration est additive et le retour arrière est documenté, ou sans objet.
+- [ ] La documentation et `docs/26-CADRE-INSTITUTIONNEL.md` restent cohérents avec le changement.
+
 ## Validation locale
 
 <!-- Commandes exécutées et leur résultat réel (pas "les tests passent" sans détail). Exemple :

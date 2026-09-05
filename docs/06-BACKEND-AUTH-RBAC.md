@@ -2,7 +2,7 @@
 
 ## Objectif
 
-Transformer le prototype frontend en plateforme transactionnelle sécurisée sans coupler directement l'interface à PostgreSQL.
+Fournir le socle transactionnel sécurisé de la plateforme institutionnelle sans coupler directement l'interface à PostgreSQL.
 
 ## Composants
 

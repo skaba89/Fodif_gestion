@@ -64,7 +64,7 @@ Le portail doit couvrir les espaces :
 - TypeScript
 - REST API
 - OpenAPI
-- monolithe modulaire pour le MVP
+- monolithe modulaire institutionnel, stateless et réplicable
 
 Modules cibles :
 
@@ -235,9 +235,9 @@ Prévoir pour la production :
 - procédures de restauration testées ;
 - métriques, traces et logs centralisés.
 
-## Stratégie de livraison
+## Trajectoire de livraison
 
-### MVP 1
+### Socle transactionnel livré
 - Next.js / PWA
 - NestJS
 - PostgreSQL
@@ -256,7 +256,7 @@ Prévoir pour la production :
 - audit
 - dashboard basique
 
-### MVP 2
+### Extension métier livrée
 - remboursements avancés
 - notifications multicanales
 - banques partenaires
@@ -264,7 +264,7 @@ Prévoir pour la production :
 - suivi d'impact
 - Data Platform
 
-### Phase nationale
+### Consolidation institutionnelle nationale
 - Snowflake avancé
 - Observatoire national
 - API partenaires

@@ -1,4 +1,4 @@
-# Étape 24 — Rapprochement bancaire
+# Étape 25 — Rapprochement bancaire
 
 ## Objectif
 

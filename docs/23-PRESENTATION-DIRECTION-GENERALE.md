@@ -1,5 +1,10 @@
 # 23 — Présentation au Directeur général
 
+> **Positionnement à employer : plateforme institutionnelle nationale en qualification.** La
+> démonstration prouve le socle fonctionnel et technique ; elle ne vaut ni homologation, ni
+> autorisation d'utiliser des données réelles. La note de décision à soumettre à la Direction est
+> disponible dans `docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md`.
+
 Mission « Mettre FODIP Digital 2030 au niveau d'une présentation au Directeur général »
 (branche `feat/dg-premium-presentation`). Ce document est le guide opérationnel de la
 démonstration : comment démarrer, se connecter, dérouler le scénario en 10 minutes, et répondre
@@ -162,10 +167,11 @@ Oui — la navigation mobile (menu, tiroir accessible, cibles tactiles ≥44×44
 (`apps/web/playwright.config.ts`).
 
 **« Quand est-ce disponible en production ? »**
-Voir §9 — plusieurs prérequis d'exploitation nationale restent à finaliser avant un déploiement en
-production (haute disponibilité, rapprochement bancaire, plan de reprise d'activité — l'idempotence
-financière, le maker-checker sur l'exécution des décaissements et le scan antivirus des documents
-ci-dessous sont désormais partiellement couverts).
+Le socle est en qualification institutionnelle. Le rapprochement bancaire, l'idempotence des
+écritures sensibles, le maker-checker sur les décaissements et le scan antivirus sont livrés ou
+partiellement couverts, mais une production nationale exige encore les validations formelles du
+cadre d'homologation : hébergement, sécurité externe, conformité, exploitation, recette métier et
+Go/No-Go. Voir `docs/26-CADRE-INSTITUTIONNEL.md` et §9.
 
 ## 8. Limites actuelles — honnêtement déclarées
 
@@ -184,12 +190,13 @@ ci-dessous sont désormais partiellement couverts).
   sérieuse sur mobile.
 - **Redirection 403** : `apps/web/lib/client-api.ts` redirige automatiquement vers la connexion
   sur une réponse 401, pas encore sur une réponse 403 (rôle authentifié mais insuffisant) — un
-  utilisateur au mauvais rôle reste sur la page sans message explicite. Corrigé séparément.
-- **Couverture navigateur mobile** : le projet Playwright « Pixel 7 » (moteur Chromium) est
-  vérifié localement, 10/10 tests verts. Le projet « iPhone 14 » (moteur WebKit) est
-  configuré et validé structurellement (descripteur d'appareil réel), mais WebKit n'est pas
-  installable dans le bac à sable de développement utilisé pour cette session — sa vérification
-  réelle a lieu en CI, qui installe déjà WebKit pour le projet desktop existant.
+  utilisateur au mauvais rôle reste sur la page avec l'erreur API, sans parcours de réorientation
+  dédié. Il s'agit d'un écart d'expérience utilisateur, pas d'un contournement du contrôle RBAC
+  côté serveur.
+- **Couverture navigateur mobile** : les projets Playwright « Pixel 7 » (Chromium) et « iPhone
+  14 » (WebKit) font partie de la matrice CI, avec Chromium, Firefox et WebKit desktop. Cette
+  émulation apporte une preuve de non-régression automatisée ; elle ne remplace pas une recette
+  d'accessibilité sur appareils et technologies d'assistance réels.
 - **Captures de référence pour la régression visuelle** : non ajoutées dans cette itération —
   des captures figées dans cet environnement de développement ne correspondraient pas au rendu de
   polices/anticrénelage du runner CI et casseraient à la première exécution CI plutôt que
@@ -214,8 +221,8 @@ suivants ne sont pas finalisés :
 - Antivirus/scan de contenu sur les documents déposés — **partiellement fait** : les documents sont
   désormais scannés en clamd (`ClamAvService`) avant d'être persistés, en échec fermé (un scan
   indisponible refuse l'upload plutôt que de le laisser passer), désactivé par défaut comme l'OIDC
-  (voir `docs/14-ROADMAP-SAAS-PREMIUM.md`, axe E6) ; restent la quarantaine, le versioning et
-  l'upload en streaming (le fichier est encore bufferisé en mémoire à l'upload).
+  (voir `docs/14-ROADMAP-SAAS-PREMIUM.md`, axe E6). Le versioning est livré ; restent la
+  quarantaine et l'upload en streaming (le fichier est encore bufferisé en mémoire à l'upload).
 - Plan de reprise d'activité (PRA) documenté et testé au-delà de la sauvegarde/restauration
   Postgres déjà couverte par `scripts/backup-postgres.sh`/`scripts/test-backup-restore.sh`.
 

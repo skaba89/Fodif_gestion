@@ -37,7 +37,7 @@ Assistant en cinq étapes :
 4. documents ;
 5. vérification avant soumission.
 
-Le prototype initial affichait une checklist documentaire. Depuis l’étape 8, le téléversement réel utilise MinIO via une API S3 compatible.
+La première maquette affichait une checklist documentaire. Depuis l’étape 8, le téléversement réel utilise un stockage privé via une API S3 compatible.
 
 ### Suivi
 - liste des dossiers ;
@@ -48,6 +48,4 @@ Le prototype initial affichait une checklist documentaire. Depuis l’étape 8, 
 
 ## Sécurité et données
 
-Toutes les informations affichées actuellement sont fictives. Aucun formulaire n'écrit encore en base et aucune authentification réelle n'est active.
-
-La prochaine phase doit connecter le portail à l'API NestJS, PostgreSQL, RBAC et stockage documentaire.
+Le portail est connecté à l'API NestJS, PostgreSQL, au RBAC et au stockage documentaire privé. L'entreprise autorisée provient du JWT ; un identifiant d'entreprise fourni par le navigateur ne peut pas élargir le périmètre. Les données synthétiques sont limitées au mode local et ne doivent jamais être chargées en production.
