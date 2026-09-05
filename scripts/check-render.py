@@ -20,6 +20,8 @@ else:
             errors.append(f"{name}: runtime must be docker")
         if service.get("plan") != "free":
             errors.append(f"{name}: qualification Blueprint must explicitly use the free plan")
+        if service.get("plan") == "free" and "maxShutdownDelaySeconds" in service:
+            errors.append(f"{name}: maxShutdownDelaySeconds is not supported by Render's free plan")
         if service.get("autoDeployTrigger") != "checksPass":
             errors.append(f"{name}: deploys must wait for GitHub checks")
 
