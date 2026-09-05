@@ -160,6 +160,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/24-DEPLOIEMENT-PRODUCTION-OCI-K8S.md` — cible technique OCI/Kubernetes
 - `docs/25-RAPPROCHEMENT-BANCAIRE.md` — contrôle des relevés et rapprochement des opérations financières
 - `docs/26-CADRE-INSTITUTIONNEL.md` — qualification, homologation, responsabilités et critères de mise en production
+- `docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md` — note de décision pour autoriser l'homologation pilote
 - `CONTRIBUTING.md` — gouvernance des changements et conditions de fusion
 
 ## Sécurité
@@ -185,6 +186,7 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 14b — dossier de déploiement (environnement de test ; la production reste conditionnée aux décisions B5/B6/B7b/B8 de `docs/14-ROADMAP-SAAS-PREMIUM.md`)
 - [x] Étape 25 — rapprochement bancaire contrôlé et audité
 - [x] Étape 26 — cadre de qualification institutionnelle
+- [x] Étape 27 — note de décision pour le lancement de l'homologation pilote
 
 ## Licence
 

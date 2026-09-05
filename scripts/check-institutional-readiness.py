@@ -21,6 +21,7 @@ required_files = [
     "docs/24-DEPLOIEMENT-PRODUCTION-OCI-K8S.md",
     "docs/25-RAPPROCHEMENT-BANCAIRE.md",
     "docs/26-CADRE-INSTITUTIONNEL.md",
+    "docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md",
 ]
 for relative_path in required_files:
     if not (ROOT / relative_path).is_file():
@@ -30,6 +31,7 @@ expectations = {
     "README.md": [
         "Statut : plateforme institutionnelle en qualification",
         "docs/26-CADRE-INSTITUTIONNEL.md",
+        "docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md",
     ],
     "apps/api/README.md": ["Backend transactionnel institutionnel"],
     ".github/pull_request_template.md": ["Impact institutionnel"],
