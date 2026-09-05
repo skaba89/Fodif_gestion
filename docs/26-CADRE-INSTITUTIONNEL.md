@@ -88,6 +88,12 @@ Chaque version candidate à l'homologation doit conserver :
 - les PV de recette et décisions Go/No-Go ;
 - les risques résiduels et dérogations encore ouvertes.
 
+La CI produit automatiquement un artefact `institutional-evidence-<run_id>` contenant un manifeste
+JSON et un résumé Markdown : SHA, résultats des contrôles, liens d'exécution, inventaire signé par
+SHA-256 des migrations et documents de gouvernance. Cet artefact ne remplace ni CodeQL, exécuté
+séparément, ni les PV signés. Pour une version candidate, il doit être exporté avant l'expiration
+de sa rétention GitHub et archivé avec les modèles de `docs/templates/` complétés.
+
 ## Décisions institutionnelles ouvertes
 
 | Référence | Décision | Effet bloquant |
@@ -102,6 +108,8 @@ Chaque version candidate à l'homologation doit conserver :
 
 Chaque décision doit recevoir un propriétaire, une échéance, une décision datée et un lien vers
 la preuve ou le procès-verbal correspondant.
+
+Le suivi opérationnel se trouve dans `docs/28-REGISTRE-DECISIONS-HOMOLOGATION.md`.
 
 ## Prochaine cible
 
