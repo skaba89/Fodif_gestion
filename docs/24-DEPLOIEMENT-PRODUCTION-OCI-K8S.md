@@ -57,6 +57,9 @@ registre ou un cloud - `docker build`, en poussant vers n'importe quel registre 
 | `04-api-deployment.yaml` | `Deployment` (2 réplicas) + `Service` pour l'API |
 | `05-web-deployment.yaml` | `Deployment` (2 réplicas) + `Service` pour le web |
 | `06-ingress.example.yaml` | **Gabarit** - nécessite un contrôleur Ingress déjà installé dans le cluster (délibérément non imposé ici) |
+| `07-network-policies.yaml` | Refus par défaut du trafic entrant, exposition du web et flux web vers API uniquement |
+| `08-pod-disruption-budgets.yaml` | Maintien d'au moins un pod API et web lors des interruptions volontaires |
+| `kustomization.yaml` | Base Kustomize auditable ; exclut volontairement les gabarits de secret et d'Ingress |
 
 Ordre d'application :
 
@@ -68,8 +71,14 @@ kubectl apply -f k8s/03-migration-job.yaml
 kubectl wait --for=condition=complete job/fodip-migrate -n fodip --timeout=120s
 kubectl apply -f k8s/04-api-deployment.yaml
 kubectl apply -f k8s/05-web-deployment.yaml
+kubectl apply -f k8s/07-network-policies.yaml
+kubectl apply -f k8s/08-pod-disruption-budgets.yaml
 # k8s/06-ingress.yaml (votre copie de 06-ingress.example.yaml) une fois le contrôleur Ingress choisi
 ```
+
+Après création du secret réel et adaptation de l'Ingress, la base peut aussi être rendue ou
+appliquée avec `kubectl kustomize k8s/` / `kubectl apply -k k8s/`. Le secret et l'Ingress ne sont
+jamais inclus automatiquement : cela empêche de déployer par erreur leurs valeurs `CHANGE_ME`.
 
 ### Pourquoi deux réplicas par défaut, pas un
 
@@ -84,26 +93,42 @@ réplicas par défaut n'est plus une lacune silencieuse.
 
 ### Sondes de disponibilité (probes)
 
-Les `readinessProbe`/`livenessProbe` de `04-api-deployment.yaml`/`05-web-deployment.yaml`
-utilisent exactement les routes que le `HEALTHCHECK` intégré à chaque image vérifie déjà
-(`apps/api/Dockerfile`, `apps/web/Dockerfile`, axe E7) - `GET /api/v1/health` pour l'API (publique,
-sans session), `GET /` pour le web (page d'accueil publique). Kubernetes ne lit jamais le
-`HEALTHCHECK` Docker lui-même (seul un `docker run`/`docker ps` autonome le ferait) - les probes
-ci-dessus sont la vraie vérification côté Kubernetes, avec les mêmes routes pour ne jamais
-diverger des deux.
+L'API distingue désormais deux signaux publics, sans donnée sensible :
+
+- `GET /api/v1/health/live` confirme seulement que le processus répond ; une panne PostgreSQL ou
+  S3 ne provoque donc pas une boucle de redémarrage ;
+- `GET /api/v1/health/ready` vérifie réellement PostgreSQL et le bucket S3-compatible. Il renvoie
+  `503` avec les seuls états `up`/`down` si une dépendance critique manque ; Kubernetes retire alors
+  le pod du Service jusqu'au rétablissement.
+
+`GET /api/v1/health` reste un alias de liveness pour la compatibilité avec le `HEALTHCHECK` OCI et
+les intégrations existantes. Le web conserve `GET /` pour ses deux probes.
+
+### Disponibilité et durcissement
+
+- mises à jour `RollingUpdate` avec `maxUnavailable: 0`, `maxSurge: 1` et délai de disponibilité ;
+- deux réplicas et un `PodDisruptionBudget` avec `minAvailable: 1` pour l'API et le web ;
+- arrêt gracieux NestJS sur `SIGTERM` et délai Kubernetes de 30 secondes ;
+- profil Pod Security Admission `restricted`, seccomp `RuntimeDefault`, toutes les capabilities
+  Linux supprimées, système de fichiers racine en lecture seule et jeton de ServiceAccount non
+  monté ;
+- `DEMO_MODE: "false"` explicite dans la configuration de production ;
+- `NetworkPolicy` en refus entrant par défaut, puis autorisation du contrôleur Ingress vers le web
+  et du web vers l'API. La règle Ingress, volontairement indépendante du fournisseur, doit être
+  resserrée sur le namespace et les labels du contrôleur choisi lors de la décision d'hébergement.
 
 ## Vérifié
 
-- Les 7 fichiers `k8s/*.yaml` validés contre le schéma Kubernetes réel avec `kubeconform`
-  (binaire officiel v0.6.7, téléchargé et exécuté ici, mode `--strict`) : 9 ressources, toutes
-  valides, zéro erreur.
+- Les manifestes initiaux ont été validés contre le schéma Kubernetes avec `kubeconform` v0.6.7.
+  Le contrôle `scripts/check-k8s.py`, désormais exécuté à chaque pré-push/CI, interdit la régression
+  des invariants de sécurité, disponibilité, probes et exclusion des gabarits.
 - Les routes de sonde (`/api/v1/health`, `/`) et les ports (4000, 3000) confirmés directement
   contre `apps/api/Dockerfile`/`apps/web/Dockerfile`/`docker-compose.yml`, pas devinés.
 - La liste de variables d'environnement de `01-configmap.yaml`/`02-secret.example.yaml` confirmée
   exhaustive par lecture directe du service `api`/`web` de `docker-compose.yml` (chaque variable
   qu'il définit a son équivalent ici, à l'exception de celles propres à la stack de démo locale -
-  `DEMO_MODE`, `CLAMAV_HOST`/`CLAMAV_PORT` optionnels non repris par défaut, `.env.example`
-  documente leur ajout si besoin).
+  `CLAMAV_HOST`/`CLAMAV_PORT` optionnels non repris par défaut, `.env.example` documente leur ajout
+  si besoin). `DEMO_MODE` est explicitement forcé à `false`.
 
 ## Non vérifié ici, à confirmer par un vrai cluster
 
@@ -121,8 +146,9 @@ déjà documentée ailleurs dans ce dépôt pour tout travail dépendant de Dock
   qui prouvent la même logique contre un vrai PostgreSQL, mais pas depuis deux pods Kubernetes
   réels).
 
-Reste, pour aller au-delà de ce que ce document couvre : un chart Helm ou une configuration
-Kustomize (les manifestes bruts ci-dessus suffisent pour un premier déploiement et restent la
-référence la plus simple à auditer, mais ne gèrent pas nativement plusieurs environnements) ; un
-`NetworkPolicy` restreignant le trafic entre pods ; l'intégration à un gestionnaire de secrets
-réel plutôt que le gabarit `02-secret.example.yaml`.
+Reste, pour fermer la porte d'homologation sur le cluster cible : intégrer un gestionnaire de
+secrets réel plutôt que le gabarit `02-secret.example.yaml`, remplacer les images `CHANGE_ME` par
+des digests issus du registre OCI institutionnel, créer les adaptations REC/PPD/PROD et valider
+un déploiement complet. Une politique egress en refus par défaut sera ajoutée après choix des
+destinations PostgreSQL, S3, OIDC, DNS et observabilité ; la deviner avant la décision
+d'hébergement rendrait le manifeste soit inopérant, soit faussement permissif.

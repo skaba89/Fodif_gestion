@@ -1,0 +1,52 @@
+# Default-deny inbound traffic, then expose only the documented web -> API path. Egress remains
+# open until the institutional hosting decision supplies stable PostgreSQL, S3, OIDC, DNS and
+# observability destinations that can be allow-listed without breaking production.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: fodip
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-web
+  namespace: fodip
+spec:
+  podSelector:
+    matchLabels:
+      app: fodip-web
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # Vendor-neutral baseline for ingress controllers deployed as cluster pods. Tighten this
+        # to the controller namespace/labels selected by the institutional cluster.
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-to-api
+  namespace: fodip
+spec:
+  podSelector:
+    matchLabels:
+      app: fodip-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: fodip-web
+      ports:
+        - protocol: TCP
+          port: 4000

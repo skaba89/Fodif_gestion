@@ -190,6 +190,7 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 26 — cadre de qualification institutionnelle
 - [x] Étape 27 — note de décision pour le lancement de l'homologation pilote
 - [x] Étape 28 — registre de décisions, modèles de PV et dossier de preuves CI automatisé
+- [x] Étape 29 — socle Kubernetes durci : disponibilité, segmentation réseau et sondes de dépendances
 
 ## Licence
 

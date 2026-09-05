@@ -18,6 +18,10 @@ async function bootstrap() {
   });
   const config = app.get(ConfigService);
 
+  // Let Kubernetes SIGTERM trigger Nest lifecycle hooks and close PostgreSQL cleanly before the
+  // pod's termination grace period expires.
+  app.enableShutdownHooks();
+
   // Only ever used to read back the short-lived, httpOnly OIDC flow cookie (auth/oidc) - the API
   // sets no other cookies and never trusts one for authenticating a regular request.
   app.use(cookieParser());

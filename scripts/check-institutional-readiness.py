@@ -26,6 +26,9 @@ required_files = [
     "docs/templates/DECISION-INSTITUTIONNELLE.md",
     "docs/templates/PV-RECETTE-INSTITUTIONNELLE.md",
     "docs/templates/PV-GO-NO-GO.md",
+    "k8s/07-network-policies.yaml",
+    "k8s/08-pod-disruption-budgets.yaml",
+    "k8s/kustomization.yaml",
 ]
 for relative_path in required_files:
     if not (ROOT / relative_path).is_file():
