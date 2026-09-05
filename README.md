@@ -147,6 +147,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/13-NOTIFICATIONS-ADMINISTRATION.md` — notifications métier, utilisateurs, rôles et protections administratives
 - `docs/14-ROADMAP-SAAS-PREMIUM.md` — feuille de route identité visuelle, conformité étatique, fiabilité SaaS
 - `docs/15-DEPLOIEMENT-TEST.md` — déployer un environnement de test sur Render/Netlify avec Neon ou Supabase
+- `docs/24-RAPPROCHEMENT-BANCAIRE.md` — contrôle des relevés et rapprochement des opérations financières
 
 ## Sécurité
 

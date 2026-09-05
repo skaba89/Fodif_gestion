@@ -6,6 +6,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 const AUDITABLE_ENTITY_TYPES = [
   'UTILISATEUR', 'DOSSIER_FINANCEMENT', 'DOSSIER_DOCUMENT',
   'FINANCEMENT', 'DECAISSEMENT', 'REMBOURSEMENT', 'SUIVI_IMPACT',
+  'MOUVEMENT_BANCAIRE', 'RAPPROCHEMENT_BANCAIRE',
 ] as const;
 
 export class ListAuditLogsDto extends PaginationQueryDto {

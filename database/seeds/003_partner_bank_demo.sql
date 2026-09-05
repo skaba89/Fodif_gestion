@@ -44,3 +44,38 @@ VALUES
      'PARTNER_DECLARE_REPAYMENT', 'REMBOURSEMENT', '83000000-0000-4000-8000-000000000001',
      '{"reference": "REM-DEMO-001", "montant": 60000000}', CURRENT_DATE - 1)
 ON CONFLICT (id) DO NOTHING;
+
+-- Rapprochement bancaire (axe E5) : un décaissement déjà contrôlé et un remboursement encore à
+-- rapprocher permettent à l'écran Direction de démontrer les deux états sans données fictives
+-- codées en dur dans le frontend.
+INSERT INTO mouvements_bancaires (
+    id, partenaire_bancaire_id, reference_externe, date_operation, sens, montant,
+    libelle, lot_import, created_by, created_at
+)
+VALUES
+    ('86000000-0000-4000-8000-000000000001', '90000000-0000-4000-8000-000000000001',
+     'REL-DEMO-DEC-001', CURRENT_DATE - 14, 'DEBIT', 400000000,
+     'Décaissement PME Démo', 'DEMO-2026-09', '50000000-0000-4000-8000-000000000004', CURRENT_DATE - 13),
+    ('86000000-0000-4000-8000-000000000002', '90000000-0000-4000-8000-000000000001',
+     'REL-DEMO-REM-001', CURRENT_DATE - 1, 'CREDIT', 60000000,
+     'Remboursement PME Démo', 'DEMO-2026-09', '50000000-0000-4000-8000-000000000004', CURRENT_DATE - 1)
+ON CONFLICT (partenaire_bancaire_id, reference_externe) DO NOTHING;
+
+INSERT INTO rapprochements_bancaires (
+    id, mouvement_bancaire_id, decaissement_id, commentaire, rapproche_par, rapproche_at
+)
+VALUES (
+    '87000000-0000-4000-8000-000000000001', '86000000-0000-4000-8000-000000000001',
+    '81000000-0000-4000-8000-000000000001', 'Référence et montant contrôlés.',
+    '50000000-0000-4000-8000-000000000004', CURRENT_DATE - 13
+)
+ON CONFLICT (mouvement_bancaire_id) DO NOTHING;
+
+INSERT INTO audit_logs (id, utilisateur_id, action, entity_type, entity_id, new_values, created_at)
+VALUES (
+    '85000000-0000-4000-8000-000000000008', '50000000-0000-4000-8000-000000000004',
+    'RECONCILE_BANK_ENTRY', 'RAPPROCHEMENT_BANCAIRE', '87000000-0000-4000-8000-000000000001',
+    '{"mouvementBancaireId":"86000000-0000-4000-8000-000000000001","operationType":"DECAISSEMENT","operationId":"81000000-0000-4000-8000-000000000001","montant":400000000,"banqueId":"90000000-0000-4000-8000-000000000001"}',
+    CURRENT_DATE - 13
+)
+ON CONFLICT (id) DO NOTHING;

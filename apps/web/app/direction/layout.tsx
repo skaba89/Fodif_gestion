@@ -4,6 +4,7 @@ import { AccountMenu } from '../_shared/AccountMenu';
 const navItems = [
   { label: 'Cockpit national', href: '/direction/tableau-de-bord' },
   { label: 'Financements', href: '/direction/financements' },
+  { label: 'Rapprochement', href: '/direction/rapprochements' },
   { label: 'Notifications', href: '/notifications' },
   { label: 'Mes données', href: '/mes-donnees' },
 ];
