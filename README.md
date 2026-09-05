@@ -162,6 +162,7 @@ L’ajout de `-v` supprime également les données PostgreSQL et MinIO locales.
 - `docs/26-CADRE-INSTITUTIONNEL.md` — qualification, homologation, responsabilités et critères de mise en production
 - `docs/27-NOTE-DIRECTEUR-HOMOLOGATION.md` — note de décision pour autoriser l'homologation pilote
 - `docs/28-REGISTRE-DECISIONS-HOMOLOGATION.md` — suivi auditable des arbitrages DEC-001 à DEC-007
+- `docs/29-CHAINE-RELEASE-OCI.md` — publication, attestation et signature des images de release
 - `docs/templates/` — modèles de décision, recette institutionnelle et comité Go/No-Go
 - `CONTRIBUTING.md` — gouvernance des changements et conditions de fusion
 
@@ -191,6 +192,7 @@ Ce dépôt ne doit contenir aucune clé, aucun mot de passe, aucun token, aucune
 - [x] Étape 27 — note de décision pour le lancement de l'homologation pilote
 - [x] Étape 28 — registre de décisions, modèles de PV et dossier de preuves CI automatisé
 - [x] Étape 29 — socle Kubernetes durci : disponibilité, segmentation réseau et sondes de dépendances
+- [x] Étape 30 — chaîne de release OCI avec digests, SBOM, provenance et signatures vérifiables
 
 ## Licence
 

@@ -29,6 +29,8 @@ required_files = [
     "k8s/07-network-policies.yaml",
     "k8s/08-pod-disruption-budgets.yaml",
     "k8s/kustomization.yaml",
+    ".github/workflows/release-oci.yml",
+    "docs/29-CHAINE-RELEASE-OCI.md",
 ]
 for relative_path in required_files:
     if not (ROOT / relative_path).is_file():
