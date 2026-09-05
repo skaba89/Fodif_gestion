@@ -19,8 +19,11 @@
 # (scripts/check-migrations.py les valide déjà en CI).
 /database/ @skaba89
 
-# Gouvernance, CI/CD et chaîne d'approvisionnement logicielle (ce Sprint Enterprise 0).
+# Gouvernance institutionnelle, CI/CD et chaîne d'approvisionnement logicielle.
 /.github/ @skaba89
+/CONTRIBUTING.md @skaba89
+/docs/26-CADRE-INSTITUTIONNEL.md @skaba89
 /docker-compose.yml @skaba89
+/k8s/ @skaba89
 /apps/api/Dockerfile @skaba89
 /apps/web/Dockerfile @skaba89

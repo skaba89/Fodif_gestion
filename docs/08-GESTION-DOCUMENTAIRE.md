@@ -13,7 +13,7 @@ Cette étape relie les dossiers PME à un stockage objet privé sans exposer de 
 7. PostgreSQL reçoit les métadonnées et une trace d’audit.
 8. Tout téléchargement est autorisé par l’API et son intégrité est recalculée avant restitution.
 
-## Formats et limites MVP
+## Formats et limites institutionnels actuels
 
 - PDF (`application/pdf`)
 - JPEG (`image/jpeg`)
@@ -58,6 +58,6 @@ Les décisions possibles sont `VALIDE`, `REJETE` et `A_COMPLETER`. Un commentair
 - validation additive de la migration SQL ;
 - tests API et builds API/web.
 
-## Limite assumée
+## Limites restantes avant homologation
 
-Cette livraison effectue une validation de format et d’intégrité, mais ne remplace pas un antivirus. Avant la production, ClamAV ou un scanner asynchrone équivalent devra placer les fichiers en quarantaine jusqu’au résultat d’analyse.
+Le scan antivirus ClamAV est disponible et échoue de manière fermée lorsqu'il est activé, mais il doit être effectivement provisionné dans chaque environnement institutionnel. Une quarantaine explicite et un téléversement en streaming restent à livrer avant l'ouverture nationale à fort volume.

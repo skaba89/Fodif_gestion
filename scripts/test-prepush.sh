@@ -13,6 +13,7 @@ python scripts/check-node-version.py
 python scripts/check-migrations.py
 python scripts/check-docker.py
 python scripts/check-licenses.py
+python scripts/check-institutional-readiness.py
 bash -n scripts/docker-smoke.sh
 bash -n scripts/backup-postgres.sh
 bash -n scripts/restore-postgres.sh

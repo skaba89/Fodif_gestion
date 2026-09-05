@@ -103,7 +103,7 @@ Accès restreint selon conventions et scopes : dossiers transmis, décaissements
 
 Interface principalement en lecture : décisions, historiques, mouvements financiers, journaux et exports contrôlés.
 
-## Navigation Direction générale — MVP
+## Navigation Direction générale
 
 - Vue nationale
 - PME
@@ -115,34 +115,29 @@ Interface principalement en lecture : décisions, historiques, mouvements financ
 - Partenaires
 - Audit
 
-## Cockpit Direction — prototype v0.1
+## Cockpit Direction — socle institutionnel
 
-Le prototype présent dans `apps/web/app/page.tsx` contient :
+Le produit contient un accueil institutionnel et un cockpit Direction connecté aux API :
 
 - hero institutionnel ;
-- 6 cartes KPI ;
-- graphique horizontal des financements par région ;
-- pipeline d'instruction ;
-- tableau des dossiers prioritaires ;
-- indicateurs d'impact ;
+- indicateurs exécutifs consolidés ;
+- analyses régionales, sectorielles et par programme ;
+- pipeline d'instruction et points d'attention ;
+- portefeuille financier, remboursements, impayés et impact ;
 - navigation latérale responsive.
 
-Les chiffres sont explicitement des données de démonstration et devront être remplacés par l'API.
+En local, les chiffres proviennent de données synthétiques clairement signalées ; dans les environnements homologués, ils proviennent du système transactionnel et des vues analytiques contrôlées.
 
-## Prochains écrans UX
+## Évolutions UX restantes
 
-Ordre recommandé :
+Ordre recommandé pour la qualification :
 
-1. Portail PME — tableau de bord.
-2. Création d'une PME.
-3. Assistant de dépôt de dossier en plusieurs étapes.
-4. Portail Agent — file d'instruction.
-5. Fiche dossier 360°.
-6. Écran Comité.
-7. Fiche Financement / décaissements / remboursements.
-8. Suivi d'impact.
-9. Administration programmes et scoring.
-10. Observatoire public agrégé.
+1. composants partagés `Toast`, `Button`, `Dialog`, `FilterBar`, `Breadcrumbs` et `ResponsiveTable` ;
+2. assistants guidés pour les parcours métier longs ;
+3. références de régression visuelle produites sur le runner CI officiel ;
+4. tests utilisateurs avec les profils institutionnels et PME ;
+5. audit manuel avec lecteur d'écran réel ;
+6. validation de la charte graphique officielle FODIP.
 
 ## Responsive
 

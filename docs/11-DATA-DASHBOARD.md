@@ -1,6 +1,6 @@
 # Étape 11 — Data Platform et cockpit Direction
 
-## Décision d’architecture MVP
+## Décision d’architecture transactionnelle
 
 Le cockpit Direction fonctionne entièrement dans le socle Docker autonome. Il ne dépend d’aucun service Azure. PostgreSQL fournit à la fois le système transactionnel et un schéma de lecture analytique isolé nommé `analytics`.
 
@@ -28,7 +28,7 @@ Le jeu local `database/seeds/002_analytics_demo.sql` fournit plusieurs régions,
 
 ## Définitions des KPI
 
-| Indicateur | Définition MVP |
+| Indicateur | Définition opérationnelle |
 |---|---|
 | PME dans le portefeuille | Nombre distinct de PME ayant au moins un dossier dans le périmètre filtré |
 | Dossiers actifs | Dossiers `SOUMIS`, `EN_INSTRUCTION`, `COMPLEMENT_REQUIS` ou `PRET_COMITE` |
