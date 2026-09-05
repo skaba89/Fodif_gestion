@@ -1,0 +1,30 @@
+# TEMPLATE - requires an Ingress controller already running in the cluster (nginx-ingress,
+# Traefik, ... - deliberately not chosen here to stay vendor-neutral, per this axis's own "sans
+# dépendance cloud" requirement) and, for the tls: block, cert-manager or manually provisioned
+# certificates. Copy to 06-ingress.yaml, adjust the host and the ingressClassName to match your
+# cluster, and fill in the TLS secret name.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fodip-web
+  namespace: fodip
+  annotations: {}
+    # Example for cert-manager (https://cert-manager.io), if installed:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: CHANGE_ME # e.g. "nginx"
+  rules:
+    - host: CHANGE_ME # e.g. app.example.org - must match WEB_BASE_URL in 01-configmap.yaml
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fodip-web
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - CHANGE_ME
+      secretName: fodip-web-tls

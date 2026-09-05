@@ -1,0 +1,6 @@
+# Axe E7 (docs/14-ROADMAP-SAAS-PREMIUM.md) - cible de production OCI/K8s, sans dépendance cloud.
+# Voir docs/24-DEPLOIEMENT-PRODUCTION-OCI-K8S.md pour le contexte complet et l'ordre d'application.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fodip

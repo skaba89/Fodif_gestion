@@ -1,0 +1,35 @@
+# Runs database/*.sql once before the API deployment is expected to serve traffic - the same
+# scripts/run-migrations.js the `migrations` service in docker-compose.yml runs, already baked
+# into the API image (apps/api/Dockerfile), including its checksum verification and PostgreSQL
+# advisory lock (safe even if this Job is accidentally applied twice, or runs while an old API
+# pod is still up). Apply this AFTER 01/02 and BEFORE 04-api-deployment.yaml; re-running it on
+# every deploy is intentional and safe - a re-applied migration that's already recorded is a
+# fast no-op, not an error (see apps/api/scripts/run-migrations.js).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # A fixed name means a second `kubectl apply` of the exact same Job spec is a no-op (Kubernetes
+  # Jobs are immutable once created) - bump the suffix by hand (or template it from your CI
+  # pipeline's own commit SHA/tag) whenever the image tag below changes, so a new migration run
+  # is a new Job object rather than an apply that's silently rejected as unchanged.
+  name: fodip-migrate
+  namespace: fodip
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          # Same image as 04-api-deployment.yaml - keep both tags in sync, the migrations this Job
+          # runs must match the schema the API deployment it precedes actually expects.
+          image: CHANGE_ME/fodip-digital-api:CHANGE_ME
+          command: ["node", "scripts/run-migrations.js"]
+          envFrom:
+            - configMapRef:
+                name: fodip-config
+            - secretRef:
+                name: fodip-secrets
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false

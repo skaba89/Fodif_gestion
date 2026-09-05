@@ -1,0 +1,93 @@
+# Apply after 00-03 (namespace, config, secrets, migration Job completed).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fodip-api
+  namespace: fodip
+spec:
+  # Axe E4 (docs/14-ROADMAP-SAAS-PREMIUM.md) - safe to run more than one replica now: rate
+  # limiting (PostgresThrottlerStorageService) and session revocation (RevocationService) are
+  # both PostgreSQL-backed, shared across every replica rather than kept in an in-process Map.
+  # Before that work, a second replica would have silently multiplied the real request budget of
+  # every rate-limited route and let a revoked token still verify against whichever replica
+  # didn't see the revocation.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fodip-api
+  template:
+    metadata:
+      labels:
+        app: fodip-api
+    spec:
+      containers:
+        - name: api
+          # Built from apps/api/Dockerfile - a standard OCI image, buildable and pushable to any
+          # registry (no cloud-specific base image or build step). Replace both placeholders with
+          # your own registry/tag.
+          image: CHANGE_ME/fodip-digital-api:CHANGE_ME
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - configMapRef:
+                name: fodip-config
+            - secretRef:
+                name: fodip-secrets
+          # Same check the image's own HEALTHCHECK runs (apps/api/Dockerfile) - GET /api/v1/health,
+          # a public route needing no session/cookie. Kubernetes reads this directly rather than
+          # docker's own HEALTHCHECK status (a plain `docker run` or `docker ps` would use that
+          # one instead - see apps/api/Dockerfile's own comment on why the check now lives in the
+          # image, not only in docker-compose.yml).
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # The image already runs as `USER node` (apps/api/Dockerfile) - restated explicitly here
+          # so a cluster's admission policy (e.g. Pod Security Admission at the "restricted"
+          # level) can verify it without trusting the image's own metadata alone.
+          # readOnlyRootFilesystem: this application writes nothing to disk at runtime (uploaded
+          # documents are streamed straight to S3-compatible storage, never buffered to a local
+          # file - see apps/api/src/documents/document-storage.service.ts) - the writable /tmp
+          # volume below is defense-in-depth for anything a dependency might do, not a known need.
+          # NOT verified against a real running container in this environment (no Docker/K8s
+          # daemon available here - see docs/24-DEPLOIEMENT-PRODUCTION-OCI-K8S.md's own
+          # verification notes) - flagged rather than assumed.
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fodip-api
+  namespace: fodip
+spec:
+  selector:
+    app: fodip-api
+  ports:
+    - port: 4000
+      targetPort: 4000

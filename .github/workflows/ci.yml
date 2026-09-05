@@ -265,6 +265,14 @@ jobs:
     # (Chromium/Firefox/WebKit) across five projects instead of Chromium alone - extra install and
     # test time, same job.
     timeout-minutes: 35
+    # Axe E7 (docs/14-ROADMAP-SAAS-PREMIUM.md) - id-token:write lets this job mint a short-lived
+    # OpenID Connect token from GitHub's own OIDC provider, which cosign exchanges for a
+    # short-lived signing certificate from Sigstore's Fulcio (keyless signing - no private key to
+    # generate, store as a secret, or ever rotate). contents:read (inherited from the workflow
+    # default) is unchanged - this job pushes nothing back to the repository.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -331,11 +339,30 @@ jobs:
           format: cyclonedx-json
           output-file: sbom-web.cyclonedx.json
 
-      - name: Upload SBOMs
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      # Axe E7 - keyless signing (Sigstore's "keyless" flow, not literally no key: cosign generates
+      # an ephemeral key pair in memory, Fulcio issues it a short-lived certificate bound to this
+      # workflow run's own GitHub OIDC identity - repo, workflow file, ref, commit SHA - the
+      # private key is never written to disk and discarded the moment this step ends). No secret
+      # to provision, store, or ever rotate, and the resulting bundle is independently checkable
+      # against Sigstore's public transparency log (Rekor) - not merely "trust this repo's CI".
+      # --bundle produces one file per SBOM carrying the signature, certificate, and Rekor
+      # inclusion proof together, cosign's own recommended format over separate .sig/.pem/.cert
+      # files. See docs/19-GOUVERNANCE-SUPPLY-CHAIN.md for the corresponding verify-blob command.
+      - name: Sign SBOMs (Sigstore keyless, cosign)
+        run: |
+          cosign sign-blob --yes --bundle sbom-api.cyclonedx.json.sigstore.json sbom-api.cyclonedx.json
+          cosign sign-blob --yes --bundle sbom-web.cyclonedx.json.sigstore.json sbom-web.cyclonedx.json
+
+      - name: Upload SBOMs and signatures
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sboms
-          path: sbom-*.cyclonedx.json
+          path: |
+            sbom-*.cyclonedx.json
+            sbom-*.cyclonedx.json.sigstore.json
           retention-days: 90
 
       - name: Start Docker platform
