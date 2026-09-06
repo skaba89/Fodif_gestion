@@ -77,4 +77,14 @@ export class AdministrationService {
     }
     return result;
   }
+
+  async resetUserPassword(actorId: string, id: string, password: string) {
+    const result = await this.administration.resetPassword(actorId, id, await hash(password, 12));
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') throw new NotFoundException('User not found');
+      if (result.error === 'ANONYMIZED_USER') throw new BadRequestException(result.error);
+      throw new BadRequestException(result.error);
+    }
+    return result;
+  }
 }

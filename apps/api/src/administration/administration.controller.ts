@@ -8,6 +8,7 @@ import { AdministrationService } from './administration.service';
 import { CreateEnterpriseDto } from './dto/create-enterprise.dto';
 import { CreatePartnerBankDto } from './dto/create-partner-bank.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 interface AuthenticatedRequest extends Request { user: AuthenticatedUser }
@@ -36,6 +37,14 @@ export class AdministrationController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateUserDto,
   ) { return this.administration.updateUser(request.user.sub, id, dto); }
+
+  @Post('users/:id/reset-password')
+  @RequirePermissions('user.manage')
+  resetUserPassword(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: ResetUserPasswordDto,
+  ) { return this.administration.resetUserPassword(request.user.sub, id, dto.password); }
 
   @Get('roles')
   @RequirePermissions('role.read')

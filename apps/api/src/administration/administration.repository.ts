@@ -18,9 +18,6 @@ type PartnerBankWrite = { code: string; raisonSociale: string };
 
 @Injectable()
 export class AdministrationRepository {
-  // Axe B5: same key-derivation pattern as MfaService's TOTP seed encryption (a distinct HMAC
-  // context of the already-validated JWT_SECRET, rather than provisioning a separate secret) -
-  // see security-policy.js#deriveSecret and database/013_pii_encryption.sql.
   private readonly piiEncryptionKey: Buffer;
 
   constructor(private readonly db: DatabaseService, config: ConfigService) {
@@ -139,8 +136,6 @@ export class AdministrationRepository {
       if (input.partenaireBancaireId && !(await this.partnerBankExists(client, input.partenaireBancaireId))) {
         return { error: 'INVALID_PARTNER_BANK' } as const;
       }
-      // Accounts holding a privileged role (SUPER_ADMIN, DIRECTION_FODIP, ...) are always MFA-enrolled,
-      // regardless of what the caller passed - an admin cannot opt a sensitive role out of it.
       const mfaRequired = input.mfaRequired || requiresMfa(input.roles);
       const telephone = input.telephone?.trim() || null;
       const inserted = await client.query<{ id: string }>(
@@ -202,8 +197,6 @@ export class AdministrationRepository {
         return { error: 'PROTECTED_SUPER_ADMIN' } as const;
       }
 
-      // Accounts holding a privileged role are always MFA-enrolled: neither an explicit
-      // mfaRequired:false nor a role change away from the request can turn it off on its own.
       const mfaRequired = (input.mfaRequired ?? target.rows[0].mfaRequired) || requiresMfa(nextRoles);
 
       await client.query(
@@ -220,6 +213,24 @@ export class AdministrationRepository {
         mfaRequired,
         roles: nextRoles, entrepriseId: input.entrepriseId, partenaireBancaireId: input.partenaireBancaireId,
       });
+      return { id };
+    });
+  }
+
+  async resetPassword(actorId: string, id: string, passwordHash: string) {
+    return this.db.transaction(async (client) => {
+      const target = await client.query<{ anonymizedAt: Date | null }>(
+        `SELECT anonymized_at AS "anonymizedAt" FROM utilisateurs WHERE id = $1 FOR UPDATE`,
+        [id],
+      );
+      if (!target.rows[0]) return { error: 'NOT_FOUND' } as const;
+      if (target.rows[0].anonymizedAt) return { error: 'ANONYMIZED_USER' } as const;
+
+      await client.query(
+        `UPDATE utilisateurs SET password_hash = $2, actif = TRUE, updated_at = NOW() WHERE id = $1`,
+        [id, passwordHash],
+      );
+      await this.audit(client, actorId, 'RESET_USER_PASSWORD', id, null, { passwordReset: true, reactivated: true });
       return { id };
     });
   }
