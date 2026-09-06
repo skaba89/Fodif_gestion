@@ -194,6 +194,62 @@
   line-height: 1.5;
 }
 
+.contentFrame {
+  min-height: calc(100vh - 152px);
+}
+
+.contentFrame :global(main) {
+  animation: content-in 280ms var(--ease);
+}
+
+.contentFrame :global(h1) {
+  text-wrap: balance;
+}
+
+.contentFrame :global(article) {
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.contentFrame :global(input:not([type='checkbox']):not([type='radio'])),
+.contentFrame :global(select),
+.contentFrame :global(textarea) {
+  border-radius: 11px;
+  box-shadow: 0 1px 2px rgba(20, 35, 27, 0.025);
+}
+
+.contentFrame :global(input:not([type='checkbox']):not([type='radio']):focus-visible),
+.contentFrame :global(select:focus-visible),
+.contentFrame :global(textarea:focus-visible) {
+  border-color: var(--green);
+  box-shadow: var(--focus-ring), 0 6px 16px rgba(15, 107, 69, 0.055);
+}
+
+.contentFrame :global(table) {
+  font-variant-numeric: tabular-nums;
+}
+
+.contentFrame :global(th) {
+  font-weight: 800;
+}
+
+.contentFrame :global(button) {
+  letter-spacing: -0.005em;
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .drawerNav {
   display: flex;
   flex-direction: column;
@@ -300,7 +356,10 @@
 @media (prefers-reduced-motion: reduce) {
   .nav a,
   .themeToggle,
-  .hamburger {
+  .hamburger,
+  .contentFrame :global(main),
+  .contentFrame :global(article) {
+    animation: none;
     transition: none;
   }
 }
