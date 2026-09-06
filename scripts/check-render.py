@@ -28,7 +28,7 @@ else:
     api = services.get("fodip-api", {})
     api_env = {item.get("key"): item for item in api.get("envVars", [])}
     required_api_env = {
-        "DATABASE_URL", "DATABASE_URL_UNPOOLED", "DATABASE_SSL", "JWT_SECRET",
+        "APP_ENV", "DATABASE_URL", "DATABASE_URL_UNPOOLED", "DATABASE_SSL", "JWT_SECRET",
         "BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_NOM", "BOOTSTRAP_ADMIN_PASSWORD",
         "STORAGE_ENDPOINT", "STORAGE_REGION", "STORAGE_BUCKET", "STORAGE_ACCESS_KEY",
         "STORAGE_SECRET_KEY", "WEB_BASE_URL",
@@ -36,6 +36,8 @@ else:
     missing = sorted(required_api_env - set(api_env))
     if missing:
         errors.append(f"fodip-api: missing environment variables: {', '.join(missing)}")
+    if api_env.get("APP_ENV", {}).get("value") != "QUALIFICATION":
+        errors.append("fodip-api: Render/Neon must stay explicitly labelled APP_ENV=QUALIFICATION")
     command = api.get("dockerCommand", "")
     if command != "/bin/bash scripts/start-render.sh":
         errors.append("fodip-api: dockerCommand must invoke the quote-safe Render startup script")
