@@ -138,6 +138,18 @@
   box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--gold) 70%, transparent);
 }
 
+/* The dark premium surface is intentionally subtle, but active navigation must remain above
+   WCAG AA 4.5:1. primary-200 keeps the institutional green family while providing safe contrast. */
+:global(:root[data-theme='dark']) .nav a[aria-current='page'] {
+  color: var(--primary-200);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .nav a[aria-current='page'] {
+    color: var(--primary-200);
+  }
+}
+
 .headerActions {
   display: flex;
   align-items: center;

@@ -15,7 +15,12 @@ export async function clientApi<T>(url: string, init: RequestInit = {}): Promise
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== 'undefined') window.location.replace('/entrepreneur/connexion');
+    // Keep the explicit expiry reason used by the shared session guard. Several PME requests can
+    // fail concurrently when the short-lived token expires; none of them should overwrite the
+    // guard's informative redirect with a plain login URL.
+    if (response.status === 401 && typeof window !== 'undefined') {
+      window.location.replace('/entrepreneur/connexion?reason=session-expired');
+    }
     throw new ApiError(data?.message ?? 'Une erreur est survenue', response.status);
   }
   return data as T;
