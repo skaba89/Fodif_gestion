@@ -15,11 +15,19 @@ type User = {
 };
 
 const emptyForm = { email: '', nom: '', prenom: '', password: '', roles: ['AGENT_FODIP'], entrepriseId: '', partenaireBancaireId: '', mfaRequired: false };
+const emptyEnterpriseForm = { codeFodip: '', raisonSociale: '', nomCommercial: '' };
+const emptyPartnerBankForm = { code: '', raisonSociale: '' };
+
+function responseMessage(body: { message?: string | string[] }, fallback: string) {
+  return Array.isArray(body.message) ? body.message.join(' · ') : body.message ?? fallback;
+}
 
 export default function UsersAdministrationPage() {
   const [users, setUsers] = useState<User[]>([]); const [roles, setRoles] = useState<Role[]>([]);
   const [enterprises, setEnterprises] = useState<Enterprise[]>([]); const [partnerBanks, setPartnerBanks] = useState<PartnerBank[]>([]);
   const [form, setForm] = useState(emptyForm); const [search, setSearch] = useState(''); const [message, setMessage] = useState('');
+  const [enterpriseForm, setEnterpriseForm] = useState(emptyEnterpriseForm);
+  const [partnerBankForm, setPartnerBankForm] = useState(emptyPartnerBankForm);
   const [pendingAnonymize, setPendingAnonymize] = useState<User | null>(null);
 
   const load = useCallback(async () => {
@@ -39,6 +47,32 @@ export default function UsersAdministrationPage() {
 
   useEffect(() => { load().catch((error) => setMessage(error.message)); }, [load]);
 
+  async function createEnterprise(event: FormEvent) {
+    event.preventDefault(); setMessage('');
+    const response = await fetch('/api/administration/enterprises', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(enterpriseForm),
+    });
+    const body = await response.json().catch(() => ({})) as Enterprise & { message?: string | string[] };
+    if (!response.ok) return setMessage(responseMessage(body, 'Création de la PME impossible'));
+    setEnterpriseForm(emptyEnterpriseForm);
+    setForm((current) => ({ ...current, roles: ['PME'], entrepriseId: body.id, partenaireBancaireId: '' }));
+    setMessage(`PME ${body.raisonSociale} créée. Elle est déjà sélectionnée pour le prochain compte PME.`);
+    await load();
+  }
+
+  async function createPartnerBank(event: FormEvent) {
+    event.preventDefault(); setMessage('');
+    const response = await fetch('/api/administration/partner-banks', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(partnerBankForm),
+    });
+    const body = await response.json().catch(() => ({})) as PartnerBank & { message?: string | string[] };
+    if (!response.ok) return setMessage(responseMessage(body, 'Création de la banque partenaire impossible'));
+    setPartnerBankForm(emptyPartnerBankForm);
+    setForm((current) => ({ ...current, roles: ['PARTENAIRE_BANCAIRE'], partenaireBancaireId: body.id, entrepriseId: '' }));
+    setMessage(`Banque partenaire ${body.raisonSociale} créée. Elle est déjà sélectionnée pour le prochain compte partenaire.`);
+    await load();
+  }
+
   async function create(event: FormEvent) {
     event.preventDefault(); setMessage('');
     const response = await fetch('/api/administration/users', {
@@ -46,7 +80,7 @@ export default function UsersAdministrationPage() {
       body: JSON.stringify({ ...form, entrepriseId: form.entrepriseId || undefined, partenaireBancaireId: form.partenaireBancaireId || undefined }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) return setMessage(Array.isArray(body.message) ? body.message.join(' · ') : body.message ?? 'Création impossible');
+    if (!response.ok) return setMessage(responseMessage(body, 'Création impossible'));
     setMessage('Utilisateur créé et action enregistrée dans le journal d’audit.'); setForm(emptyForm); await load();
   }
 
@@ -77,8 +111,31 @@ export default function UsersAdministrationPage() {
   }
 
   return <main className={portal.main}><p className={portal.eyebrow}>Super administration</p><h1 className={portal.title}>Utilisateurs et rôles</h1>
-    <p className={portal.lead}>Créez les comptes, attribuez leurs rôles et périmètres, activez ou suspendez les accès. La désactivation de son propre compte et du dernier super-administrateur est interdite.</p>
+    <p className={portal.lead}>Créez les PME et banques partenaires, puis les comptes utilisateurs et leurs périmètres. La désactivation de son propre compte et du dernier super-administrateur est interdite.</p>
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
+
+    <section className={`${portal.card} ${portal.formCard} ${portal.section}`}>
+      <div className={portal.sectionHeader}><div><h2>Créer les référentiels d’accès</h2><p>Une PME ou une banque doit exister avant de pouvoir lui rattacher un compte utilisateur.</p></div></div>
+      <h3>Nouvelle PME</h3>
+      <form onSubmit={createEnterprise}>
+        <div className={portal.formGrid}>
+          <div className={portal.field}><label htmlFor="enterprise-code">Code FODIP</label><input id="enterprise-code" required maxLength={30} value={enterpriseForm.codeFodip} onChange={(event) => setEnterpriseForm({ ...enterpriseForm, codeFodip: event.target.value })} placeholder="PME-0001" /></div>
+          <div className={portal.field}><label htmlFor="enterprise-name">Raison sociale</label><input id="enterprise-name" required maxLength={255} value={enterpriseForm.raisonSociale} onChange={(event) => setEnterpriseForm({ ...enterpriseForm, raisonSociale: event.target.value })} /></div>
+          <div className={portal.field}><label htmlFor="enterprise-trade-name">Nom commercial</label><input id="enterprise-trade-name" maxLength={255} value={enterpriseForm.nomCommercial} onChange={(event) => setEnterpriseForm({ ...enterpriseForm, nomCommercial: event.target.value })} /></div>
+        </div>
+        <div className={portal.buttonRow}><button className={portal.secondary}>Créer la PME</button></div>
+      </form>
+
+      <h3>Nouvelle banque partenaire</h3>
+      <form onSubmit={createPartnerBank}>
+        <div className={portal.formGrid}>
+          <div className={portal.field}><label htmlFor="bank-code">Code banque</label><input id="bank-code" required maxLength={50} value={partnerBankForm.code} onChange={(event) => setPartnerBankForm({ ...partnerBankForm, code: event.target.value })} placeholder="BANK-01" /></div>
+          <div className={portal.field}><label htmlFor="bank-name">Raison sociale</label><input id="bank-name" required maxLength={255} value={partnerBankForm.raisonSociale} onChange={(event) => setPartnerBankForm({ ...partnerBankForm, raisonSociale: event.target.value })} /></div>
+        </div>
+        <div className={portal.buttonRow}><button className={portal.secondary}>Créer la banque partenaire</button></div>
+      </form>
+    </section>
+
     <section className={`${portal.card} ${portal.formCard} ${portal.section}`}><div className={portal.sectionHeader}><div><h2>Créer un utilisateur</h2><p>Le mot de passe initial respecte la politique forte et n’est jamais journalisé.</p></div></div>
       <form onSubmit={create}><div className={portal.formGrid}>
         <div className={portal.field}><label htmlFor="email">Email</label><input id="email" type="email" required value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></div>
@@ -86,8 +143,8 @@ export default function UsersAdministrationPage() {
         <div className={portal.field}><label htmlFor="nom">Nom</label><input id="nom" required value={form.nom} onChange={(event) => setForm({ ...form, nom: event.target.value })} /></div>
         <div className={portal.field}><label htmlFor="prenom">Prénom</label><input id="prenom" value={form.prenom} onChange={(event) => setForm({ ...form, prenom: event.target.value })} /></div>
         <div className={portal.field}><label htmlFor="role">Rôle</label><select id="role" value={form.roles[0]} onChange={(event) => setForm({ ...form, roles: [event.target.value], entrepriseId: event.target.value === 'PME' ? form.entrepriseId : '', partenaireBancaireId: event.target.value === 'PARTENAIRE_BANCAIRE' ? form.partenaireBancaireId : '' })}>{roles.map((role) => <option key={role.code} value={role.code}>{role.nom}</option>)}</select></div>
-        <div className={portal.field}><label htmlFor="entreprise">Entreprise PME</label><select id="entreprise" disabled={!form.roles.includes('PME')} required={form.roles.includes('PME')} value={form.entrepriseId} onChange={(event) => setForm({ ...form, entrepriseId: event.target.value })}><option value="">Sélectionner</option>{enterprises.map((enterprise) => <option key={enterprise.id} value={enterprise.id}>{enterprise.raisonSociale}</option>)}</select></div>
-        <div className={portal.field}><label htmlFor="partenaire">Banque partenaire</label><select id="partenaire" disabled={!form.roles.includes('PARTENAIRE_BANCAIRE')} required={form.roles.includes('PARTENAIRE_BANCAIRE')} value={form.partenaireBancaireId} onChange={(event) => setForm({ ...form, partenaireBancaireId: event.target.value })}><option value="">Sélectionner</option>{partnerBanks.map((bank) => <option key={bank.id} value={bank.id}>{bank.raisonSociale}</option>)}</select></div>
+        <div className={portal.field}><label htmlFor="entreprise">Entreprise PME</label><select id="entreprise" disabled={!form.roles.includes('PME')} required={form.roles.includes('PME')} value={form.entrepriseId} onChange={(event) => setForm({ ...form, entrepriseId: event.target.value })}><option value="">Sélectionner</option>{enterprises.map((enterprise) => <option key={enterprise.id} value={enterprise.id}>{enterprise.raisonSociale} · {enterprise.codeFodip}</option>)}</select></div>
+        <div className={portal.field}><label htmlFor="partenaire">Banque partenaire</label><select id="partenaire" disabled={!form.roles.includes('PARTENAIRE_BANCAIRE')} required={form.roles.includes('PARTENAIRE_BANCAIRE')} value={form.partenaireBancaireId} onChange={(event) => setForm({ ...form, partenaireBancaireId: event.target.value })}><option value="">Sélectionner</option>{partnerBanks.map((bank) => <option key={bank.id} value={bank.id}>{bank.raisonSociale} · {bank.code}</option>)}</select></div>
       </div><div className={portal.buttonRow}><button className={portal.primary}>Créer le compte</button></div></form>
     </section>
 

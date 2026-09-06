@@ -13,6 +13,8 @@ type UserUpdate = {
   actif?: boolean; mfaRequired?: boolean; roles?: string[];
   entrepriseId?: string | null; partenaireBancaireId?: string | null;
 };
+type EnterpriseWrite = { codeFodip: string; raisonSociale: string; nomCommercial?: string };
+type PartnerBankWrite = { code: string; raisonSociale: string };
 
 @Injectable()
 export class AdministrationRepository {
@@ -85,6 +87,46 @@ export class AdministrationRepository {
        FROM entreprises WHERE deleted_at IS NULL ORDER BY raison_sociale`,
     );
     return { items: result.rows };
+  }
+
+  async createEnterprise(actorId: string, input: EnterpriseWrite) {
+    return this.db.transaction(async (client) => {
+      const inserted = await client.query<{ id: string; codeFodip: string; raisonSociale: string }>(
+        `INSERT INTO entreprises (code_fodip, raison_sociale, nom_commercial)
+         VALUES ($1, $2, $3)
+         RETURNING id, code_fodip AS "codeFodip", raison_sociale AS "raisonSociale"`,
+        [input.codeFodip, input.raisonSociale, input.nomCommercial ?? null],
+      );
+      const enterprise = inserted.rows[0];
+      await client.query(
+        `INSERT INTO audit_logs (utilisateur_id, action, entity_type, entity_id, new_values)
+         VALUES ($1, 'CREATE_ENTERPRISE', 'ENTREPRISE', $2, $3)`,
+        [actorId, enterprise.id, JSON.stringify({
+          codeFodip: input.codeFodip,
+          raisonSociale: input.raisonSociale,
+          nomCommercial: input.nomCommercial ?? null,
+        })],
+      );
+      return enterprise;
+    });
+  }
+
+  async createPartnerBank(actorId: string, input: PartnerBankWrite) {
+    return this.db.transaction(async (client) => {
+      const inserted = await client.query<{ id: string; code: string; raisonSociale: string }>(
+        `INSERT INTO partenaires_bancaires (code, raison_sociale, actif)
+         VALUES ($1, $2, TRUE)
+         RETURNING id, code, raison_sociale AS "raisonSociale"`,
+        [input.code, input.raisonSociale],
+      );
+      const partnerBank = inserted.rows[0];
+      await client.query(
+        `INSERT INTO audit_logs (utilisateur_id, action, entity_type, entity_id, new_values)
+         VALUES ($1, 'CREATE_PARTNER_BANK', 'PARTENAIRE_BANCAIRE', $2, $3)`,
+        [actorId, partnerBank.id, JSON.stringify({ code: input.code, raisonSociale: input.raisonSociale })],
+      );
+      return partnerBank;
+    });
   }
 
   async create(actorId: string, input: UserWrite) {

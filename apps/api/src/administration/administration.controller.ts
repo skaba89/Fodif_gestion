@@ -5,6 +5,8 @@ import { AuthenticatedUser } from '../auth/auth-user.interface';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { RequireRoles } from '../common/decorators/roles.decorator';
 import { AdministrationService } from './administration.service';
+import { CreateEnterpriseDto } from './dto/create-enterprise.dto';
+import { CreatePartnerBankDto } from './dto/create-partner-bank.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -43,8 +45,19 @@ export class AdministrationController {
   @RequirePermissions('user.manage')
   listEnterprises() { return this.administration.listEnterprises(); }
 
+  @Post('enterprises')
+  @RequirePermissions('user.manage')
+  createEnterprise(@Req() request: AuthenticatedRequest, @Body() dto: CreateEnterpriseDto) {
+    return this.administration.createEnterprise(request.user.sub, dto);
+  }
+
   @Get('partner-banks')
   @RequirePermissions('user.manage')
   listPartnerBanks() { return this.administration.listPartnerBanks(); }
-}
 
+  @Post('partner-banks')
+  @RequirePermissions('user.manage')
+  createPartnerBank(@Req() request: AuthenticatedRequest, @Body() dto: CreatePartnerBankDto) {
+    return this.administration.createPartnerBank(request.user.sub, dto);
+  }
+}
