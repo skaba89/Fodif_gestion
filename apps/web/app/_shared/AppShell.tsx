@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import ThemeToggle from './ThemeToggle';
 import Drawer from './Drawer';
 import { MenuIcon } from './Icons';
-import styles from '../entrepreneur/portal.module.css';
+import styles from './AppShell.module.css';
 
 export interface AppShellNavItem {
   label: string;
@@ -14,19 +14,10 @@ export interface AppShellNavItem {
 }
 
 /**
- * Shared header + navigation shell for every authenticated portal - mission "présentation
- * Directeur général" (section 6, mobile navigation; section 7, "AppShell" in the components to
- * mutualize list). Replaces each portal's own inline `<header>...<nav>...` markup (previously
- * duplicated near-verbatim across entrepreneur/agent/comite/administration/auditeur/partenaire's
- * layout.tsx, and inlined a third way again inside direction/tableau-de-bord/page.tsx).
+ * Shared premium institutional shell for every authenticated portal.
  *
- * Fixes the real, previously-diagnosed bug this mission calls out by name (see
- * apps/web/playwright.config.ts's own file-level comment, written when the two mobile Playwright
- * projects were deliberately left disabled pending exactly this fix): entrepreneur/portal.module.css
- * hid `.nav` outright below 900px with nothing to replace it - unusable, not just visually
- * different, on any phone-width viewport. Below that same breakpoint this component now shows a
- * 44×44px hamburger button opening an accessible Drawer (focus trap, Escape-to-close, focus
- * return - see Drawer.tsx) carrying the identical nav items and account menu, rather than nothing.
+ * The component keeps all existing navigation, accessibility, responsive drawer, session-expiry
+ * notice and demo-mode behaviour unchanged while centralising the visual identity of FODIP Digital.
  */
 export default function AppShell({
   portalLabel,
