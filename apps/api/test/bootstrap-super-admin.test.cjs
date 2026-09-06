@@ -2,11 +2,30 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { bootstrapSuperAdmin, resolveBootstrapConfig } = require('../scripts/bootstrap-super-admin');
+const {
+  bootstrapSuperAdmin,
+  isProtectedEnvironment,
+  resolveBootstrapConfig,
+} = require('../scripts/bootstrap-super-admin');
 
 const strongConfig = {
   email: 'admin@example.org', nom: 'Kaba', prenom: 'Cheickna', password: 'Institutionnel-2030!',
 };
+
+function existingAdminClient() {
+  const queries = [];
+  return {
+    queries,
+    client: {
+      async query(sql, values) {
+        queries.push({ sql, values });
+        if (sql.startsWith('SELECT pg_try_advisory_lock')) return { rows: [{ locked: true }], rowCount: 1 };
+        if (sql.includes("role.code = 'SUPER_ADMIN'")) return { rows: [{ id: 'existing' }], rowCount: 1 };
+        return { rows: [], rowCount: 0 };
+      },
+    },
+  };
+}
 
 test('bootstrap is disabled when no bootstrap secret is configured', () => {
   assert.equal(resolveBootstrapConfig({}), null);
@@ -41,19 +60,26 @@ test('bootstrap enforces the institutional password policy', () => {
   }), /does not meet policy/);
 });
 
-test('bootstrap is an idempotent no-op when an active SUPER_ADMIN exists', async () => {
-  const queries = [];
-  const client = {
-    async query(sql, values) {
-      queries.push({ sql, values });
-      if (sql.startsWith('SELECT pg_try_advisory_lock')) return { rows: [{ locked: true }], rowCount: 1 };
-      if (sql.includes("role.code = 'SUPER_ADMIN'")) return { rows: [{ id: 'existing' }], rowCount: 1 };
-      return { rows: [], rowCount: 0 };
-    },
-  };
-  const result = await bootstrapSuperAdmin(client, strongConfig, () => undefined);
+test('protected environment detection is explicit and case-insensitive', () => {
+  assert.equal(isProtectedEnvironment({ APP_ENV: 'PROD' }), true);
+  assert.equal(isProtectedEnvironment({ APP_ENV: ' ppd ' }), true);
+  assert.equal(isProtectedEnvironment({ APP_ENV: 'QUALIFICATION' }), false);
+  assert.equal(isProtectedEnvironment({}), false);
+});
+
+test('bootstrap is an idempotent no-op when an active SUPER_ADMIN exists outside PPD/PROD', async () => {
+  const { client, queries } = existingAdminClient();
+  const result = await bootstrapSuperAdmin(client, strongConfig, () => undefined, { APP_ENV: 'QUALIFICATION' });
   assert.deepEqual(result, { created: false });
   assert.equal(queries.some(({ sql }) => sql.startsWith('INSERT INTO utilisateurs')), false);
+});
+
+test('bootstrap refuses stale bootstrap credentials after SUPER_ADMIN exists in PROD', async () => {
+  const { client } = existingAdminClient();
+  await assert.rejects(
+    () => bootstrapSuperAdmin(client, strongConfig, () => undefined, { APP_ENV: 'PROD' }),
+    /BOOTSTRAP_ADMIN_\* must be removed/,
+  );
 });
 
 test('bootstrap hashes the password, assigns SUPER_ADMIN and commits the audited account', async () => {
@@ -68,7 +94,7 @@ test('bootstrap hashes the password, assigns SUPER_ADMIN and commits the audited
       return { rows: [], rowCount: 0 };
     },
   };
-  const result = await bootstrapSuperAdmin(client, strongConfig, () => undefined);
+  const result = await bootstrapSuperAdmin(client, strongConfig, () => undefined, { APP_ENV: 'PROD' });
   assert.deepEqual(result, { created: true, id: 'admin-id' });
   const userInsert = queries.find(({ sql }) => sql.startsWith('INSERT INTO utilisateurs'));
   assert.notEqual(userInsert.values[3], strongConfig.password);
