@@ -47,6 +47,28 @@ else:
         for required in ("run-migrations.js", "bootstrap-super-admin.js", "exec node dist/main.js"):
             if required not in start_content:
                 errors.append(f"fodip-api: start-render.sh must include {required}")
+
+        # Hosted startup is deliberately tiny and allow-listed. In particular, schema migrations
+        # must run WITHOUT --seed: database/seeds are local/CI fixtures and are never a hosted data
+        # source. Comparing the complete executable sequence makes a future seed command (or any
+        # other hidden startup side effect) fail CI instead of silently reaching qualification or
+        # a future production environment.
+        executable_lines = [
+            line.strip()
+            for line in start_content.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        expected_startup = [
+            "set -euo pipefail",
+            "node scripts/run-migrations.js",
+            "node scripts/bootstrap-super-admin.js",
+            "exec node dist/main.js",
+        ]
+        if executable_lines != expected_startup:
+            errors.append(
+                "fodip-api: hosted startup must remain exactly migrations (without --seed), "
+                "one-time admin bootstrap, then API"
+            )
     if api.get("healthCheckPath") != "/api/v1/health/ready":
         errors.append("fodip-api: health check must verify database and object storage readiness")
 
