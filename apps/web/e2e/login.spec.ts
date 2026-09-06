@@ -15,6 +15,15 @@ test.describe('Login flow', () => {
     await expect(page).toHaveURL(/\/administration\/connexion$/);
   });
 
+  test('an institutional account entering through PME login is routed to its canonical portal', async ({ page }) => {
+    await page.goto('/entrepreneur/connexion');
+    await page.getByLabel('Email').fill('admin@fodip.local');
+    await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+
+    await expect(page).toHaveURL(/\/administration\/utilisateurs$/);
+  });
+
   test('a PME account reaches its own space and can log out', async ({ page }) => {
     await page.goto('/entrepreneur/connexion');
     await page.getByLabel('Email').fill('pme@fodip.local');
