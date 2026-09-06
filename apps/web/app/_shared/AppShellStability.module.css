@@ -1,0 +1,28 @@
+/*
+ * Keep the premium entrance motion without animating opacity.
+ *
+ * Axe scans can start while the shell is entering. An opacity animation changes the effective
+ * foreground colour by compositing text with its background, which made otherwise WCAG-AA design
+ * tokens fail non-deterministically across Chromium, Firefox and mobile emulation. Repeating the
+ * class raises specificity above AppShell.module.css without !important and makes the transform-
+ * only animation deterministic for both users and automated accessibility checks.
+ */
+@keyframes stable-content-in {
+  from {
+    transform: translateY(5px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+.stableContent.stableContent :global(main) {
+  animation: stable-content-in 280ms var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stableContent.stableContent :global(main) {
+    animation: none;
+  }
+}
