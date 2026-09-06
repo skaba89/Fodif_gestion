@@ -46,6 +46,7 @@ export default function AppShell({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -55,6 +56,11 @@ export default function AppShell({
       .catch(() => { /* config unreachable - default to no banner, never block the portal on it */ });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get('reason');
+    setSessionExpired(reason === 'session-expired');
+  }, [pathname]);
 
   return (
     <div className={styles.shell}>
@@ -90,6 +96,12 @@ export default function AppShell({
           </button>
         </div>
       </header>
+
+      {sessionExpired && (
+        <div className={styles.notice} role="alert" data-testid="session-expired-notice">
+          Votre session a expiré pour des raisons de sécurité. Reconnectez-vous pour continuer.
+        </div>
+      )}
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={portalLabel}>
         <nav className={styles.drawerNav} aria-label={`Navigation ${portalLabel}`}>
