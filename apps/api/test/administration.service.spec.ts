@@ -71,6 +71,34 @@ describe('AdministrationService', () => {
     expect(input.passwordHash).toMatch(/^\$2[aby]\$/);
   });
 
+  it('hashes a replacement password before resetting an account', async () => {
+    const repository = {
+      resetPassword: jest.fn().mockResolvedValue({ id: 'user-1' }),
+    } as unknown as AdministrationRepository;
+    const service = new AdministrationService(repository);
+
+    await service.resetUserPassword('admin', 'user-1', 'Password2026!');
+
+    const [, id, passwordHash] = (repository.resetPassword as jest.Mock).mock.calls[0];
+    expect(id).toBe('user-1');
+    expect(passwordHash).not.toBe('Password2026!');
+    expect(passwordHash).toMatch(/^\$2[aby]\$/);
+  });
+
+  it('maps reset password failures to safe HTTP errors', async () => {
+    const missingRepository = {
+      resetPassword: jest.fn().mockResolvedValue({ error: 'NOT_FOUND' }),
+    } as unknown as AdministrationRepository;
+    await expect(new AdministrationService(missingRepository).resetUserPassword('admin', 'missing', 'Password2026!'))
+      .rejects.toBeInstanceOf(NotFoundException);
+
+    const anonymizedRepository = {
+      resetPassword: jest.fn().mockResolvedValue({ error: 'ANONYMIZED_USER' }),
+    } as unknown as AdministrationRepository;
+    await expect(new AdministrationService(anonymizedRepository).resetUserPassword('admin', 'anon', 'Password2026!'))
+      .rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('maps repository protections to safe HTTP errors', async () => {
     const protectedRepository = {
       update: jest.fn().mockResolvedValue({ error: 'PROTECTED_SUPER_ADMIN' }),
