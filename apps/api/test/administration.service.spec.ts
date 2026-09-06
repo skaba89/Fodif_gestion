@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AdministrationRepository } from '../src/administration/administration.repository';
 import { AdministrationService } from '../src/administration/administration.service';
 
@@ -19,6 +19,40 @@ describe('AdministrationService', () => {
     await expect(service.createUser('admin', {
       email: 'partner@example.com', nom: 'Partner', password: 'Password2026!', roles: ['PARTENAIRE_BANCAIRE'],
     })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('normalizes enterprise and partner bank codes before persistence', async () => {
+    const repository = {
+      createEnterprise: jest.fn().mockResolvedValue({ id: 'enterprise-1' }),
+      createPartnerBank: jest.fn().mockResolvedValue({ id: 'bank-1' }),
+    } as unknown as AdministrationRepository;
+    const service = new AdministrationService(repository);
+
+    await service.createEnterprise('admin', {
+      codeFodip: ' pme-001 ', raisonSociale: ' PME Exemple ', nomCommercial: ' Exemple ',
+    });
+    await service.createPartnerBank('admin', { code: ' bank-01 ', raisonSociale: ' Banque Exemple ' });
+
+    expect(repository.createEnterprise).toHaveBeenCalledWith('admin', {
+      codeFodip: 'PME-001', raisonSociale: 'PME Exemple', nomCommercial: 'Exemple',
+    });
+    expect(repository.createPartnerBank).toHaveBeenCalledWith('admin', {
+      code: 'BANK-01', raisonSociale: 'Banque Exemple',
+    });
+  });
+
+  it('maps duplicate enterprise and partner bank codes to conflicts', async () => {
+    const duplicate = Object.assign(new Error('duplicate'), { code: '23505' });
+    const repository = {
+      createEnterprise: jest.fn().mockRejectedValue(duplicate),
+      createPartnerBank: jest.fn().mockRejectedValue(duplicate),
+    } as unknown as AdministrationRepository;
+    const service = new AdministrationService(repository);
+
+    await expect(service.createEnterprise('admin', { codeFodip: 'PME-001', raisonSociale: 'PME' }))
+      .rejects.toBeInstanceOf(ConflictException);
+    await expect(service.createPartnerBank('admin', { code: 'BANK-01', raisonSociale: 'Banque' }))
+      .rejects.toBeInstanceOf(ConflictException);
   });
 
   it('normalizes roles and hashes the password before persistence', async () => {
