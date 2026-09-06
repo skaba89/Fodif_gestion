@@ -16,6 +16,21 @@ interface SessionResponse {
   user?: { roles?: string[] };
 }
 
+const ROLE_HOME_PRIORITY: Array<[string, string]> = [
+  ['SUPER_ADMIN', '/administration/utilisateurs'],
+  ['DIRECTION_FODIP', '/direction/tableau-de-bord'],
+  ['ANALYSTE', '/direction/tableau-de-bord'],
+  ['AGENT_FODIP', '/agent/dossiers'],
+  ['COMITE_FINANCEMENT', '/comite/dossiers'],
+  ['AUDITEUR', '/auditeur/tableau-de-bord'],
+  ['PARTENAIRE_BANCAIRE', '/partenaire/financements'],
+  ['PME', '/entrepreneur'],
+];
+
+function resolveRoleHome(roles: string[]) {
+  return ROLE_HOME_PRIORITY.find(([role]) => roles.includes(role))?.[1];
+}
+
 export interface LoginFormProps {
   eyebrow: string;
   title: string;
@@ -24,6 +39,8 @@ export interface LoginFormProps {
   /** Roles allowed to use this portal. Omit to accept any authenticated account. */
   allowedRoles?: string[];
   deniedMessage?: string;
+  /** Redirect a recognized account to its canonical portal instead of logging it out on role mismatch. */
+  redirectWrongRoleToHome?: boolean;
   /** 'narrow' renders a single centered card (used by /administration); 'wide' matches the other portals. */
   variant?: 'wide' | 'narrow';
   replaceHistory?: boolean;
@@ -56,6 +73,7 @@ function LoginFormInner({
   redirectTo,
   allowedRoles,
   deniedMessage,
+  redirectWrongRoleToHome = false,
   variant = 'wide',
   replaceHistory = false,
   oidcPortal,
@@ -84,6 +102,12 @@ function LoginFormInner({
   async function finalizeSession(data: SessionResponse) {
     const roles = data.user?.roles ?? [];
     if (allowedRoles && !roles.some((role) => allowedRoles.includes(role))) {
+      const roleHome = redirectWrongRoleToHome ? resolveRoleHome(roles) : undefined;
+      if (roleHome) {
+        router.replace(roleHome);
+        router.refresh();
+        return;
+      }
       await fetch('/api/session/logout', { method: 'POST' });
       throw new Error(deniedMessage ?? 'Ce compte ne possède pas les droits nécessaires.');
     }
