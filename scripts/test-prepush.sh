@@ -24,4 +24,13 @@ bash -n scripts/backup-postgres.sh
 bash -n scripts/restore-postgres.sh
 bash -n scripts/test-backup-restore.sh
 bash -n apps/api/scripts/start-render.sh
+sh -n apps/web/scripts/start-web.sh
+if APP_ENV=PROD DEMO_MODE=true sh apps/web/scripts/start-web.sh >/dev/null 2>&1; then
+  echo "apps/web/scripts/start-web.sh must refuse DEMO_MODE=true in PROD" >&2
+  exit 1
+fi
+if APP_ENV=PPD DEMO_MODE=true sh apps/web/scripts/start-web.sh >/dev/null 2>&1; then
+  echo "apps/web/scripts/start-web.sh must refuse DEMO_MODE=true in PPD" >&2
+  exit 1
+fi
 pnpm -r lint
