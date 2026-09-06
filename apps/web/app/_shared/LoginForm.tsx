@@ -3,6 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from '../entrepreneur/portal.module.css';
+import premium from './LoginForm.module.css';
 
 type Step = 'credentials' | 'setup' | 'verify';
 type OidcPortal = 'agent' | 'comite' | 'direction' | 'administration' | 'auditeur';
@@ -52,15 +53,11 @@ export interface LoginFormProps {
 /**
  * Shared login flow for every portal. Handles the plain email/password case, the two-step TOTP
  * flow returned by the API for accounts flagged `mfa_required` (enrollment then verification, or
- * verification alone once enrolled), and resuming an OpenID Connect sign-in: the API's
- * /auth/oidc/callback redirects the browser straight back to this same page with an
- * `oidc_token` (or `oidc_error`) query param, which is picked up on mount and exchanged exactly
- * like an MFA challenge would be - it may itself resolve to an MFA challenge, since OIDC doesn't
- * bypass our own TOTP requirement for accounts that have it.
+ * verification alone once enrolled), and resuming an OpenID Connect sign-in.
  */
 export default function LoginForm(props: LoginFormProps) {
   return (
-    <Suspense fallback={<main className={props.variant === 'narrow' ? undefined : styles.main} />}>
+    <Suspense fallback={<main className={premium.main} />}>
       <LoginFormInner {...props} />
     </Suspense>
   );
@@ -183,35 +180,33 @@ function LoginFormInner({
     } else if (oidcError) {
       setError('La connexion via le fournisseur d’identité a échoué. Réessayez, ou utilisez votre mot de passe.');
     }
-    // Runs once on mount only: this is consuming a one-time redirect result, not reacting to
-    // ongoing URL changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const card = variant === 'narrow'
-    ? { className: `${styles.card} ${styles.formCard}`, style: { maxWidth: 560, margin: '50px auto' } }
-    : { className: `${styles.card} ${styles.formCard} ${styles.section}` };
+  const cardClassName = `${premium.card} ${variant === 'narrow' ? '' : styles.section}`;
 
   return (
-    <main className={styles.main}>
-      <p className={styles.eyebrow}>{eyebrow}</p>
-      <h1 className={styles.title}>{title}</h1>
-      <p className={styles.lead}>{lead}</p>
+    <main className={premium.main}>
+      <div className={premium.header}>
+        <p className={premium.eyebrow}>{eyebrow}</p>
+        <h1 className={premium.title}>{title}</h1>
+        <p className={premium.lead}>{lead}</p>
+      </div>
 
       {step === 'credentials' && (
-        <form {...card} onSubmit={submitCredentials}>
-          <div className={styles.formGrid}>
-            <div className={`${styles.field} ${styles.fieldFull}`}>
+        <form className={cardClassName} onSubmit={submitCredentials}>
+          <div className={premium.formGrid}>
+            <div className={premium.field}>
               <label htmlFor="email">Email</label>
               <input id="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
             </div>
-            <div className={`${styles.field} ${styles.fieldFull}`}>
+            <div className={premium.field}>
               <label htmlFor="password">Mot de passe</label>
               <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
             </div>
           </div>
-          {error && <div className={styles.notice} role="alert" data-testid="login-error">{error}</div>}
-          <div className={styles.buttonRow}>
+          {error && <div className={`${styles.notice} ${premium.notice}`} role="alert" data-testid="login-error">{error}</div>}
+          <div className={premium.actions}>
             <button className={styles.primary} disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</button>
             {oidcPortal && (
               <a className={styles.secondary} href={`/api/session/oidc/start?portal=${oidcPortal}`}>
@@ -223,25 +218,25 @@ function LoginFormInner({
       )}
 
       {step === 'setup' && (
-        <div {...card}>
-          <p className={styles.lead}>
+        <div className={cardClassName}>
+          <p className={`${premium.lead} ${premium.mfaLead}`}>
             Ce compte exige une double authentification. Ouvrez une application d’authentification (Google Authenticator, Authy…),
             ajoutez un compte manuellement avec la clé secrète ci-dessous, puis saisissez le code à 6 chiffres qu’elle affiche.
           </p>
-          <div className={styles.notice}>
+          <div className={premium.secretCard}>
             <strong style={{ display: 'block', marginBottom: 6 }}>Clé secrète</strong>
             <code style={{ fontSize: '1rem', letterSpacing: '0.05em', wordBreak: 'break-all' }}>{secret}</code>
           </div>
-          <form onSubmit={(event) => submitCode(event, 'confirm')} style={{ marginTop: 16 }}>
-            <div className={styles.formGrid}>
-              <div className={`${styles.field} ${styles.fieldFull}`}>
+          <form onSubmit={(event) => submitCode(event, 'confirm')}>
+            <div className={premium.formGrid}>
+              <div className={premium.field}>
                 <label htmlFor="code">Code à 6 chiffres</label>
                 <input id="code" inputMode="numeric" autoComplete="one-time-code" required maxLength={6}
                   value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
               </div>
             </div>
-            {error && <div className={styles.notice} role="alert" data-testid="login-error">{error}</div>}
-            <div className={styles.buttonRow}>
+            {error && <div className={`${styles.notice} ${premium.notice}`} role="alert" data-testid="login-error">{error}</div>}
+            <div className={premium.actions}>
               <button className={styles.primary} disabled={loading}>{loading ? 'Vérification…' : 'Activer et se connecter'}</button>
             </div>
           </form>
@@ -249,18 +244,18 @@ function LoginFormInner({
       )}
 
       {step === 'verify' && (
-        <div {...card}>
-          <p className={styles.lead}>Saisissez le code à 6 chiffres généré par votre application d’authentification.</p>
+        <div className={cardClassName}>
+          <p className={`${premium.lead} ${premium.mfaLead}`}>Saisissez le code à 6 chiffres généré par votre application d’authentification.</p>
           <form onSubmit={(event) => submitCode(event, 'verify')}>
-            <div className={styles.formGrid}>
-              <div className={`${styles.field} ${styles.fieldFull}`}>
+            <div className={premium.formGrid}>
+              <div className={premium.field}>
                 <label htmlFor="code">Code à 6 chiffres</label>
                 <input id="code" inputMode="numeric" autoComplete="one-time-code" required maxLength={6}
                   value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
               </div>
             </div>
-            {error && <div className={styles.notice} role="alert" data-testid="login-error">{error}</div>}
-            <div className={styles.buttonRow}>
+            {error && <div className={`${styles.notice} ${premium.notice}`} role="alert" data-testid="login-error">{error}</div>}
+            <div className={premium.actions}>
               <button className={styles.primary} disabled={loading}>{loading ? 'Vérification…' : 'Se connecter'}</button>
             </div>
           </form>

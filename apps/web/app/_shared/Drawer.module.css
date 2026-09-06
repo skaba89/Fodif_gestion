@@ -10,7 +10,9 @@
   inset: 0;
   border: 0;
   padding: 0;
-  background: rgba(15, 23, 20, 0.45);
+  background: rgba(6, 28, 18, 0.48);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   cursor: pointer;
 }
 
@@ -19,11 +21,14 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  width: min(320px, 86vw);
+  width: min(350px, 90vw);
   height: 100%;
-  background: var(--surface);
-  box-shadow: var(--shadow-md);
-  animation: slide-in var(--duration-fast, 160ms) var(--ease, ease-out);
+  border-left: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(229, 182, 56, 0.08), transparent 18rem),
+    color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: -24px 0 70px rgba(6, 28, 18, 0.20);
+  animation: slide-in 190ms var(--ease, ease-out);
 }
 
 .panelRight {
@@ -32,10 +37,22 @@
 
 .panelLeft {
   margin-right: auto;
+  border-left: 0;
+  border-right: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  box-shadow: 24px 0 70px rgba(6, 28, 18, 0.20);
 }
 
 @keyframes slide-in {
-  from { transform: translateX(0); opacity: 0.6; }
+  from { transform: translateX(18px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.panelLeft {
+  animation-name: slide-in-left;
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-18px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
 
@@ -44,39 +61,46 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px;
-  border-bottom: 1px solid var(--line);
+  min-height: 72px;
+  padding: 14px 16px 14px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
 }
 
 .panelHeader strong {
-  font-size: 0.95rem;
+  font-size: 0.94rem;
+  font-weight: 850;
+  letter-spacing: -0.015em;
 }
 
 .closeButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   background: var(--surface);
   color: var(--ink);
   font-size: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
 
 .closeButton:hover {
   border-color: var(--green);
+  transform: translateY(-1px);
 }
 
 .panelBody {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 16px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .panel {
+  .panel,
+  .panelLeft {
     animation: none;
   }
 }
