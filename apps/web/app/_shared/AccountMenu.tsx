@@ -13,7 +13,7 @@ const SESSION_CHECK_INTERVAL_MS = 60_000;
  * Shared authenticated account menu and session guard for every portal.
  *
  * A short-lived access token is intentional. When it expires, protected pages must not stay
- * mounted and keep firing 401 responses: this component now redirects the user to the login page
+ * mounted and keep firing 401 responses: this component redirects the user to the login page
  * of the current portal, while preserving the distinction between an expired session and an
  * intentional logout.
  */
@@ -38,6 +38,9 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
     try {
       const response = await fetch('/api/session/me', { cache: 'no-store' });
       if (response.ok) {
+        // A successful session after a voluntary logout means the user logged in again while the
+        // shared layout stayed mounted. Re-arm expiry handling for that new authenticated session.
+        intentionalLogout.current = false;
         setSession(await response.json());
         return;
       }
