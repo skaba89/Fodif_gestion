@@ -7,6 +7,7 @@ import ThemeToggle from './ThemeToggle';
 import Drawer from './Drawer';
 import { MenuIcon } from './Icons';
 import styles from './AppShell.module.css';
+import stability from './AppShellStability.module.css';
 
 export interface AppShellNavItem {
   label: string;
@@ -111,7 +112,13 @@ export default function AppShell({
         <div className={styles.drawerAccount}>{accountMenu}</div>
       </Drawer>
 
-      <div id="main-content" tabIndex={-1} className={styles.contentFrame}>{children}</div>
+      <div
+        id="main-content"
+        tabIndex={-1}
+        className={`${styles.contentFrame} ${stability.stableContent}`}
+      >
+        {children}
+      </div>
       <footer className={styles.footer}>{footer}</footer>
     </div>
   );
