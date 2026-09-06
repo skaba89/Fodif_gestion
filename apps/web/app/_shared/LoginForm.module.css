@@ -120,6 +120,12 @@
   min-height: 46px;
 }
 
+/* Gold primary actions need a darker green than the generic portal token to keep
+   WCAG AA contrast across both the light premium surface and browser color interpolation. */
+.actions button {
+  color: var(--primary-900);
+}
+
 .notice {
   margin-top: 16px;
 }
