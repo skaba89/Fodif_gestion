@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { hash } from 'bcryptjs';
 import { normalizeRoleCodes, validateUserScope } from '../admin-policy';
 import { AdministrationRepository } from './administration.repository';
+import { CreateEnterpriseDto } from './dto/create-enterprise.dto';
+import { CreatePartnerBankDto } from './dto/create-partner-bank.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -13,6 +15,35 @@ export class AdministrationService {
   listRoles() { return this.administration.listRoles(); }
   listEnterprises() { return this.administration.listEnterprises(); }
   listPartnerBanks() { return this.administration.listPartnerBanks(); }
+
+  async createEnterprise(actorId: string, dto: CreateEnterpriseDto) {
+    try {
+      return await this.administration.createEnterprise(actorId, {
+        codeFodip: dto.codeFodip.trim().toUpperCase(),
+        raisonSociale: dto.raisonSociale.trim(),
+        nomCommercial: dto.nomCommercial?.trim() || undefined,
+      });
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505') {
+        throw new ConflictException('ENTERPRISE_CODE_ALREADY_EXISTS');
+      }
+      throw error;
+    }
+  }
+
+  async createPartnerBank(actorId: string, dto: CreatePartnerBankDto) {
+    try {
+      return await this.administration.createPartnerBank(actorId, {
+        code: dto.code.trim().toUpperCase(),
+        raisonSociale: dto.raisonSociale.trim(),
+      });
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505') {
+        throw new ConflictException('PARTNER_BANK_CODE_ALREADY_EXISTS');
+      }
+      throw error;
+    }
+  }
 
   async createUser(actorId: string, dto: CreateUserDto) {
     const roles = normalizeRoleCodes(dto.roles);
@@ -47,4 +78,3 @@ export class AdministrationService {
     return result;
   }
 }
-
