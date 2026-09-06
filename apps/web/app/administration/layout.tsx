@@ -3,6 +3,7 @@ import { AccountMenu } from '../_shared/AccountMenu';
 
 const navItems = [
   { label: 'Utilisateurs et rôles', href: '/administration/utilisateurs' },
+  { label: 'Récupération comptes', href: '/administration/recuperation' },
   { label: 'Notifications', href: '/notifications' },
   { label: 'Mes données', href: '/mes-donnees' },
 ];
