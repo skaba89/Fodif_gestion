@@ -111,7 +111,7 @@ export default function AppShell({
         <div className={styles.drawerAccount}>{accountMenu}</div>
       </Drawer>
 
-      <div id="main-content" tabIndex={-1}>{children}</div>
+      <div id="main-content" tabIndex={-1} className={styles.contentFrame}>{children}</div>
       <footer className={styles.footer}>{footer}</footer>
     </div>
   );
