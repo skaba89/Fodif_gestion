@@ -52,6 +52,10 @@ COPY --chown=node:node --from=build /app/deploy/.next ./.next
 # reproducing the same 404 locally after temporarily removing apps/web/public/ and serving with
 # `next start` from that stripped directory.
 COPY --chown=node:node --from=build /app/deploy/public ./public
+# Startup policy is kept outside the Docker CMD so it can fail closed before Next.js starts when
+# a PPD/PROD deployment is accidentally configured with DEMO_MODE=true. The qualification
+# environment remains allowed to show its explicit synthetic-data banner.
+COPY --chown=node:node --from=build /app/apps/web/scripts/start-web.sh ./scripts/start-web.sh
 USER node
 EXPOSE 3000
 # Sprint Enterprise 0, axe E7 (architecture Docker entreprise, docs/14-ROADMAP-SAAS-PREMIUM.md) -
@@ -65,7 +69,4 @@ EXPOSE 3000
 # serves no API of its own to check, and `/` needs no session/cookie to load successfully.
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=12 \
   CMD ["node", "-e", "fetch('http://localhost:'+(process.env.PORT||3000)+'/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
-# Shell form (not exec/JSON form) so ${PORT} is actually substituted: docker-compose never sets
-# it (falls back to 3000, unchanged), but a host like Render assigns its own PORT and expects the
-# container to bind to it.
-CMD node node_modules/next/dist/bin/next start -p ${PORT:-3000}
+CMD ["sh", "scripts/start-web.sh"]
