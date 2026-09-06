@@ -1,0 +1,445 @@
+.adminPage {
+  padding-top: 42px;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.headerCopy {
+  min-width: 0;
+}
+
+.securityBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--green) 22%, var(--line));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--green-soft) 76%, var(--surface));
+  color: var(--green-strong);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.securityDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 12%, transparent);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.statCard {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: 18px 19px;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 96%, white), var(--surface)),
+    var(--surface);
+  box-shadow: 0 10px 26px rgba(20, 35, 27, 0.055);
+}
+
+.statCard::after {
+  content: '';
+  position: absolute;
+  inset: auto -20px -36px auto;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--green) 7%, transparent);
+}
+
+.statLabel {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: clamp(1.65rem, 3vw, 2.1rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.statMeta {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.flash {
+  box-shadow: var(--shadow-sm);
+}
+
+.referenceSection,
+.userSection,
+.usersSection,
+.rbacSection {
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--line) 88%, transparent);
+  box-shadow: 0 14px 34px rgba(20, 35, 27, 0.055);
+}
+
+.referenceSection {
+  padding: 0;
+}
+
+.sectionIntro {
+  padding: 24px 26px 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 30%, var(--surface)), var(--surface));
+}
+
+.sectionIntro h2,
+.sectionIntro p {
+  margin: 0;
+}
+
+.sectionIntro h2 {
+  font-size: 1.15rem;
+  letter-spacing: -0.025em;
+}
+
+.sectionIntro p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.referenceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+
+.referenceCard {
+  min-width: 0;
+  padding: 24px 26px 26px;
+  background: var(--surface);
+}
+
+.referenceCard + .referenceCard {
+  border-left: 1px solid var(--line);
+}
+
+.referenceKicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--green-soft) 76%, var(--surface));
+  color: var(--green-strong);
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.referenceCard h3 {
+  margin: 12px 0 4px;
+  font-size: 1.05rem;
+  letter-spacing: -0.025em;
+}
+
+.referenceCard > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.referenceCard form {
+  margin-top: 18px;
+}
+
+.userSection {
+  position: relative;
+}
+
+.userSection::before,
+.usersSection::before,
+.rbacSection::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--green), var(--gold));
+  opacity: 0.9;
+}
+
+.userSectionHeader,
+.tableToolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.userSectionHeader h2,
+.tableToolbar h2 {
+  margin: 0;
+}
+
+.userSectionHeader p,
+.tableToolbar p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.policyBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--line));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--warning-soft) 58%, var(--surface));
+  color: var(--warning);
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tableToolbar {
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 24%, var(--surface)), var(--surface));
+}
+
+.searchField {
+  width: min(320px, 100%);
+}
+
+.tableScroller {
+  overflow-x: auto;
+}
+
+.usersSection table {
+  min-width: 980px;
+}
+
+.usersSection th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: color-mix(in srgb, var(--surface-soft) 35%, var(--surface));
+}
+
+.usersSection tbody tr:hover {
+  background: color-mix(in srgb, var(--green-soft) 28%, var(--surface));
+}
+
+.userIdentity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 210px;
+}
+
+.userAvatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: 1px solid color-mix(in srgb, var(--green) 18%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--green-soft) 72%, var(--surface));
+  color: var(--green-strong);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.userIdentity strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.userEmail {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.usersSection td select {
+  min-width: 150px;
+}
+
+.usersSection td select[multiple] {
+  min-height: 70px;
+}
+
+.toggleCell {
+  text-align: center;
+}
+
+.toggleCell input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+.actionButton {
+  white-space: nowrap;
+}
+
+.dangerAction {
+  white-space: nowrap;
+}
+
+.rbacSection {
+  padding: 24px;
+}
+
+.rbacHeader {
+  margin-bottom: 16px;
+}
+
+.rbacHeader h2 {
+  margin-bottom: 4px;
+}
+
+.rbacHeader p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.roleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.roleDetails {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface) 96%, var(--surface-soft));
+}
+
+.roleDetails summary {
+  cursor: pointer;
+  padding: 13px 14px;
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+
+.roleDetails[open] summary {
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--green-soft) 38%, var(--surface));
+}
+
+.roleBody {
+  padding: 12px 14px 14px;
+}
+
+.roleBody p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.roleBody p + p {
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .referenceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .referenceCard + .referenceCard {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .roleGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .adminPage {
+    padding-top: 28px;
+  }
+
+  .pageHeader,
+  .userSectionHeader,
+  .tableToolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .securityBadge,
+  .policyBadge {
+    white-space: normal;
+  }
+
+  .statsGrid {
+    gap: 10px;
+  }
+
+  .statCard {
+    padding: 15px;
+  }
+
+  .referenceCard,
+  .sectionIntro,
+  .rbacSection,
+  .tableToolbar {
+    padding-inline: 18px;
+  }
+
+  .searchField {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .usersSection tbody tr {
+    transition: none;
+  }
+}
