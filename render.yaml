@@ -65,6 +65,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Explicitly not PROD/PPD: this Blueprint remains the qualification environment.
+      - key: APP_ENV
+        value: QUALIFICATION
       - key: COOKIE_SECURE
         value: "true"
       - key: DEMO_MODE
