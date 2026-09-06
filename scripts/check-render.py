@@ -37,9 +37,16 @@ else:
     if missing:
         errors.append(f"fodip-api: missing environment variables: {', '.join(missing)}")
     command = api.get("dockerCommand", "")
-    for required in ("run-migrations.js", "bootstrap-super-admin.js", "exec node dist/main.js"):
-        if required not in command:
-            errors.append(f"fodip-api: dockerCommand must include {required}")
+    if command != "/bin/bash scripts/start-render.sh":
+        errors.append("fodip-api: dockerCommand must invoke the quote-safe Render startup script")
+    start_script = Path("apps/api/scripts/start-render.sh")
+    if not start_script.exists():
+        errors.append("fodip-api: apps/api/scripts/start-render.sh is missing")
+    else:
+        start_content = start_script.read_text(encoding="utf-8")
+        for required in ("run-migrations.js", "bootstrap-super-admin.js", "exec node dist/main.js"):
+            if required not in start_content:
+                errors.append(f"fodip-api: start-render.sh must include {required}")
     if api.get("healthCheckPath") != "/api/v1/health/ready":
         errors.append("fodip-api: health check must verify database and object storage readiness")
 

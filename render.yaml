@@ -13,7 +13,7 @@ services:
     dockerContext: .
     # Render pre-deploy commands are paid-only. On the free plan, run the locked/checksummed
     # migrations and optional one-time admin bootstrap before starting the API process.
-    dockerCommand: /bin/bash -c "node scripts/run-migrations.js && node scripts/bootstrap-super-admin.js && exec node dist/main.js"
+    dockerCommand: /bin/bash scripts/start-render.sh
     healthCheckPath: /api/v1/health/ready
     envVars:
       - key: NODE_ENV
