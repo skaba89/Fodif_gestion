@@ -52,8 +52,19 @@ else:
 
     web = services.get("fodip-web", {})
     web_env = {item.get("key"): item for item in web.get("envVars", [])}
+    if web_env.get("APP_ENV", {}).get("value") != "QUALIFICATION":
+        errors.append("fodip-web: Render/Neon must stay explicitly labelled APP_ENV=QUALIFICATION")
     if web_env.get("DEMO_MODE", {}).get("value") != "true":
         errors.append("fodip-web: DEMO_MODE must remain true on the qualification environment")
+
+    web_start_script = Path("apps/web/scripts/start-web.sh")
+    if not web_start_script.exists():
+        errors.append("fodip-web: apps/web/scripts/start-web.sh is missing")
+    else:
+        web_start_content = web_start_script.read_text(encoding="utf-8")
+        for required in ("PPD|PROD", "DEMO_MODE", "exit 1"):
+            if required not in web_start_content:
+                errors.append(f"fodip-web: start-web.sh must enforce the production demo guard ({required})")
 
 if errors:
     print("\n".join(errors), file=sys.stderr)
