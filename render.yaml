@@ -18,6 +18,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Explicitly not PROD/PPD: this Blueprint remains the qualification environment.
+      - key: APP_ENV
+        value: QUALIFICATION
       - key: DATABASE_URL
         sync: false # Neon pooled connection string (-pooler hostname)
       - key: DATABASE_URL_UNPOOLED

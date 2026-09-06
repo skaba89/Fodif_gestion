@@ -5,8 +5,9 @@
  * Creates the first SUPER_ADMIN without loading public demo fixtures.
  *
  * The command is safe to run at every container start: a PostgreSQL advisory lock serializes
- * concurrent starts and an existing active SUPER_ADMIN makes it a no-op. Remove the BOOTSTRAP_*
- * variables from Render immediately after the first successful deployment.
+ * concurrent starts and an existing active SUPER_ADMIN makes it a no-op outside protected
+ * environments. In PPD/PROD, keeping BOOTSTRAP_* values after an active SUPER_ADMIN exists is a
+ * startup error so long-lived bootstrap credentials cannot silently remain configured.
  */
 
 const bcrypt = require('bcryptjs');
@@ -24,6 +25,7 @@ const securityPolicyPath = fs.existsSync(path.resolve(__dirname, '..', 'src', 's
 const { evaluatePassword } = require(securityPolicyPath);
 
 const ADVISORY_LOCK_KEY = '4108716353481239790';
+const PROTECTED_ENVIRONMENTS = new Set(['PPD', 'PROD']);
 
 function resolveBootstrapConfig(env = process.env) {
   const values = {
@@ -45,7 +47,11 @@ function resolveBootstrapConfig(env = process.env) {
   return values;
 }
 
-async function bootstrapSuperAdmin(client, config, log = console.log) {
+function isProtectedEnvironment(env = process.env) {
+  return PROTECTED_ENVIRONMENTS.has(env.APP_ENV?.trim().toUpperCase());
+}
+
+async function bootstrapSuperAdmin(client, config, log = console.log, env = process.env) {
   const { rows: lockRows } = await client.query('SELECT pg_try_advisory_lock($1) AS locked', [ADVISORY_LOCK_KEY]);
   if (!lockRows[0]?.locked) throw new Error('Another SUPER_ADMIN bootstrap is already running.');
 
@@ -59,6 +65,11 @@ async function bootstrapSuperAdmin(client, config, log = console.log) {
        LIMIT 1`,
     );
     if (existing.rowCount > 0) {
+      if (config && isProtectedEnvironment(env)) {
+        throw new Error(
+          'BOOTSTRAP_ADMIN_* must be removed after the initial SUPER_ADMIN creation before PPD/PROD may restart.',
+        );
+      }
       log('An active SUPER_ADMIN already exists; bootstrap skipped.');
       return { created: false };
     }
@@ -85,7 +96,7 @@ async function bootstrapSuperAdmin(client, config, log = console.log) {
         [id, JSON.stringify({ roles: ['SUPER_ADMIN'], mfaRequired: true })],
       );
       await client.query('COMMIT');
-      log('Initial SUPER_ADMIN created with mandatory MFA enrollment.');
+      log('Initial SUPER_ADMIN created with mandatory MFA enrollment. Remove BOOTSTRAP_ADMIN_* before the next PPD/PROD restart.');
       return { created: true, id };
     } catch (error) {
       await client.query('ROLLBACK').catch(() => undefined);
@@ -123,4 +134,10 @@ if (require.main === module) {
   });
 }
 
-module.exports = { ADVISORY_LOCK_KEY, bootstrapSuperAdmin, resolveBootstrapConfig };
+module.exports = {
+  ADVISORY_LOCK_KEY,
+  PROTECTED_ENVIRONMENTS,
+  bootstrapSuperAdmin,
+  isProtectedEnvironment,
+  resolveBootstrapConfig,
+};
