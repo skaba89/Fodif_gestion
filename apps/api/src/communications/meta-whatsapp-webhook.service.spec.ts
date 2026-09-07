@@ -61,6 +61,34 @@ describe('MetaWhatsAppWebhookService', () => {
     );
   });
 
+  it('forwards a delayed read event as the strongest semantic delivery state', async () => {
+    communications.applyProviderStatus.mockResolvedValue(true);
+
+    await expect(service.process({
+      object: 'whatsapp_business_account',
+      entry: [{
+        changes: [{
+          field: 'messages',
+          value: {
+            statuses: [{
+              id: 'wamid.test-read',
+              status: 'read',
+              timestamp: '1788796700',
+            }],
+          },
+        }],
+      }],
+    })).resolves.toEqual({ received: 1, updated: 1, ignored: 0 });
+
+    expect(communications.applyProviderStatus).toHaveBeenCalledWith(
+      'meta',
+      'wamid.test-read',
+      'READ',
+      new Date(1788796700 * 1000),
+      undefined,
+    );
+  });
+
   it('ignores inbound or unsupported webhook payloads without storing message content', async () => {
     await expect(service.process({
       object: 'whatsapp_business_account',
