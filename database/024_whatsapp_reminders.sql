@@ -17,14 +17,14 @@ CREATE TABLE IF NOT EXISTS whatsapp_reminder_dispatches (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT ck_whatsapp_reminder_dispatch_status
-        CHECK (status IN ('CLAIMED', 'SENT', 'FAILED')),
+        CHECK (status IN ('CLAIMED', 'SENT', 'FAILED', 'REVIEW_REQUIRED')),
     CONSTRAINT uq_whatsapp_reminder_occurrence
         UNIQUE (rule_key, utilisateur_id, context_type, context_id, scheduled_for)
 );
 
 CREATE INDEX IF NOT EXISTS idx_whatsapp_reminder_dispatch_retry
     ON whatsapp_reminder_dispatches (status, last_attempt_at)
-    WHERE status = 'FAILED';
+    WHERE status IN ('FAILED', 'CLAIMED', 'REVIEW_REQUIRED');
 
 CREATE INDEX IF NOT EXISTS idx_whatsapp_reminder_dispatch_user
     ON whatsapp_reminder_dispatches (utilisateur_id, scheduled_for DESC);
@@ -41,4 +41,4 @@ WHERE role.code = 'SUPER_ADMIN'
 ON CONFLICT DO NOTHING;
 
 COMMENT ON TABLE whatsapp_reminder_dispatches IS
-    'Idempotency and retry ledger for WhatsApp reminder occurrences; no message body or template variables are persisted.';
+    'Idempotency, retry and ambiguity ledger for WhatsApp reminder occurrences; no message body or template variables are persisted.';
