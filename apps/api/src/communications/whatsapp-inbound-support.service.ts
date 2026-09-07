@@ -84,8 +84,11 @@ export class WhatsAppInboundSupportService {
             'Les notifications WhatsApp FODIP associées à ce numéro sont désactivées. Vous pourrez les réactiver depuis votre espace sécurisé si vous le souhaitez.',
         });
 
-        if (!reply.sent) {
-          await this.repository.markInboundFailed(inboundMessageId, reply.reason);
+        if (reply.sent !== true) {
+          const reason = 'reason' in reply
+            ? reply.reason
+            : 'WHATSAPP_PROVIDER_REJECTED';
+          await this.repository.markInboundFailed(inboundMessageId, reason);
           return this.result(true, false, false, true, false);
         }
 
@@ -102,8 +105,11 @@ export class WhatsAppInboundSupportService {
         text: answer.answer,
       });
 
-      if (!reply.sent) {
-        await this.repository.markInboundFailed(inboundMessageId, reply.reason);
+      if (reply.sent !== true) {
+        const reason = 'reason' in reply
+          ? reply.reason
+          : 'WHATSAPP_PROVIDER_REJECTED';
+        await this.repository.markInboundFailed(inboundMessageId, reason);
         return this.result(true, false, false, false, answer.humanHandoff);
       }
 
