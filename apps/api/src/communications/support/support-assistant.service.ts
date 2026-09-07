@@ -42,28 +42,26 @@ const TOPICS: TopicDefinition[] = [
     intent: 'DOCUMENTS',
     keywords: ['document', 'piece', 'justificatif', 'dossier complet', 'fichier'],
     answer:
-      "Les pièces demandées dépendent du programme et de l'étape de votre dossier. Consultez la liste affichée dans votre espace de demande et déposez uniquement les documents demandés. N'envoyez pas de document d'identité, de coordonnées bancaires ou de secret de connexion dans ce chat.",
-    actions: [{ label: 'Accéder à ma demande', href: '/entrepreneur/demande' }],
+      "Les pièces demandées dépendent du programme, de votre rôle et de l'étape du dossier. Consultez la liste affichée dans votre espace authentifié et déposez uniquement les documents demandés. N'envoyez pas de document d'identité, de coordonnées bancaires ou de secret de connexion dans ce chat.",
   },
   {
     intent: 'TRACKING',
     keywords: ['suivre', 'suivi', 'statut', 'avancement', 'ou en est', 'etat de'],
     answer:
-      "Le suivi officiel d'un dossier se fait dans votre espace authentifié. L'assistant peut expliquer les statuts de manière générale, mais il ne lit ni ne révèle ici les données de votre dossier.",
-    actions: [{ label: 'Ouvrir le suivi de dossier', href: '/entrepreneur/suivi' }],
+      "Le suivi officiel d'un dossier se fait dans l'espace authentifié correspondant à votre rôle. L'assistant peut expliquer les statuts de manière générale, mais il ne lit ni ne révèle ici les données d'un dossier.",
   },
   {
     intent: 'APPLICATION',
     keywords: ['deposer', 'demande', 'candidature', 'soumettre', 'creer un dossier'],
     answer:
-      "Pour déposer une demande, utilisez votre espace entrepreneur, complétez les informations requises, joignez les pièces demandées puis soumettez le dossier lorsque les contrôles sont satisfaits. L'assistant ne soumet jamais un dossier à votre place.",
-    actions: [{ label: 'Préparer ma demande', href: '/entrepreneur/demande' }],
+      "Pour déposer une demande en tant qu'entrepreneur, utilisez l'espace entrepreneur, complétez les informations requises, joignez les pièces demandées puis soumettez le dossier lorsque les contrôles sont satisfaits. L'assistant ne soumet jamais un dossier à votre place.",
+    actions: [{ label: "Accéder à l'espace entrepreneur", href: '/entrepreneur' }],
   },
   {
     intent: 'PROGRAMS',
     keywords: ['programme', 'eligibilite', 'eligible', 'financement disponible', 'aide disponible'],
     answer:
-      "Les critères d'éligibilité et les conditions de financement dépendent du programme actif. Vérifiez toujours la fiche officielle du programme concerné dans FODIP Digital avant de constituer votre demande. L'assistant ne déclare pas une entreprise éligible et ne promet aucun financement.",
+      "Les critères d'éligibilité et les conditions de financement dépendent du programme actif. Vérifiez toujours la fiche officielle du programme concerné dans FODIP Digital avant de constituer une demande. L'assistant ne déclare pas une entreprise éligible et ne promet aucun financement.",
   },
   {
     intent: 'REPAYMENT',
@@ -168,9 +166,8 @@ export class SupportAssistantService {
     if (includesAny(question, ACCOUNT_SPECIFIC_KEYWORDS)) {
       return this.response(
         'ACCOUNT_SPECIFIC',
-        "Pour protéger vos données, je ne révèle pas ici le contenu d'un dossier, d'un financement, d'un document ou d'un compte. Consultez l'espace authentifié correspondant. Si une analyse humaine est nécessaire, contactez un agent FODIP depuis le canal institutionnel prévu.",
+        "Pour protéger vos données, je ne révèle pas ici le contenu d'un dossier, d'un financement, d'un document ou d'un compte. Consultez l'espace authentifié correspondant à votre rôle. Si une analyse humaine est nécessaire, contactez un agent FODIP depuis le canal institutionnel prévu.",
         true,
-        [{ label: 'Ouvrir le suivi de dossier', href: '/entrepreneur/suivi' }],
       );
     }
 
@@ -193,7 +190,7 @@ export class SupportAssistantService {
 
     return this.response(
       'GENERAL',
-      "Je peux vous guider sur les démarches FODIP, les documents, le suivi d'un dossier, les programmes, les remboursements, WhatsApp et l'orientation vers un agent. Pour une décision métier ou une information propre à votre dossier, utilisez votre espace sécurisé ou demandez un accompagnement humain.",
+      "Je peux vous guider sur les démarches FODIP, les documents, le suivi d'un dossier, les programmes, les remboursements, WhatsApp et l'orientation vers un agent. Pour une décision métier ou une information propre à un dossier, utilisez votre espace sécurisé ou demandez un accompagnement humain.",
       true,
     );
   }
