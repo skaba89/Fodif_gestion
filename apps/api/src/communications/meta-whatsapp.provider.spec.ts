@@ -91,4 +91,35 @@ describe('MetaWhatsAppProvider', () => {
       },
     });
   });
+
+  it('sends a bounded freeform text reply for a user-initiated support conversation', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ messages: [{ id: 'wamid.reply-1' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const provider = new MetaWhatsAppProvider(new ConfigService(configuredValues));
+
+    await expect(provider.sendText({
+      to: '+224600000000',
+      text: 'Orientation FODIP sécurisée.',
+    })).resolves.toEqual({
+      accepted: true,
+      provider: 'meta',
+      providerMessageId: 'wamid.reply-1',
+    });
+
+    const [, options] = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(options?.body))).toEqual({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: '224600000000',
+      type: 'text',
+      text: {
+        preview_url: false,
+        body: 'Orientation FODIP sécurisée.',
+      },
+    });
+  });
 });
