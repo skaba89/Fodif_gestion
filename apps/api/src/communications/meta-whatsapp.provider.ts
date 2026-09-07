@@ -24,9 +24,7 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
   constructor(private readonly config: ConfigService) {}
 
   assertConfigured(): void {
-    this.required('WHATSAPP_META_GRAPH_API_VERSION');
-    this.required('WHATSAPP_META_PHONE_NUMBER_ID');
-    this.required('WHATSAPP_META_ACCESS_TOKEN');
+    this.assertMessageConfigured();
     this.required('WHATSAPP_META_APP_SECRET');
     this.required('WHATSAPP_META_VERIFY_TOKEN');
     this.templateCatalog();
@@ -81,7 +79,7 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
 
   async sendText(request: WhatsAppTextRequest): Promise<WhatsAppSendResult> {
     try {
-      this.assertConfigured();
+      this.assertMessageConfigured();
     } catch {
       return this.configurationError();
     }
@@ -105,6 +103,12 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
         body: text.slice(0, 4096),
       },
     });
+  }
+
+  private assertMessageConfigured(): void {
+    this.required('WHATSAPP_META_GRAPH_API_VERSION');
+    this.required('WHATSAPP_META_PHONE_NUMBER_ID');
+    this.required('WHATSAPP_META_ACCESS_TOKEN');
   }
 
   private async postMessage(body: unknown): Promise<WhatsAppSendResult> {
