@@ -12,6 +12,7 @@ import { BankReconciliationsModule } from './reconciliations/bank-reconciliation
 import { CompaniesModule } from './companies/companies.module';
 import { CommitteeModule } from './committee/committee.module';
 import { CommunicationsModule } from './communications/communications.module';
+import { ReminderSchedulerModule } from './communications/reminders/reminder-scheduler.module';
 import { AuthorizationGuard } from './common/guards/authorization.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -58,6 +59,7 @@ import { ScoringModule } from './scoring/scoring.module';
     AnalyticsModule,
     AuditModule,
     CommunicationsModule,
+    ReminderSchedulerModule,
     DataRightsModule,
     DocumentsModule,
     FinancingsModule,
