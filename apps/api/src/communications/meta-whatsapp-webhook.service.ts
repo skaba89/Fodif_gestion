@@ -37,7 +37,12 @@ export class MetaWhatsAppWebhookService {
 
   verifyChallenge(mode?: string, token?: string, challenge?: string): string | null {
     const expected = this.config.get<string>('WHATSAPP_META_VERIFY_TOKEN');
-    if (!expected || mode !== 'subscribe' || token !== expected || !challenge) return null;
+    // Meta's verification challenge is numeric. Reject every other shape before reflecting it
+    // in the plain-text verification response so an attacker-controlled query value can never
+    // become executable markup (CodeQL reflected-XSS defense-in-depth).
+    const isSafeChallenge = typeof challenge === 'string'
+      && /^\d{1,32}$/.test(challenge);
+    if (!expected || mode !== 'subscribe' || token !== expected || !isSafeChallenge) return null;
     return challenge;
   }
 
