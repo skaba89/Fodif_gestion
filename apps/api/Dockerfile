@@ -1,4 +1,4 @@
-FROM node:26-bookworm-slim AS dependencies
+FROM node:24-bookworm-slim AS dependencies
 # npm install -g, not `corepack enable && corepack prepare`: this image was previously bumped to
 # node:26-bookworm-slim by an independent Dependabot PR, where `corepack enable` fails with
 # "corepack: not found" - Node dropped Corepack from the default distribution starting with Node
@@ -26,7 +26,7 @@ RUN pnpm --filter @fodip/api build
 # absent - the exact class of finding Trivy's image scan caught here before this fix).
 RUN pnpm --filter @fodip/api deploy --prod /app/deploy
 
-FROM node:26-bookworm-slim AS runtime
+FROM node:24-bookworm-slim AS runtime
 ENV NODE_ENV=production
 # npm (and, on this 24.x line, Corepack too - see the `dependencies` stage above) ships inside the
 # base Node.js image for building/installing - this runtime stage never invokes any of them (CMD
