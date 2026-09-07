@@ -1,4 +1,4 @@
-FROM node:26-bookworm-slim AS dependencies
+FROM node:24-bookworm-slim AS dependencies
 # `corepack enable` alone worked while this image was on node:22-bookworm-slim (which bundled
 # Corepack); a Dependabot base-image bump to node:26-bookworm-slim broke it - Node dropped
 # Corepack from the default distribution starting with Node 25, so `corepack enable` failed with
@@ -28,7 +28,7 @@ RUN pnpm --filter @fodip/web build
 # devDependency - the exact class of finding Trivy's image scan caught here before this fix).
 RUN pnpm --filter @fodip/web deploy --prod /app/deploy
 
-FROM node:26-bookworm-slim AS runtime
+FROM node:24-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 # npm (and, on this 24.x line, Corepack too - see the `dependencies` stage above) ships inside the
