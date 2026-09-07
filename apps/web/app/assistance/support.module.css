@@ -1,0 +1,246 @@
+.page {
+  min-height: 100vh;
+  padding: 40px 20px 64px;
+  background:
+    radial-gradient(circle at top left, rgba(15, 92, 79, 0.08), transparent 34rem),
+    var(--surface-page, #f4f7f6);
+  color: var(--text-primary, #14201d);
+}
+
+.shell {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.header h1 {
+  margin: 4px 0 10px;
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  line-height: 1.08;
+  max-width: 720px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted, #52635e);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 720px;
+  color: var(--text-muted, #52635e);
+  line-height: 1.6;
+}
+
+.homeLink,
+.messageActions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid rgba(20, 74, 64, 0.22);
+  border-radius: 10px;
+  background: var(--surface-raised, #ffffff);
+  color: var(--text-primary, #14201d);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.homeLink:focus-visible,
+.messageActions a:focus-visible,
+.quickActions button:focus-visible,
+.form button:focus-visible,
+.form textarea:focus-visible {
+  outline: 3px solid rgba(15, 92, 79, 0.35);
+  outline-offset: 2px;
+}
+
+.notice {
+  padding: 16px 18px;
+  border: 1px solid rgba(130, 92, 28, 0.25);
+  border-radius: 12px;
+  background: rgba(255, 248, 230, 0.88);
+  color: #4f3a18;
+  line-height: 1.55;
+}
+
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quickActions button {
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 1px solid rgba(20, 74, 64, 0.18);
+  border-radius: 10px;
+  background: var(--surface-raised, #ffffff);
+  color: var(--text-primary, #14201d);
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quickActions button:hover:not(:disabled) {
+  border-color: rgba(15, 92, 79, 0.45);
+  transform: translateY(-1px);
+}
+
+.quickActions button:disabled,
+.form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.conversation {
+  min-height: 300px;
+  max-height: 540px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid rgba(20, 74, 64, 0.16);
+  border-radius: 16px;
+  background: var(--surface-raised, #ffffff);
+  box-shadow: 0 18px 45px rgba(22, 54, 47, 0.08);
+}
+
+.assistantMessage,
+.userMessage {
+  width: min(720px, 92%);
+  padding: 14px 16px;
+  border-radius: 14px;
+  line-height: 1.58;
+}
+
+.assistantMessage {
+  align-self: flex-start;
+  background: #eef6f3;
+  border: 1px solid rgba(15, 92, 79, 0.13);
+}
+
+.userMessage {
+  align-self: flex-end;
+  background: #173f37;
+  color: #ffffff;
+}
+
+.assistantMessage p,
+.userMessage p {
+  margin: 0;
+}
+
+.messageAuthor {
+  margin-bottom: 6px !important;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.messageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.loading {
+  margin: 0;
+  color: var(--text-muted, #52635e);
+  font-size: 0.92rem;
+}
+
+.form {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(20, 74, 64, 0.16);
+  border-radius: 16px;
+  background: var(--surface-raised, #ffffff);
+}
+
+.form label {
+  font-weight: 800;
+}
+
+.form textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 88px;
+  padding: 12px 14px;
+  border: 1px solid rgba(20, 74, 64, 0.28);
+  border-radius: 10px;
+  background: var(--surface-raised, #ffffff);
+  color: var(--text-primary, #14201d);
+  font: inherit;
+  line-height: 1.5;
+}
+
+.formFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.formFooter span {
+  color: var(--text-muted, #52635e);
+  font-size: 0.82rem;
+}
+
+.form button {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #173f37;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 680px) {
+  .page {
+    padding: 24px 14px 44px;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .quickActions {
+    grid-template-columns: 1fr;
+  }
+
+  .assistantMessage,
+  .userMessage {
+    width: 100%;
+  }
+
+  .formFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .form button {
+    width: 100%;
+  }
+}
