@@ -4,6 +4,7 @@ import {
   WhatsAppProvider,
   WhatsAppSendResult,
   WhatsAppTemplateRequest,
+  WhatsAppTextRequest,
 } from './whatsapp-provider';
 
 interface MetaTemplateDefinition {
@@ -37,11 +38,7 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
       this.assertConfigured();
       catalog = this.templateCatalog();
     } catch {
-      return {
-        accepted: false,
-        provider: 'meta',
-        errorCode: 'WHATSAPP_META_CONFIGURATION_INVALID',
-      };
+      return this.configurationError();
     }
 
     const template = catalog[request.templateKey];
@@ -67,13 +64,7 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
       parameters.push({ type: 'text', text: value.slice(0, 1024) });
     }
 
-    const version = this.required('WHATSAPP_META_GRAPH_API_VERSION');
-    const phoneNumberId = this.required('WHATSAPP_META_PHONE_NUMBER_ID');
-    const accessToken = this.required('WHATSAPP_META_ACCESS_TOKEN');
-    const apiBaseUrl = (this.config.get<string>('WHATSAPP_META_API_BASE_URL') ?? 'https://graph.facebook.com')
-      .replace(/\/$/, '');
-
-    const body = {
+    return this.postMessage({
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
       to: request.to.replace(/^\+/, ''),
@@ -85,7 +76,51 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
           ? { components: [{ type: 'body', parameters }] }
           : {}),
       },
-    };
+    });
+  }
+
+  async sendText(request: WhatsAppTextRequest): Promise<WhatsAppSendResult> {
+    try {
+      this.assertConfigured();
+    } catch {
+      return this.configurationError();
+    }
+
+    const text = request.text.trim();
+    if (!text) {
+      return {
+        accepted: false,
+        provider: 'meta',
+        errorCode: 'WHATSAPP_TEXT_EMPTY',
+      };
+    }
+
+    return this.postMessage({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: request.to.replace(/^\+/, ''),
+      type: 'text',
+      text: {
+        preview_url: false,
+        body: text.slice(0, 4096),
+      },
+    });
+  }
+
+  private async postMessage(body: unknown): Promise<WhatsAppSendResult> {
+    let version: string;
+    let phoneNumberId: string;
+    let accessToken: string;
+    try {
+      version = this.required('WHATSAPP_META_GRAPH_API_VERSION');
+      phoneNumberId = this.required('WHATSAPP_META_PHONE_NUMBER_ID');
+      accessToken = this.required('WHATSAPP_META_ACCESS_TOKEN');
+    } catch {
+      return this.configurationError();
+    }
+
+    const apiBaseUrl = (this.config.get<string>('WHATSAPP_META_API_BASE_URL') ?? 'https://graph.facebook.com')
+      .replace(/\/$/, '');
 
     try {
       const response = await fetch(`${apiBaseUrl}/${version}/${phoneNumberId}/messages`, {
@@ -128,6 +163,14 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
         errorCode: 'WHATSAPP_META_NETWORK_ERROR',
       };
     }
+  }
+
+  private configurationError(): WhatsAppSendResult {
+    return {
+      accepted: false,
+      provider: 'meta',
+      errorCode: 'WHATSAPP_META_CONFIGURATION_INVALID',
+    };
   }
 
   private templateCatalog(): MetaTemplateCatalog {
