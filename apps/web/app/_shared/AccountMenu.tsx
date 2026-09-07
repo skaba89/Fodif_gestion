@@ -3,24 +3,21 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import styles from '../entrepreneur/portal.module.css';
-
-type Session = { email: string };
+import styles from './AccountMenu.module.css';
 
 const SESSION_CHECK_INTERVAL_MS = 60_000;
 
 /**
- * Shared authenticated account menu and session guard for every portal.
+ * Shared authenticated account controls and session guard for every portal.
  *
- * A short-lived access token is intentional. When it expires, protected pages must not stay
- * mounted and keep firing 401 responses: this component redirects the user to the login page
- * of the current portal, while preserving the distinction between an expired session and an
- * intentional logout.
+ * Privacy rule: account identifiers and roles are deliberately absent from the global shell.
+ * The shell only needs to know whether a session is valid. Identity details are loaded and shown
+ * on the dedicated profile page, never in the header or navigation drawer.
  */
 export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref: string; loginLabel?: string }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [session, setSession] = useState<Session | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
   const intentionalLogout = useRef(false);
 
   const redirectExpiredSession = useCallback(() => {
@@ -31,35 +28,30 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
 
   const checkSession = useCallback(async () => {
     if (pathname === loginHref) {
-      setSession(null);
+      setAuthenticated(false);
       return;
     }
 
     try {
       const response = await fetch('/api/session/me', { cache: 'no-store' });
       if (response.ok) {
-        // A successful session after a voluntary logout means the user logged in again while the
-        // shared layout stayed mounted. Re-arm expiry handling for that new authenticated session.
         intentionalLogout.current = false;
-        setSession(await response.json());
+        setAuthenticated(true);
         return;
       }
 
-      setSession(null);
+      setAuthenticated(false);
       if (response.status === 401) redirectExpiredSession();
     } catch {
       // A network outage is not the same thing as an expired session. Keep the portal mounted and
       // let the page-level error handling report connectivity problems instead of forcing logout.
-      setSession(null);
+      setAuthenticated(false);
     }
   }, [pathname, loginHref, redirectExpiredSession]);
 
-  // Re-check on navigation, periodically while the portal stays open, and whenever the user comes
-  // back to the tab/window. This covers the common case where the 15-minute access token expires
-  // while the user is reading or filling a form without navigating.
   useEffect(() => {
     if (pathname === loginHref) {
-      setSession(null);
+      setAuthenticated(false);
       return;
     }
 
@@ -81,17 +73,20 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
 
   async function logout() {
     intentionalLogout.current = true;
-    setSession(null);
+    setAuthenticated(false);
     await fetch('/api/session/logout', { method: 'POST' });
     router.replace(loginHref);
     router.refresh();
   }
 
-  if (!session) return <Link className={styles.secondary} href={loginHref}>{loginLabel}</Link>;
+  if (!authenticated) {
+    return <Link className={styles.secondaryAction} href={loginHref}>{loginLabel}</Link>;
+  }
+
   return (
-    <div className={styles.account}>
-      <span>{session.email}</span>
-      <button className={styles.secondary} type="button" onClick={logout}>Déconnexion</button>
+    <div className={styles.actions} aria-label="Actions du compte">
+      <Link className={styles.profileAction} href="/profil">Mon profil</Link>
+      <button className={styles.secondaryAction} type="button" onClick={logout}>Déconnexion</button>
     </div>
   );
 }
