@@ -34,9 +34,9 @@ test.describe('Accessibility (axe A6)', () => {
   });
 
   // One session covers the authenticated shell, the cross-device hamburger drawer, light/dark
-  // contrast and /mes-donnees with a single login. auditeur@fodip.local avoids sharing the login
-  // rate-limit budget used by the PME workflow specs.
-  test('the Auditeur portal and institutional hamburger menu remain accessible', async ({ page }) => {
+  // contrast, the dedicated profile and /mes-donnees with a single login. auditeur@fodip.local
+  // avoids sharing the login rate-limit budget used by the PME workflow specs.
+  test('the Auditeur portal, profile and institutional hamburger menu remain accessible', async ({ page }) => {
     await page.goto('/auditeur/connexion');
     await page.getByLabel('Email').fill('auditeur@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
@@ -49,7 +49,7 @@ test.describe('Accessibility (axe A6)', () => {
     await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
     await menuButton.click();
 
-    const drawer = page.getByRole('dialog', { name: 'Navigation Auditeur' });
+    const drawer = page.getByRole('dialog', { name: 'Navigation principale' });
     await expect(drawer).toBeVisible();
     await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
     await expect(drawer.getByRole('link', { name: 'Supervision' })).toHaveAttribute('aria-current', 'page');
@@ -63,6 +63,18 @@ test.describe('Accessibility (axe A6)', () => {
     // ThemeToggle applies data-theme synchronously; two animation frames let every browser repaint
     // before axe samples contrast values, avoiding a transient mixed-theme snapshot on WebKit.
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expectNoSeriousViolations(page);
+
+    await menuButton.click();
+    await expect(drawer).toBeVisible();
+    await drawer.getByRole('link', { name: 'Mon profil' }).click();
+    await expect(page).toHaveURL(/\/profil$/);
+    await expect(page.getByTestId('profile-email')).toHaveText('auditeur@fodip.local');
+    await expect(page.getByTestId('profile-roles')).toContainText('Auditeur');
+    await expectNoSeriousViolations(page);
+
+    await page.getByRole('button', { name: 'Retour à l’espace' }).click();
+    await expect(page).toHaveURL(/\/auditeur\/tableau-de-bord$/);
     await expectNoSeriousViolations(page);
 
     await menuButton.click();
