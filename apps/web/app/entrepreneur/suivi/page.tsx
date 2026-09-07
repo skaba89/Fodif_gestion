@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { clientApi } from '../../../lib/client-api';
 import Breadcrumbs from '../../_shared/Breadcrumbs';
 import Button from '../../_shared/Button';
@@ -42,17 +42,17 @@ export default function TrackingPage() {
   const [statusFilter, setStatusFilter] = useState('TOUS');
   const { pushToast } = useToast();
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       setDossiers(await clientApi<Application[]>('/api/pme/dossiers'));
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Chargement impossible');
     }
-  }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
-  async function submit(id: string) {
+  const submit = useCallback(async (id: string) => {
     setMessage('');
     try {
       await clientApi(`/api/pme/dossiers/${id}/submit`, { method: 'POST' });
@@ -63,7 +63,7 @@ export default function TrackingPage() {
       setMessage(e instanceof Error ? e.message : 'Soumission impossible');
       pushToast({ tone: 'error', title: 'Soumission impossible', message: 'Le dossier n’a pas été soumis. Vérifiez les informations puis réessayez.' });
     }
-  }
+  }, [load, pushToast]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -96,7 +96,7 @@ export default function TrackingPage() {
         </div>
       ),
     },
-  ], []);
+  ], [submit]);
 
   const activeFilterCount = Number(Boolean(query.trim())) + Number(statusFilter !== 'TOUS');
 
