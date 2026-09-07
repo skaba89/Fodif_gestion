@@ -12,6 +12,9 @@ import { JsonLoggerService } from './common/json-logger.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     cors: false,
+    // Preserve the exact request bytes for signed external webhooks (Meta WhatsApp). Nest still
+    // exposes the parsed JSON body normally; rawBody is only used for cryptographic verification.
+    rawBody: true,
     // Structured JSON logs in production, where a real log aggregator is the reader; local dev,
     // CI and the Docker demo keep Nest's default human-readable console logger.
     logger: process.env.NODE_ENV === 'production' ? new JsonLoggerService() : undefined,
