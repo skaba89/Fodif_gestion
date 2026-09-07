@@ -6,6 +6,11 @@ export interface WhatsAppTemplateRequest {
   variables?: Record<string, string>;
 }
 
+export interface WhatsAppTextRequest {
+  to: string;
+  text: string;
+}
+
 export interface WhatsAppSendResult {
   accepted: boolean;
   provider: string;
@@ -15,4 +20,5 @@ export interface WhatsAppSendResult {
 
 export interface WhatsAppProvider {
   sendTemplate(request: WhatsAppTemplateRequest): Promise<WhatsAppSendResult>;
+  sendText(request: WhatsAppTextRequest): Promise<WhatsAppSendResult>;
 }
