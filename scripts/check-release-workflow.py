@@ -19,7 +19,7 @@ required = [
     'Analyze (javascript-typescript)',
     "push: true",
     "sbom: true",
-    "actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a",
+    "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
     "cosign sign --yes",
     "cosign verify --certificate-identity",
     "release-manifest.sigstore.json",
