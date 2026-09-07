@@ -70,6 +70,21 @@ describe('SupportAssistantService', () => {
     expect(result.safeguards.stateChanged).toBe(false);
   });
 
+  it('ranks the most specific topic when several institutional topics match', () => {
+    const result = service.answer('Quels documents et justificatifs pour suivre mon dossier complet ?');
+
+    expect(result.intent).toBe('DOCUMENTS');
+    expect(result.answer).toContain('pièces demandées');
+  });
+
+  it('routes an explicit request for an agent to human support', () => {
+    const result = service.answer('Je souhaite contacter un conseiller humain');
+
+    expect(result.intent).toBe('HUMAN_SUPPORT');
+    expect(result.humanHandoff).toBe(true);
+    expect(result.answer).toContain('agent FODIP');
+  });
+
   it('falls back to a bounded institutional help scope for unknown questions', () => {
     const result = service.answer('Pouvez-vous m’aider ?');
 
