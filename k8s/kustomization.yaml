@@ -8,3 +8,4 @@ resources:
   - 05-web-deployment.yaml
   - 07-network-policies.yaml
   - 08-pod-disruption-budgets.yaml
+  - 09-reminder-scheduler-cronjob.yaml
