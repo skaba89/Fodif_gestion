@@ -10,7 +10,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content {
   position: relative;
   isolation: isolate;
@@ -25,7 +26,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content > main {
   position: relative;
   width: min(1240px, calc(100% - clamp(28px, 5vw, 72px)));
@@ -37,7 +39,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content > main > p:first-child {
   display: inline-flex;
   align-items: center;
@@ -58,7 +61,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content > main > h1 {
   max-width: 930px;
   margin: 0;
@@ -74,7 +78,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content > main > h1 + p {
   max-width: 820px;
   margin-top: 16px;
@@ -88,7 +93,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main > section {
   scroll-margin-top: 104px;
 }
@@ -97,7 +103,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main section > article {
   border-color: color-mix(in srgb, var(--line) 88%, transparent);
   background:
@@ -111,7 +118,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main section > article:hover {
   border-color: color-mix(in srgb, var(--green) 24%, var(--line));
   box-shadow:
@@ -124,7 +132,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main form {
   border-color: color-mix(in srgb, var(--line) 86%, transparent);
 }
@@ -133,7 +142,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main label {
   color: var(--ink);
   font-size: 0.75rem;
@@ -145,7 +155,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main :is(input, select, textarea) {
   min-height: 44px;
   border-color: color-mix(in srgb, var(--line) 92%, transparent);
@@ -159,7 +170,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main :is(input, select, textarea):hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--green) 34%, var(--line));
 }
@@ -168,7 +180,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main :is(input, select, textarea):focus-visible {
   outline: none;
   border-color: var(--green);
@@ -180,7 +193,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main [role="region"] {
   border-color: color-mix(in srgb, var(--line) 86%, transparent);
   border-radius: 20px;
@@ -192,7 +206,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main table {
   width: 100%;
   border-spacing: 0;
@@ -202,7 +217,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main thead th {
   padding-block: 13px;
   border-bottom-color: color-mix(in srgb, var(--green) 16%, var(--line));
@@ -218,7 +234,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main tbody td {
   padding-block: 15px;
   border-bottom-color: color-mix(in srgb, var(--line) 76%, transparent);
@@ -230,7 +247,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main tbody tr:last-child td {
   border-bottom-color: transparent;
 }
@@ -239,7 +257,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main tbody tr:hover {
   background: color-mix(in srgb, var(--green-soft) 34%, transparent);
 }
@@ -249,7 +268,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main button {
   min-height: 42px;
   border-radius: 11px;
@@ -263,7 +283,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main button:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
@@ -273,7 +294,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main button:disabled {
   cursor: not-allowed;
 }
@@ -283,7 +305,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main :is([role="status"], [role="alert"]) {
   border-radius: 14px;
   line-height: 1.55;
@@ -293,7 +316,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main h2 {
   color: var(--ink);
   font-weight: 880;
@@ -304,7 +328,8 @@
   [data-portal-context="Espace PME"],
   [data-portal-context="Espace Agent"],
   [data-portal-context="Comité de financement"],
-  [data-portal-context="Auditeur"]
+  [data-portal-context="Auditeur"],
+  [data-portal-context="Partenaire bancaire"]
 ) #main-content main hr {
   border: 0;
   border-top: 1px solid var(--line);
@@ -315,7 +340,8 @@
     [data-portal-context="Espace PME"],
     [data-portal-context="Espace Agent"],
     [data-portal-context="Comité de financement"],
-    [data-portal-context="Auditeur"]
+    [data-portal-context="Auditeur"],
+    [data-portal-context="Partenaire bancaire"]
   ) #main-content > main {
     width: min(100% - 24px, 1240px);
     padding-top: 30px;
@@ -326,7 +352,8 @@
     [data-portal-context="Espace PME"],
     [data-portal-context="Espace Agent"],
     [data-portal-context="Comité de financement"],
-    [data-portal-context="Auditeur"]
+    [data-portal-context="Auditeur"],
+    [data-portal-context="Partenaire bancaire"]
   ) #main-content > main > h1 {
     font-size: clamp(1.82rem, 9vw, 2.5rem);
   }
@@ -335,7 +362,8 @@
     [data-portal-context="Espace PME"],
     [data-portal-context="Espace Agent"],
     [data-portal-context="Comité de financement"],
-    [data-portal-context="Auditeur"]
+    [data-portal-context="Auditeur"],
+    [data-portal-context="Partenaire bancaire"]
   ) #main-content main [role="region"] {
     border-radius: 16px;
   }
@@ -344,7 +372,8 @@
     [data-portal-context="Espace PME"],
     [data-portal-context="Espace Agent"],
     [data-portal-context="Comité de financement"],
-    [data-portal-context="Auditeur"]
+    [data-portal-context="Auditeur"],
+    [data-portal-context="Partenaire bancaire"]
   ) #main-content main table {
     min-width: 720px;
   }
@@ -355,7 +384,8 @@
     [data-portal-context="Espace PME"],
     [data-portal-context="Espace Agent"],
     [data-portal-context="Comité de financement"],
-    [data-portal-context="Auditeur"]
+    [data-portal-context="Auditeur"],
+    [data-portal-context="Partenaire bancaire"]
   ) #main-content > main {
     width: min(100% - 20px, 1240px);
   }
@@ -364,7 +394,8 @@
     [data-portal-context="Espace PME"],
     [data-portal-context="Espace Agent"],
     [data-portal-context="Comité de financement"],
-    [data-portal-context="Auditeur"]
+    [data-portal-context="Auditeur"],
+    [data-portal-context="Partenaire bancaire"]
   ) #main-content > main > p:first-child {
     max-width: 100%;
     white-space: normal;
