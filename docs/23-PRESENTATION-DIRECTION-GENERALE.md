@@ -181,13 +181,13 @@ Go/No-Go. Voir `docs/26-CADRE-INSTITUTIONNEL.md` et §9.
   partenaires en retard). Le type « documents manquants » n'est pas implémenté : le schéma actuel
   n'a pas de configuration de checklist documentaire par programme à partir de laquelle le
   calculer sans l'inventer.
-- **Composants partagés restants** : `AppShell`, `AccountMenu`, `Drawer`, `KpiCard`,
-  `ExecutiveAlert`, `ConfirmDialog`, `Skeleton`, `EmptyState`, `ErrorState` sont mutualisés et en
-  service. `Toast`, `Button`, `Dialog` générique, `FilterBar` autonome, `Breadcrumbs` et
-  `ResponsiveTable` (tableaux en cartes sur mobile) restent à construire comme composants
-  dédiés — un correctif d'accessibilité minimal (`tabIndex`/`role="region"`/`aria-label` sur les
-  conteneurs de défilement horizontal) est en place en attendant, vérifié sans violation WCAG
-  sérieuse sur mobile.
+- **Composants partagés** : `AppShell`, `AccountMenu`, `Drawer`, `KpiCard`, `ExecutiveAlert`,
+  `ConfirmDialog`, `Skeleton`, `EmptyState`, `ErrorState`, `Button`, `Toast`, `Dialog`, `FilterBar`,
+  `Breadcrumbs` et `ResponsiveTable` sont désormais mutualisés. Le lot UI institutionnel partagé
+  les documente dans `/design-system` et adopte réellement les nouveaux composants sur
+  `/direction/financements`, `/agent/dossiers` et `/entrepreneur/suivi`. La migration des autres
+  écrans reste volontairement progressive, écran par écran, pour éviter un big-bang. L'axe E3
+  reste **partiel** tant qu'aucun assistant guidé (wizard) PME/Agent/Comité/Direction n'est livré.
 - **Redirection 403** : `apps/web/lib/client-api.ts` redirige automatiquement vers la connexion
   sur une réponse 401, pas encore sur une réponse 403 (rôle authentifié mais insuffisant) — un
   utilisateur au mauvais rôle reste sur la page avec l'erreur API, sans parcours de réorientation

@@ -1,0 +1,90 @@
+.viewport {
+  position: fixed;
+  z-index: 1400;
+  top: 1rem;
+  right: 1rem;
+  width: min(24rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.65rem;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 0.35rem minmax(0, 1fr) 44px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+
+.accent {
+  width: 100%;
+  min-height: 100%;
+}
+
+.success .accent { background: var(--success); }
+.info .accent { background: var(--info); }
+.warning .accent { background: var(--warning); }
+.error .accent { background: var(--danger); }
+
+.body {
+  min-width: 0;
+  padding: 0.85rem 0.8rem 0.85rem 0.75rem;
+}
+
+.title {
+  display: block;
+  margin: 0 0 0.2rem;
+  font-size: 0.92rem;
+}
+
+.message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.close {
+  width: 44px;
+  height: 44px;
+  margin: 0.35rem 0.35rem 0 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.close:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+@media (max-width: 520px) {
+  .viewport {
+    top: auto;
+    right: 0.65rem;
+    bottom: 0.65rem;
+    left: 0.65rem;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast {
+    animation: enter 180ms var(--ease) both;
+  }
+
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(-0.5rem); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}

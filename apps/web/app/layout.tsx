@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Public_Sans } from 'next/font/google';
 import ServiceWorkerRegistration from './_shared/ServiceWorkerRegistration';
+import { ToastProvider } from './_shared/Toast';
 import './globals.css';
 import './_shared/business-workspaces.css';
 
@@ -56,8 +57,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
-        {children}
-        <ServiceWorkerRegistration />
+        <ToastProvider>
+          {children}
+          <ServiceWorkerRegistration />
+        </ToastProvider>
       </body>
     </html>
   );
