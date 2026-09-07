@@ -171,6 +171,19 @@ export class ReminderRepository {
     return result.rows;
   }
 
+  async quarantineStaleClaims(): Promise<number> {
+    const result = await this.db.query<{ id: string }>(
+      `UPDATE whatsapp_reminder_dispatches
+       SET status = 'REVIEW_REQUIRED',
+           last_error_code = 'AMBIGUOUS_STALE_CLAIM',
+           updated_at = NOW()
+       WHERE status = 'CLAIMED'
+         AND last_attempt_at <= NOW() - INTERVAL '15 minutes'
+       RETURNING id`,
+    );
+    return result.rowCount ?? result.rows.length;
+  }
+
   async claim(candidate: ReminderCandidate): Promise<string | null> {
     const result = await this.db.query<{ id: string }>(
       `INSERT INTO whatsapp_reminder_dispatches (
@@ -182,6 +195,7 @@ export class ReminderRepository {
          status = 'CLAIMED',
          attempt_count = whatsapp_reminder_dispatches.attempt_count + 1,
          last_attempt_at = NOW(),
+         last_error_code = NULL,
          updated_at = NOW()
        WHERE whatsapp_reminder_dispatches.status = 'FAILED'
          AND whatsapp_reminder_dispatches.last_attempt_at <= NOW() - INTERVAL '1 hour'
