@@ -1,8 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import Breadcrumbs from '../../_shared/Breadcrumbs';
+import Button from '../../_shared/Button';
+import FilterBar, { FilterField } from '../../_shared/FilterBar';
 import Pagination from '../../_shared/Pagination';
+import ResponsiveTable, { type ResponsiveColumn } from '../../_shared/ResponsiveTable';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from '../agent.module.css';
 
@@ -28,11 +31,36 @@ export default function AgentDossiersPage() {
 
   useEffect(() => { load(1).catch((error) => setMessage(error.message)); }, [load]);
   const counts = useMemo(() => result.items.reduce<Record<string, number>>((acc, item) => ({ ...acc, [item.statut]: (acc[item.statut] ?? 0) + 1 }), {}), [result.items]);
-  // A new filter always restarts from page 1: the previous page number may no longer exist once
-  // the filtered result set shrinks (e.g. going from "Tous" to a status with fewer matches).
-  function filter(event: FormEvent) { event.preventDefault(); setMessage(''); load(1).catch((error) => setMessage(error.message)); }
+
+  function filter(event: FormEvent) {
+    event.preventDefault();
+    setMessage('');
+    load(1).catch((error) => setMessage(error.message));
+  }
+
+  function resetFilters() {
+    setStatut('');
+    setRecherche('');
+    setMessage('');
+    load(1, '', '').catch((error) => setMessage(error.message));
+  }
+
+  const columns = useMemo<ResponsiveColumn<Dossier>[]>(() => [
+    { key: 'dossier', header: 'Dossier', render: (dossier) => <strong>{dossier.numeroDossier}</strong> },
+    { key: 'entreprise', header: 'Entreprise', render: (dossier) => dossier.raisonSociale },
+    { key: 'programme', header: 'Programme', render: (dossier) => dossier.programmeNom ?? '—' },
+    { key: 'montant', header: 'Montant', render: (dossier) => `${Number(dossier.montantDemande).toLocaleString('fr-FR')} GNF` },
+    { key: 'statut', header: 'Statut', render: (dossier) => <span className={portal.pill}>{dossier.statut}</span> },
+    { key: 'action', header: 'Action', render: (dossier) => <Button variant="outline" href={`/agent/dossiers/${dossier.id}`}>Vue 360°</Button> },
+  ], []);
+
+  const activeFilterCount = Number(Boolean(statut)) + Number(Boolean(recherche.trim()));
 
   return <main className={portal.main}>
+    <Breadcrumbs items={[
+      { label: 'Agent', href: '/agent' },
+      { label: 'Dossiers' },
+    ]} />
     <p className={portal.eyebrow}>Portefeuille d’instruction</p><h1 className={portal.title}>Dossiers de financement</h1>
     <p className={portal.lead}>Priorisez les nouvelles demandes, prenez en charge un dossier et accédez à sa vue 360°.</p>
     <section className={styles.metrics}>
@@ -41,13 +69,37 @@ export default function AgentDossiersPage() {
       <article className={`${portal.card} ${styles.metric}`}><strong>{counts.EN_INSTRUCTION ?? 0}</strong><span>En instruction (page)</span></article>
       <article className={`${portal.card} ${styles.metric}`}><strong>{counts.PRET_COMITE ?? 0}</strong><span>Prêts pour comité (page)</span></article>
     </section>
-    <form className={`${portal.card} ${portal.formCard} ${portal.section} ${styles.filters}`} onSubmit={filter}>
-      <div className={styles.filter}><label htmlFor="statut">Statut</label><select id="statut" value={statut} onChange={(event) => setStatut(event.target.value)}><option value="">Tous</option><option value="SOUMIS">Soumis</option><option value="EN_INSTRUCTION">En instruction</option><option value="COMPLEMENT_REQUIS">Complément requis</option><option value="PRET_COMITE">Prêt comité</option></select></div>
-      <div className={styles.filter}><label htmlFor="recherche">Recherche</label><input id="recherche" value={recherche} onChange={(event) => setRecherche(event.target.value)} placeholder="N° dossier ou PME" /></div>
-      <button className={portal.primary}>Filtrer</button>
+    <form className={portal.section} onSubmit={filter}>
+      <FilterBar
+        activeCount={activeFilterCount}
+        onReset={resetFilters}
+        actions={<Button type="submit">Filtrer</Button>}
+        ariaLabel="Filtres des dossiers à instruire"
+      >
+        <FilterField label="Statut" htmlFor="statut">
+          <select id="statut" value={statut} onChange={(event) => setStatut(event.target.value)}>
+            <option value="">Tous</option>
+            <option value="SOUMIS">Soumis</option>
+            <option value="EN_INSTRUCTION">En instruction</option>
+            <option value="COMPLEMENT_REQUIS">Complément requis</option>
+            <option value="PRET_COMITE">Prêt comité</option>
+          </select>
+        </FilterField>
+        <FilterField label="Recherche" htmlFor="recherche">
+          <input id="recherche" type="search" value={recherche} onChange={(event) => setRecherche(event.target.value)} placeholder="N° dossier ou PME" />
+        </FilterField>
+      </FilterBar>
     </form>
     {message && <div className={portal.notice}>{message}</div>}
-    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran"><table className={portal.table}><thead><tr><th>Dossier</th><th>Entreprise</th><th>Programme</th><th>Montant</th><th>Statut</th><th>Action</th></tr></thead><tbody>{result.items.map((dossier) => <tr key={dossier.id}><td><strong>{dossier.numeroDossier}</strong></td><td>{dossier.raisonSociale}</td><td>{dossier.programmeNom ?? '—'}</td><td>{Number(dossier.montantDemande).toLocaleString('fr-FR')} GNF</td><td><span className={portal.pill}>{dossier.statut}</span></td><td><Link className={portal.secondary} href={`/agent/dossiers/${dossier.id}`}>Vue 360°</Link></td></tr>)}</tbody></table>{result.items.length === 0 && <p className={portal.lead}>Aucun dossier ne correspond aux critères.</p>}</section>
+    <section className={portal.section}>
+      <ResponsiveTable
+        rows={result.items}
+        columns={columns}
+        rowKey={(dossier) => dossier.id}
+        caption="Dossiers de financement à instruire"
+        emptyMessage="Aucun dossier ne correspond aux critères."
+      />
+    </section>
     <Pagination page={result.page} limite={result.limite} total={result.total} onChange={(page) => load(page).catch((error) => setMessage(error.message))} buttonClassName={portal.secondary} rowClassName={portal.buttonRow} />
   </main>;
 }
