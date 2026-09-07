@@ -31,7 +31,7 @@ import { defineConfig, devices } from '@playwright/test';
  * (raising the limit, disabling it under CI) was rejected: it is exactly the kind of control this
  * mission asks to hold to a stricter, not looser, standard. accessibility.spec.ts,
  * direction-partenaire.spec.ts and pwa.spec.ts stay in HEAVY_LOGIN_SPECS's complement (light or no
- * login use, verified safe under the exact same replay) and run on the full matrix.
+ * login use, verified safe under the exact same replay) and run on the full desktop matrix.
  *
  * Mobile device emulation (Android/iPhone, the matrix's other half) was deliberately left out of
  * this file until mission "présentation Directeur général" (section 6): enabling it first turned
@@ -59,6 +59,14 @@ const HEAVY_LOGIN_SPECS = [
   /executive-demo\.spec\.ts$/,
 ];
 
+// PR #91 added an authenticated Banque accessibility journey that already opens the portfolio and
+// financing detail on every project. Replaying the separate functional Banque journey as well on
+// both mobile projects makes the final iPhone login the sixth request in the real 5-per-60s window
+// (CI #217: HTTP 429). Keep the functional journey on Chromium/Firefox/WebKit desktop, and let the
+// accessibility journey provide the overlapping portfolio/detail traversal on Pixel/iPhone. This
+// preserves the real throttle and mobile page coverage while leaving retry headroom.
+const PARTNER_FUNCTIONAL_TEST = /the partner sees its correspondent financing and can open its execution page/;
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -79,7 +87,17 @@ export default defineConfig({
     // HEAVY_LOGIN_SPECS exclusion as firefox/webkit above, for the same reason: five projects all
     // replaying login.spec.ts/workflow.spec.ts/mfa.spec.ts/pii-encryption.spec.ts within one run
     // would trip the shared 5-attempts/60s login throttle even harder than three already do.
-    { name: 'Pixel 7', use: { ...devices['Pixel 7'] }, testIgnore: HEAVY_LOGIN_SPECS },
-    { name: 'iPhone 14', use: { ...devices['iPhone 14'] }, testIgnore: HEAVY_LOGIN_SPECS },
+    {
+      name: 'Pixel 7',
+      use: { ...devices['Pixel 7'] },
+      testIgnore: HEAVY_LOGIN_SPECS,
+      grepInvert: PARTNER_FUNCTIONAL_TEST,
+    },
+    {
+      name: 'iPhone 14',
+      use: { ...devices['iPhone 14'] },
+      testIgnore: HEAVY_LOGIN_SPECS,
+      grepInvert: PARTNER_FUNCTIONAL_TEST,
+    },
   ],
 });
