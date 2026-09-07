@@ -72,6 +72,10 @@
   margin: 0;
 }
 
+.definitionList > div {
+  display: contents;
+}
+
 .definitionList dt {
   color: var(--muted);
   font-size: 0.78rem;
