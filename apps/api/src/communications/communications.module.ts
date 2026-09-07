@@ -12,6 +12,7 @@ import { ReminderRepository } from './reminders/reminder.repository';
 import { ReminderService } from './reminders/reminder.service';
 import { SupportAssistantService } from './support/support-assistant.service';
 import { SupportController } from './support/support.controller';
+import { WhatsAppInboundSupportService } from './whatsapp-inbound-support.service';
 import { WHATSAPP_PROVIDER, WhatsAppProvider } from './whatsapp-provider';
 
 @Module({
@@ -28,6 +29,7 @@ import { WHATSAPP_PROVIDER, WhatsAppProvider } from './whatsapp-provider';
     ReminderService,
     MetaWhatsAppWebhookService,
     SupportAssistantService,
+    WhatsAppInboundSupportService,
     DisabledWhatsAppProvider,
     MetaWhatsAppProvider,
     {
