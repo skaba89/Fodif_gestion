@@ -1,12 +1,20 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 // Coverage gap closed: every other portal already has e2e coverage (login.spec.ts, workflow.spec.ts,
 // mfa.spec.ts, accessibility.spec.ts, pii-encryption.spec.ts), but nothing had ever driven the
 // Direction cockpit or the Partenaire bancaire portal against a live stack before this - both are
 // exercised here for the first time, with demo accounts (direction@fodip.local,
-// partenaire@fodip.local) neither of those other specs ever logs in as, so this adds no load on
-// their login rate-limit budget (POST /auth/login: 5 attempts/60s per email).
+// partenaire@fodip.local) neither of those other authenticated specs logs in as. Keep the partner
+// login unique in this spec so the 5 attempts/60s per-email auth budget remains valid across the
+// five Playwright browser/device projects.
 const DEMO_PASSWORD = 'FodipDemo2026!';
+
+async function expectNoSeriousViolations(page: import('@playwright/test').Page) {
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  const relevant = results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical');
+  expect(relevant, JSON.stringify(relevant, null, 2)).toEqual([]);
+}
 
 test.describe('Direction cockpit', () => {
   test('the national dashboard loads seeded data, and the region filter re-queries it', async ({ page }) => {
@@ -52,7 +60,7 @@ test.describe('Direction cockpit', () => {
 });
 
 test.describe('Portail Partenaire bancaire', () => {
-  test('the partner sees its correspondent financing and can open its execution page', async ({ page }) => {
+  test('the partner sees its correspondent financing, passes axe and can open its execution page', async ({ page }) => {
     await page.goto('/partenaire/connexion');
     await page.getByLabel('Email').fill('partenaire@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
@@ -62,12 +70,15 @@ test.describe('Portail Partenaire bancaire', () => {
     // FIN-2026-DEMO01 (database/seeds/002_analytics_demo.sql, correspondent bank assigned in
     // 003_partner_bank_demo.sql) - the demo partner's only financing, reachable through both of
     // axe D1's scoping mechanisms (correspondent bank, and client-portfolio) at once.
-    await expect(page.getByText('FIN-2026-DEMO01')).toBeVisible();
+    const financingRow = page.getByRole('row', { name: /FIN-2026-DEMO01/ });
+    await expect(financingRow).toBeVisible();
+    await expectNoSeriousViolations(page);
 
-    await page.getByRole('link', { name: 'Gérer' }).click();
+    await financingRow.getByRole('link', { name: 'Gérer' }).click();
     await expect(page).toHaveURL(/\/partenaire\/financements\/[0-9a-f-]+$/);
     await expect(page.getByRole('heading', { name: 'FIN-2026-DEMO01' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Décaissements' })).toBeVisible();
+    await expectNoSeriousViolations(page);
     // The seeded disbursements (400M EFFECTUE + 150M PREVU) already cover the full accorded
     // amount, so the "declare a disbursement" form is correctly hidden - the amount-remaining
     // message renders instead, itself a real behaviour worth locking in.
