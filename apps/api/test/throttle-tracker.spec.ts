@@ -1,4 +1,8 @@
-import { trackLoginByEmail, trackMfaByChallenge } from '../src/common/throttle-tracker';
+import {
+  trackAuthenticatedSession,
+  trackLoginByEmail,
+  trackMfaByChallenge,
+} from '../src/common/throttle-tracker';
 
 describe('trackLoginByEmail', () => {
   it('keys by the normalized email in the request body', () => {
@@ -36,5 +40,45 @@ describe('trackMfaByChallenge', () => {
     const a = trackMfaByChallenge({ body: { mfaChallenge: 'token-a' }, ip: '10.0.0.1' });
     const b = trackMfaByChallenge({ body: { mfaChallenge: 'token-b' }, ip: '10.0.0.1' });
     expect(a).not.toBe(b);
+  });
+});
+
+describe('trackAuthenticatedSession', () => {
+  it('uses a stable irreversible bucket for one bearer-token session', () => {
+    const request = {
+      headers: { authorization: '  Bearer test-session-token  ' },
+      ip: '10.0.0.1',
+    };
+
+    const first = trackAuthenticatedSession(request);
+    const second = trackAuthenticatedSession({
+      headers: { authorization: 'Bearer test-session-token' },
+      ip: '10.0.0.99',
+    });
+
+    expect(first).toBe(second);
+    expect(first).toMatch(/^session:[a-f0-9]{64}$/);
+    expect(first).not.toContain('test-session-token');
+  });
+
+  it('gives different authenticated sessions independent buckets', () => {
+    const first = trackAuthenticatedSession({
+      headers: { authorization: 'Bearer session-a' },
+      ip: '10.0.0.1',
+    });
+    const second = trackAuthenticatedSession({
+      headers: { authorization: 'Bearer session-b' },
+      ip: '10.0.0.1',
+    });
+
+    expect(first).not.toBe(second);
+  });
+
+  it('falls back to the caller IP when no authorization header is usable', () => {
+    expect(trackAuthenticatedSession({ headers: {}, ip: '10.0.0.7' })).toBe('ip:10.0.0.7');
+    expect(trackAuthenticatedSession({ headers: { authorization: 123 }, ip: '10.0.0.8' })).toBe(
+      'ip:10.0.0.8',
+    );
+    expect(trackAuthenticatedSession({})).toBe('ip:unknown');
   });
 });
