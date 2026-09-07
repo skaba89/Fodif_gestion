@@ -4,6 +4,7 @@ import {
   WhatsAppProvider,
   WhatsAppSendResult,
   WhatsAppTemplateRequest,
+  WhatsAppTextRequest,
 } from './whatsapp-provider';
 
 interface MetaTemplateDefinition {
@@ -87,6 +88,58 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
       },
     };
 
+    return this.sendMessage(body, version, phoneNumberId, accessToken, apiBaseUrl);
+  }
+
+  async sendText(request: WhatsAppTextRequest): Promise<WhatsAppSendResult> {
+    try {
+      this.required('WHATSAPP_META_GRAPH_API_VERSION');
+      this.required('WHATSAPP_META_PHONE_NUMBER_ID');
+      this.required('WHATSAPP_META_ACCESS_TOKEN');
+    } catch {
+      return {
+        accepted: false,
+        provider: 'meta',
+        errorCode: 'WHATSAPP_META_CONFIGURATION_INVALID',
+      };
+    }
+
+    const text = request.text.trim();
+    if (text.length === 0) {
+      return {
+        accepted: false,
+        provider: 'meta',
+        errorCode: 'WHATSAPP_TEXT_EMPTY',
+      };
+    }
+
+    const version = this.required('WHATSAPP_META_GRAPH_API_VERSION');
+    const phoneNumberId = this.required('WHATSAPP_META_PHONE_NUMBER_ID');
+    const accessToken = this.required('WHATSAPP_META_ACCESS_TOKEN');
+    const apiBaseUrl = (this.config.get<string>('WHATSAPP_META_API_BASE_URL') ?? 'https://graph.facebook.com')
+      .replace(/\/$/, '');
+
+    const body = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: request.to.replace(/^\+/, ''),
+      type: 'text',
+      text: {
+        preview_url: false,
+        body: text.slice(0, 4096),
+      },
+    };
+
+    return this.sendMessage(body, version, phoneNumberId, accessToken, apiBaseUrl);
+  }
+
+  private async sendMessage(
+    body: Record<string, unknown>,
+    version: string,
+    phoneNumberId: string,
+    accessToken: string,
+    apiBaseUrl: string,
+  ): Promise<WhatsAppSendResult> {
     try {
       const response = await fetch(`${apiBaseUrl}/${version}/${phoneNumberId}/messages`, {
         method: 'POST',
