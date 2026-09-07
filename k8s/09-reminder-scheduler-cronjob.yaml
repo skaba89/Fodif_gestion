@@ -1,0 +1,89 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: fodip-reminder-scheduler
+  namespace: fodip
+spec:
+  # Runs hourly during FODIP business hours in Guinea. The reminder ledger is idempotent, so
+  # already-sent occurrences are skipped while confirmed failures can use their one-hour retry.
+  schedule: "0 8-18 * * 1-5"
+  timeZone: Africa/Conakry
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 120
+      ttlSecondsAfterFinished: 600
+      template:
+        metadata:
+          labels:
+            app: fodip-reminder-scheduler
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          enableServiceLinks: true
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: scheduler
+              # Reuse the same signed API image; no curl/OpenSSL/third-party scheduler image is
+              # required. Replace registry/tag placeholders alongside 04-api-deployment.yaml.
+              image: CHANGE_ME/fodip-digital-api:CHANGE_ME
+              command:
+                - node
+                - -e
+                - |
+                  const { createHmac } = require('node:crypto');
+                  const path = '/api/v1/communications/whatsapp/reminders/scheduled-run';
+                  const timestamp = Math.floor(Date.now() / 1000).toString();
+                  const secret = process.env.WHATSAPP_REMINDER_SCHEDULER_SECRET;
+                  const host = process.env.FODIP_API_SERVICE_HOST;
+                  const port = process.env.FODIP_API_SERVICE_PORT || '4000';
+                  if (!secret || secret.length < 32) throw new Error('Scheduler secret is missing or too short');
+                  if (!host) throw new Error('FODIP API service address is unavailable');
+                  const canonical = `${timestamp}\nPOST\n${path}`;
+                  const signature = `sha256=${createHmac('sha256', secret).update(canonical).digest('hex')}`;
+                  const controller = new AbortController();
+                  const timeout = setTimeout(() => controller.abort(), 60000);
+                  fetch(`http://${host}:${port}${path}`, {
+                    method: 'POST',
+                    headers: {
+                      'x-fodip-scheduler-timestamp': timestamp,
+                      'x-fodip-scheduler-signature': signature,
+                    },
+                    signal: controller.signal,
+                  })
+                    .then(async (response) => {
+                      if (!response.ok) {
+                        throw new Error(`Reminder scheduler request failed with HTTP ${response.status}`);
+                      }
+                      const summary = await response.json();
+                      console.log(JSON.stringify({ event: 'reminder-scheduler-complete', summary }));
+                    })
+                    .catch((error) => {
+                      console.error(error instanceof Error ? error.message : 'Reminder scheduler failed');
+                      process.exitCode = 1;
+                    })
+                    .finally(() => clearTimeout(timeout));
+              env:
+                - name: WHATSAPP_REMINDER_SCHEDULER_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: fodip-secrets
+                      key: WHATSAPP_REMINDER_SCHEDULER_SECRET
+              securityContext:
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 32Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
