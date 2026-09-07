@@ -8,6 +8,7 @@ export interface ReminderRunSummary {
   sent: number;
   failed: number;
   deduplicated: number;
+  reviewRequired: number;
 }
 
 @Injectable()
@@ -23,6 +24,10 @@ export class ReminderService {
 
   /** Internal date override exists for deterministic tests/backfills; HTTP never exposes it. */
   async runForDate(referenceDate?: string): Promise<ReminderRunSummary> {
+    // A process may die after claiming an occurrence but before persisting the external provider
+    // outcome. Automatically replaying that ambiguous occurrence could duplicate a WhatsApp
+    // message, so stale claims are quarantined for review rather than retried blindly.
+    const reviewRequired = await this.reminders.quarantineStaleClaims();
     const candidates = await this.reminders.listCandidates(referenceDate);
     const summary: ReminderRunSummary = {
       discovered: candidates.length,
@@ -30,6 +35,7 @@ export class ReminderService {
       sent: 0,
       failed: 0,
       deduplicated: 0,
+      reviewRequired,
     };
 
     for (const candidate of candidates) {
@@ -53,7 +59,10 @@ export class ReminderService {
         await this.reminders.markSent(dispatchId, result.messageId);
         summary.sent += 1;
       } else {
-        const errorCode = 'reason' in result ? result.reason : 'WHATSAPP_DELIVERY_FAILED';
+        const errorCode: string =
+          'reason' in result && typeof result.reason === 'string'
+            ? result.reason
+            : 'WHATSAPP_DELIVERY_FAILED';
         await this.reminders.markFailed(
           dispatchId,
           result.messageId ?? null,
