@@ -166,13 +166,7 @@ export class CommunicationsRepository {
   ): Promise<boolean> {
     const result = await this.db.query<{ id: string }>(
       `UPDATE whatsapp_messages
-       SET status = CASE
-             WHEN $3 = 'READ' THEN 'READ'
-             WHEN $3 = 'DELIVERED' AND status IN ('QUEUED', 'SENT') THEN 'DELIVERED'
-             WHEN $3 = 'SENT' AND status = 'QUEUED' THEN 'SENT'
-             WHEN $3 = 'FAILED' AND status NOT IN ('DELIVERED', 'READ') THEN 'FAILED'
-             ELSE status
-           END,
+       SET status = $3,
            provider_status_at = $4,
            sent_at = CASE
              WHEN $3 = 'SENT' THEN COALESCE(sent_at, $4)
@@ -187,18 +181,22 @@ export class CommunicationsRepository {
              ELSE read_at
            END,
            failed_at = CASE
-             WHEN $3 = 'FAILED' AND status NOT IN ('DELIVERED', 'READ')
-               THEN COALESCE(failed_at, $4)
+             WHEN $3 = 'FAILED' THEN COALESCE(failed_at, $4)
              ELSE failed_at
            END,
-           error_code = CASE
-             WHEN $3 = 'FAILED' AND status NOT IN ('DELIVERED', 'READ') THEN $5
-             WHEN $3 IN ('SENT', 'DELIVERED', 'READ') THEN NULL
-             ELSE error_code
-           END
+           error_code = CASE WHEN $3 = 'FAILED' THEN $5 ELSE NULL END
        WHERE provider = $1
          AND provider_message_id = $2
-         AND (provider_status_at IS NULL OR provider_status_at <= $4)
+         AND (
+           ($3 = 'READ' AND status <> 'READ')
+           OR ($3 = 'DELIVERED' AND status IN ('QUEUED', 'SENT'))
+           OR ($3 = 'SENT' AND status = 'QUEUED')
+           OR (
+             $3 = 'FAILED'
+             AND status IN ('QUEUED', 'SENT')
+             AND (provider_status_at IS NULL OR provider_status_at <= $4)
+           )
+         )
        RETURNING id`,
       [provider, providerMessageId, status, occurredAt, errorCode ?? null],
     );
