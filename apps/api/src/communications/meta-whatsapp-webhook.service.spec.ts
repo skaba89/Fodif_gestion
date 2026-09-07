@@ -25,6 +25,12 @@ describe('MetaWhatsAppWebhookService', () => {
     expect(service.verifyChallenge('subscribe', 'wrong', '12345')).toBeNull();
   });
 
+  it('rejects non-numeric or oversized verification challenges before reflection', () => {
+    expect(service.verifyChallenge('subscribe', 'unit-test-verify-token', '<script>alert(1)</script>')).toBeNull();
+    expect(service.verifyChallenge('subscribe', 'unit-test-verify-token', '123abc')).toBeNull();
+    expect(service.verifyChallenge('subscribe', 'unit-test-verify-token', '1'.repeat(33))).toBeNull();
+  });
+
   it('validates x-hub-signature-256 against the exact raw body', () => {
     const rawBody = Buffer.from('{"object":"whatsapp_business_account"}', 'utf8');
     const signature = `sha256=${createHmac('sha256', 'unit-test-app-secret').update(rawBody).digest('hex')}`;
