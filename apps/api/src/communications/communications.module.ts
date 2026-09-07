@@ -10,6 +10,8 @@ import { MetaWhatsAppWebhookService } from './meta-whatsapp-webhook.service';
 import { ReminderController } from './reminders/reminder.controller';
 import { ReminderRepository } from './reminders/reminder.repository';
 import { ReminderService } from './reminders/reminder.service';
+import { SupportAssistantService } from './support/support-assistant.service';
+import { SupportController } from './support/support.controller';
 import { WHATSAPP_PROVIDER, WhatsAppProvider } from './whatsapp-provider';
 
 @Module({
@@ -17,6 +19,7 @@ import { WHATSAPP_PROVIDER, WhatsAppProvider } from './whatsapp-provider';
     CommunicationsController,
     ReminderController,
     MetaWhatsAppWebhookController,
+    SupportController,
   ],
   providers: [
     CommunicationsRepository,
@@ -24,6 +27,7 @@ import { WHATSAPP_PROVIDER, WhatsAppProvider } from './whatsapp-provider';
     ReminderRepository,
     ReminderService,
     MetaWhatsAppWebhookService,
+    SupportAssistantService,
     DisabledWhatsAppProvider,
     MetaWhatsAppProvider,
     {
@@ -46,6 +50,6 @@ import { WHATSAPP_PROVIDER, WhatsAppProvider } from './whatsapp-provider';
       },
     },
   ],
-  exports: [CommunicationsService, ReminderService],
+  exports: [CommunicationsService, ReminderService, SupportAssistantService],
 })
 export class CommunicationsModule {}
