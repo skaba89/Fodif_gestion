@@ -71,7 +71,9 @@ describe('SupportAssistantService', () => {
   });
 
   it('ranks the most specific topic when several institutional topics match', () => {
-    const result = service.answer('Quels documents et justificatifs pour suivre mon dossier complet ?');
+    const result = service.answer(
+      'Quels documents, justificatifs et fichiers faut-il pour suivre l’avancement général ?',
+    );
 
     expect(result.intent).toBe('DOCUMENTS');
     expect(result.answer).toContain('pièces demandées');
