@@ -31,6 +31,7 @@ describe('CommunicationsService', () => {
 
     provider = {
       sendTemplate: jest.fn(),
+      sendText: jest.fn(),
     };
 
     service = new CommunicationsService(repository, provider);
