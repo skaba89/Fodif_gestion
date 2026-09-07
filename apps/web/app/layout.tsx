@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Public_Sans } from 'next/font/google';
 import ServiceWorkerRegistration from './_shared/ServiceWorkerRegistration';
 import './globals.css';
+import './_shared/business-workspaces.css';
 
 // Public Sans is the typeface behind the U.S. Web Design System — a deliberate choice for a
 // state-grade platform: built for long-form reading and dense data tables, distinct from
