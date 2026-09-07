@@ -1,9 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { clientApi } from '../../../lib/client-api';
+import Breadcrumbs from '../../_shared/Breadcrumbs';
+import Button from '../../_shared/Button';
 import EmptyState from '../../_shared/EmptyState';
+import FilterBar, { FilterField } from '../../_shared/FilterBar';
+import ResponsiveTable, { type ResponsiveColumn } from '../../_shared/ResponsiveTable';
+import { useToast } from '../../_shared/Toast';
 import {
   DOSSIER_STATUS_LABELS,
   StatusTone,
@@ -36,6 +40,7 @@ export default function TrackingPage() {
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('TOUS');
+  const { pushToast } = useToast();
 
   async function load() {
     try {
@@ -52,9 +57,11 @@ export default function TrackingPage() {
     try {
       await clientApi(`/api/pme/dossiers/${id}/submit`, { method: 'POST' });
       setMessage('Dossier soumis avec succès.');
+      pushToast({ tone: 'success', title: 'Dossier soumis', message: 'Votre dossier a été transmis au FODIP pour traitement.' });
       await load();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Soumission impossible');
+      pushToast({ tone: 'error', title: 'Soumission impossible', message: 'Le dossier n’a pas été soumis. Vérifiez les informations puis réessayez.' });
     }
   }
 
@@ -69,39 +76,71 @@ export default function TrackingPage() {
     });
   }, [dossiers, query, statusFilter]);
 
+  const columns = useMemo<ResponsiveColumn<Application>[]>(() => [
+    { key: 'dossier', header: 'Dossier', render: (d) => <strong>{d.numeroDossier}</strong> },
+    { key: 'programme', header: 'Programme', render: (d) => d.programmeNom ?? '—' },
+    { key: 'montant', header: 'Montant', render: (d) => `${Number(d.montantDemande).toLocaleString('fr-FR')} GNF` },
+    { key: 'date', header: 'Date', render: (d) => new Date(d.dateSoumission ?? d.createdAt).toLocaleDateString('fr-FR') },
+    {
+      key: 'statut',
+      header: 'Statut',
+      render: (d) => <span className={TONE_CLASS[dossierStatusTone(d.statut)]}>{dossierStatusLabel(d.statut)}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (d) => (
+        <div className={styles.buttonRow}>
+          <Button variant="outline" href={`/entrepreneur/suivi/${d.id}/documents`}>Documents</Button>
+          {d.statut === 'BROUILLON' ? <Button onClick={() => submit(d.id)}>Soumettre</Button> : null}
+        </div>
+      ),
+    },
+  ], []);
+
+  const activeFilterCount = Number(Boolean(query.trim())) + Number(statusFilter !== 'TOUS');
+
   return (
     <main className={styles.main}>
+      <Breadcrumbs items={[
+        { label: 'Entrepreneur', href: '/entrepreneur' },
+        { label: 'Suivi des demandes' },
+      ]} />
       <div className={designStyles.titleRow}>
         <div>
           <p className={styles.eyebrow}>Mes dossiers</p>
           <h1 className={styles.title}>Suivi de mes demandes</h1>
           <p className={styles.lead}>Cette liste est filtrée côté backend sur l’entreprise portée par votre session.</p>
         </div>
-        <Link className={styles.primary} href="/entrepreneur/demande">Nouvelle demande</Link>
+        <Button href="/entrepreneur/demande">Nouvelle demande</Button>
       </div>
 
       {message && <div className={styles.notice}>{message}</div>}
 
-      <div className={designStyles.filters}>
-        <div className={designStyles.filter}>
-          <label htmlFor="dossier-search">Rechercher</label>
-          <input
-            id="dossier-search"
-            type="search"
-            placeholder="N° de dossier ou programme"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-        <div className={designStyles.filter}>
-          <label htmlFor="dossier-status">Statut</label>
-          <select id="dossier-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="TOUS">Tous les statuts</option>
-            {Object.entries(DOSSIER_STATUS_LABELS).map(([value, label]) => (
-              <option value={value} key={value}>{label}</option>
-            ))}
-          </select>
-        </div>
+      <div className={styles.section}>
+        <FilterBar
+          activeCount={activeFilterCount}
+          onReset={() => { setQuery(''); setStatusFilter('TOUS'); }}
+          ariaLabel="Filtres de mes dossiers"
+        >
+          <FilterField label="Rechercher" htmlFor="dossier-search">
+            <input
+              id="dossier-search"
+              type="search"
+              placeholder="N° de dossier ou programme"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </FilterField>
+          <FilterField label="Statut" htmlFor="dossier-status">
+            <select id="dossier-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="TOUS">Tous les statuts</option>
+              {Object.entries(DOSSIER_STATUS_LABELS).map(([value, label]) => (
+                <option value={value} key={value}>{label}</option>
+              ))}
+            </select>
+          </FilterField>
+        </FilterBar>
       </div>
 
       {dossiers.length === 0 ? (
@@ -114,43 +153,14 @@ export default function TrackingPage() {
           />
         </div>
       ) : (
-        <section className={`${styles.card} ${styles.tableCard} ${styles.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran">
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Dossier</th>
-                <th>Programme</th>
-                <th>Montant</th>
-                <th>Date</th>
-                <th>Statut</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((d) => (
-                <tr key={d.id}>
-                  <td><strong>{d.numeroDossier}</strong></td>
-                  <td>{d.programmeNom ?? '—'}</td>
-                  <td>{Number(d.montantDemande).toLocaleString('fr-FR')} GNF</td>
-                  <td>{new Date(d.dateSoumission ?? d.createdAt).toLocaleDateString('fr-FR')}</td>
-                  <td>
-                    <span className={TONE_CLASS[dossierStatusTone(d.statut)]}>{dossierStatusLabel(d.statut)}</span>
-                  </td>
-                  <td>
-                    <div className={styles.buttonRow}>
-                      <Link className={styles.secondary} href={`/entrepreneur/suivi/${d.id}/documents`}>Documents</Link>
-                      {d.statut === 'BROUILLON' && (
-                        <button className={styles.primary} type="button" onClick={() => submit(d.id)}>Soumettre</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <p className={styles.lead}>Aucun dossier ne correspond à votre recherche.</p>
-          )}
+        <section className={styles.section}>
+          <ResponsiveTable
+            rows={filtered}
+            columns={columns}
+            rowKey={(d) => d.id}
+            caption="Suivi de mes demandes de financement"
+            emptyMessage="Aucun dossier ne correspond à votre recherche."
+          />
         </section>
       )}
     </main>
