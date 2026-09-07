@@ -33,6 +33,19 @@ describe('MetaWhatsAppProvider', () => {
     });
   });
 
+  it('fails closed for text replies when transport configuration is incomplete', async () => {
+    const provider = new MetaWhatsAppProvider(new ConfigService({}));
+
+    await expect(provider.sendText({
+      to: '+224600000000',
+      text: 'Bonjour',
+    })).resolves.toEqual({
+      accepted: false,
+      provider: 'meta',
+      errorCode: 'WHATSAPP_META_CONFIGURATION_INVALID',
+    });
+  });
+
   it('rejects an internal template key that is not mapped to an approved Meta template', async () => {
     const provider = new MetaWhatsAppProvider(new ConfigService(configuredValues));
 
@@ -88,6 +101,39 @@ describe('MetaWhatsAppProvider', () => {
             { type: 'text', text: '2026-09-14' },
           ],
         }],
+      },
+    });
+  });
+
+  it('sends a free-form text reply through the Meta messages endpoint', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ messages: [{ id: 'wamid.text-1' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const provider = new MetaWhatsAppProvider(new ConfigService(configuredValues));
+
+    await expect(provider.sendText({
+      to: '+224600000000',
+      text: '  Bonjour, comment pouvons-nous vous aider ?  ',
+    })).resolves.toEqual({
+      accepted: true,
+      provider: 'meta',
+      providerMessageId: 'wamid.text-1',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://graph.example.test/v99.0/123456789/messages');
+    expect(JSON.parse(String(options?.body))).toEqual({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: '224600000000',
+      type: 'text',
+      text: {
+        preview_url: false,
+        body: 'Bonjour, comment pouvons-nous vous aider ?',
       },
     });
   });
