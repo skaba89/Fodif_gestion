@@ -29,13 +29,13 @@
   grid-template-columns: minmax(230px, auto) minmax(0, 1fr) auto;
   align-items: center;
   gap: clamp(18px, 3vw, 42px);
-  min-height: 74px;
+  min-height: 76px;
   padding: 10px clamp(18px, 4vw, 54px);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45), 0 8px 28px rgba(20, 35, 27, 0.035);
-  backdrop-filter: blur(18px) saturate(145%);
-  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.44), 0 10px 34px rgba(20, 35, 27, 0.045);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
 }
 
 .brand {
@@ -47,23 +47,27 @@
   text-decoration: none;
 }
 
-.mark {
+.mark,
+.drawerMark {
   position: relative;
   display: grid;
   place-items: center;
-  width: 43px;
-  height: 43px;
-  flex: 0 0 43px;
   border: 1px solid rgba(255, 255, 255, 0.58);
-  border-radius: 14px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.34), transparent 42%),
     linear-gradient(135deg, var(--accent-300), var(--accent-600));
   color: var(--primary-900);
   box-shadow: 0 8px 20px rgba(124, 94, 17, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-  font-size: 0.82rem;
   font-weight: 950;
   letter-spacing: -0.04em;
+}
+
+.mark {
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  border-radius: 14px;
+  font-size: 0.82rem;
 }
 
 .brandText {
@@ -96,58 +100,34 @@
   white-space: nowrap;
 }
 
-.nav {
+.headerContext {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 10px;
   min-width: 0;
-}
-
-.nav a {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 13px;
-  border: 1px solid transparent;
-  border-radius: 12px;
   color: var(--muted);
-  text-decoration: none;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.contextLabel,
+.contextPortal {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  transition:
-    background var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease),
-    transform var(--duration-fast) var(--ease);
 }
 
-.nav a:hover {
-  border-color: color-mix(in srgb, var(--line) 78%, transparent);
-  background: color-mix(in srgb, var(--surface-soft) 66%, transparent);
-  color: var(--green-strong);
-  transform: translateY(-1px);
+.contextPortal {
+  color: var(--ink);
+  font-weight: 800;
 }
 
-.nav a[aria-current='page'] {
-  border-color: color-mix(in srgb, var(--green) 18%, var(--line));
-  background: color-mix(in srgb, var(--green-soft) 82%, var(--surface));
-  color: var(--green-strong);
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--gold) 70%, transparent);
-}
-
-/* The dark premium surface is intentionally subtle, but active navigation must remain above
-   WCAG AA 4.5:1. primary-200 keeps the institutional green family while providing safe contrast. */
-:global(:root[data-theme='dark']) .nav a[aria-current='page'] {
-  color: var(--primary-200);
-}
-
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme='light'])) .nav a[aria-current='page'] {
-    color: var(--primary-200);
-  }
+.contextDivider {
+  width: 1px;
+  height: 18px;
+  background: color-mix(in srgb, var(--line) 85%, transparent);
 }
 
 .headerActions {
@@ -162,34 +142,58 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
   min-height: 42px;
   border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   color: var(--ink);
   box-shadow: 0 5px 16px rgba(20, 35, 27, 0.035);
-  font-size: 1rem;
   line-height: 1;
   transition:
     border-color var(--duration-fast) var(--ease),
+    background var(--duration-fast) var(--ease),
     box-shadow var(--duration-fast) var(--ease),
     transform var(--duration-fast) var(--ease);
+}
+
+.themeToggle {
+  width: 42px;
+}
+
+.hamburger {
+  gap: 9px;
+  min-width: 96px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.hamburger svg {
+  width: 19px;
+  height: 19px;
+}
+
+.menuLabel {
+  font-size: 0.78rem;
+  font-weight: 820;
+  letter-spacing: 0.025em;
 }
 
 .themeToggle:hover,
 .hamburger:hover {
   border-color: color-mix(in srgb, var(--green) 48%, var(--line));
-  box-shadow: 0 8px 20px rgba(15, 107, 69, 0.08);
+  background: color-mix(in srgb, var(--green-soft) 48%, var(--surface));
+  box-shadow: 0 9px 22px rgba(15, 107, 69, 0.08);
   transform: translateY(-1px);
+}
+
+.hamburger:focus-visible,
+.themeToggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), 0 9px 22px rgba(15, 107, 69, 0.08);
 }
 
 .accountDesktop {
   display: contents;
-}
-
-.hamburger {
-  display: none;
 }
 
 .notice {
@@ -262,42 +266,168 @@
   }
 }
 
-.drawerNav {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-bottom: 18px;
-}
-
-.drawerNavItem,
-.drawerNavItemActive,
-.drawerNav a {
+.drawerBrand {
   display: flex;
   align-items: center;
-  min-height: 46px;
-  padding: 0 14px;
-  border: 1px solid transparent;
-  border-radius: 12px;
+  gap: 13px;
+  margin: 2px 0 24px;
+  padding: 4px 2px 22px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.drawerMark {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 15px;
+  font-size: 0.84rem;
+}
+
+.drawerBrand strong,
+.drawerBrand span {
+  display: block;
+}
+
+.drawerBrand strong {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 920;
+  letter-spacing: 0.085em;
+}
+
+.drawerBrand span {
+  margin-top: 4px;
   color: var(--muted);
-  text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.72rem;
   font-weight: 680;
 }
 
-.drawerNav a:hover,
+.drawerSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.drawerSectionRule {
+  height: 1px;
+  flex: 1;
+  background: color-mix(in srgb, var(--line) 78%, transparent);
+}
+
+.drawerNav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.drawerNavItem,
 .drawerNavItemActive {
-  border-color: color-mix(in srgb, var(--green) 18%, var(--line));
-  background: color-mix(in srgb, var(--green-soft) 78%, var(--surface));
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 50px;
+  padding: 0 14px 0 16px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 720;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.drawerNavItem:hover,
+.drawerNavItemActive {
+  border-color: color-mix(in srgb, var(--green) 20%, var(--line));
+  background: color-mix(in srgb, var(--green-soft) 74%, var(--surface));
   color: var(--green-strong);
 }
 
+.drawerNavItem:hover {
+  transform: translateX(2px);
+}
+
 .drawerNavItemActive {
-  font-weight: 820;
+  box-shadow: inset 3px 0 0 var(--accent-500);
+  font-weight: 840;
+}
+
+:global(:root[data-theme='dark']) .drawerNavItemActive,
+:global(:root[data-theme='dark']) .drawerNavItem:hover {
+  color: var(--primary-200);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .drawerNavItemActive,
+  :global(:root:not([data-theme='light'])) .drawerNavItem:hover {
+    color: var(--primary-200);
+  }
+}
+
+.drawerNavLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawerNavChevron {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  opacity: 0.62;
+}
+
+.drawerNavItemActive .drawerNavChevron {
+  opacity: 1;
 }
 
 .drawerAccount {
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  padding: 18px 0 20px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.drawerAccountLabel {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.drawerMeta {
+  display: grid;
+  gap: 4px;
+  margin-top: auto;
+  padding: 18px 0 2px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.drawerMeta strong {
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 820;
+}
+
+.drawerMeta span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
 }
 
 .footer {
@@ -314,29 +444,22 @@
 
 @media (max-width: 1100px) {
   .header {
-    grid-template-columns: minmax(220px, auto) minmax(0, 1fr) auto;
-    gap: 14px;
+    grid-template-columns: minmax(220px, 1fr) auto;
+    gap: 16px;
   }
 
-  .nav a {
-    padding-inline: 9px;
-    font-size: 0.77rem;
+  .headerContext {
+    display: none;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 760px) {
   .header {
-    grid-template-columns: minmax(0, 1fr) auto;
     min-height: 68px;
   }
 
-  .nav,
   .accountDesktop {
     display: none;
-  }
-
-  .hamburger {
-    display: inline-flex;
   }
 }
 
@@ -359,6 +482,24 @@
     font-size: 0.62rem;
   }
 
+  .hamburger {
+    min-width: 44px;
+    width: 44px;
+    padding: 0;
+  }
+
+  .menuLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .notice,
   .footer {
     width: min(100% - 24px, 1180px);
@@ -366,9 +507,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav a,
   .themeToggle,
   .hamburger,
+  .drawerNavItem,
+  .drawerNavItemActive,
   .contentFrame :global(main),
   .contentFrame :global(article) {
     animation: none;

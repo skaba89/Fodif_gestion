@@ -24,15 +24,25 @@ test.describe('Login flow', () => {
     await expect(page).toHaveURL(/\/administration\/utilisateurs$/);
   });
 
-  test('a PME account reaches its own space and can log out', async ({ page }) => {
+  test('a PME account reaches its own space, navigates through the hamburger menu and can log out', async ({ page }) => {
     await page.goto('/entrepreneur/connexion');
     await page.getByLabel('Email').fill('pme@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
     await expect(page).toHaveURL(/\/entrepreneur$/);
-    await expect(page.getByRole('link', { name: 'Mon entreprise' })).toBeVisible();
     await expect(page.getByText('pme@fodip.local')).toBeVisible();
+
+    const menuButton = page.getByRole('button', { name: 'Ouvrir le menu principal' });
+    await expect(menuButton).toBeVisible();
+    await menuButton.click();
+
+    const drawer = page.getByRole('dialog', { name: 'Navigation Espace PME' });
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'Mon entreprise' })).toBeVisible();
+    await drawer.getByRole('link', { name: 'Mon entreprise' }).click();
+    await expect(page).toHaveURL(/\/entrepreneur\/entreprise$/);
+    await expect(drawer).toBeHidden();
 
     await page.getByRole('button', { name: 'Déconnexion' }).click();
     await expect(page).toHaveURL(/\/entrepreneur\/connexion$/);
