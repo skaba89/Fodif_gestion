@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { MoonIcon, SunIcon } from './Icons';
 
 type Theme = 'light' | 'dark';
 
@@ -18,14 +19,13 @@ function systemPrefersDark(): boolean {
  * sync with clicks, with no mismatch between the two.
  */
 export default function ThemeToggle({ buttonClassName }: { buttonClassName: string }) {
-  // null until mounted: avoids a hydration mismatch (the server has no notion of the visitor's
-  // stored preference) and briefly rendering nothing is preferable to briefly rendering the
-  // wrong icon.
+  // null until mounted: avoids a hydration mismatch because the server has no notion of the
+  // visitor's stored preference.
   const [theme, setTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
     let stored: string | null = null;
-    try { stored = localStorage.getItem(STORAGE_KEY); } catch { /* private mode, storage disabled: fall back below */ }
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch { /* private mode: fall back below */ }
     setTheme(stored === 'dark' || stored === 'light' ? stored : (systemPrefersDark() ? 'dark' : 'light'));
   }, []);
 
@@ -33,7 +33,7 @@ export default function ThemeToggle({ buttonClassName }: { buttonClassName: stri
     const next: Theme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem(STORAGE_KEY, next); } catch { /* private mode, storage disabled: theme still applies for this page view */ }
+    try { localStorage.setItem(STORAGE_KEY, next); } catch { /* theme still applies for this page view */ }
   }
 
   if (!theme) return null;
@@ -45,7 +45,7 @@ export default function ThemeToggle({ buttonClassName }: { buttonClassName: stri
       aria-label={theme === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'}
       title={theme === 'dark' ? 'Thème clair' : 'Thème sombre'}
     >
-      {theme === 'dark' ? '☀️' : '🌙'}
+      {theme === 'dark' ? <SunIcon aria-hidden /> : <MoonIcon aria-hidden />}
     </button>
   );
 }
