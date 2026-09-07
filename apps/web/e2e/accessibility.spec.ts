@@ -83,4 +83,19 @@ test.describe('Accessibility (axe A6)', () => {
     await expect(page).toHaveURL(/\/mes-donnees$/);
     await expectNoSeriousViolations(page);
   });
+
+  test('the Partenaire bancaire portfolio and financing detail remain accessible', async ({ page }) => {
+    await page.goto('/partenaire/connexion');
+    await page.getByLabel('Email').fill('partenaire@fodip.local');
+    await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await expect(page).toHaveURL(/\/partenaire\/financements$/);
+    await expect(page.getByText('FIN-2026-DEMO01')).toBeVisible();
+    await expectNoSeriousViolations(page);
+
+    await page.getByRole('link', { name: 'Gérer' }).click();
+    await expect(page).toHaveURL(/\/partenaire\/financements\/[0-9a-f-]+$/);
+    await expect(page.getByRole('heading', { name: 'FIN-2026-DEMO01' })).toBeVisible();
+    await expectNoSeriousViolations(page);
+  });
 });
