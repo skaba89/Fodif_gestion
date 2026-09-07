@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { BankReconciliationsModule } from './reconciliations/bank-reconciliations.module';
 import { CompaniesModule } from './companies/companies.module';
 import { CommitteeModule } from './committee/committee.module';
+import { CommunicationsModule } from './communications/communications.module';
 import { AuthorizationGuard } from './common/guards/authorization.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -56,6 +57,7 @@ import { ScoringModule } from './scoring/scoring.module';
     AgentApplicationsModule,
     AnalyticsModule,
     AuditModule,
+    CommunicationsModule,
     DataRightsModule,
     DocumentsModule,
     FinancingsModule,
