@@ -20,9 +20,12 @@ type ToastInput = {
   durationMs?: number;
 };
 
-type ToastItem = Required<Pick<ToastInput, 'tone' | 'title' | 'durationMs'>> & {
+type ToastItem = {
   id: string;
+  tone: ToastTone;
+  title: string;
   message?: string;
+  durationMs: number;
 };
 
 type ToastContextValue = {
@@ -76,7 +79,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const tone = input.tone ?? 'info';
+    const tone: ToastTone = input.tone ?? 'info';
     const title = safeText(input.title, 'Notification FODIP', 90) ?? 'Notification FODIP';
     const message = safeText(input.message, 'Une information technique a été masquée. Réessayez ou contactez le support.', 260);
     const item: ToastItem = {
