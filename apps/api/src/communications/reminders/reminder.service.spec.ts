@@ -20,6 +20,7 @@ describe('ReminderService', () => {
 
   beforeEach(() => {
     repository = {
+      quarantineStaleClaims: jest.fn().mockResolvedValue(0),
       listCandidates: jest.fn(),
       claim: jest.fn(),
       markSent: jest.fn(),
@@ -41,6 +42,7 @@ describe('ReminderService', () => {
       sent: 0,
       failed: 0,
       deduplicated: 1,
+      reviewRequired: 0,
     });
     expect(communications.sendTemplateToUser).not.toHaveBeenCalled();
   });
@@ -60,6 +62,7 @@ describe('ReminderService', () => {
       sent: 1,
       failed: 0,
       deduplicated: 0,
+      reviewRequired: 0,
     });
     expect(communications.sendTemplateToUser).toHaveBeenCalledWith({
       userId: candidate.userId,
@@ -93,11 +96,27 @@ describe('ReminderService', () => {
       sent: 0,
       failed: 1,
       deduplicated: 0,
+      reviewRequired: 0,
     });
     expect(repository.markFailed).toHaveBeenCalledWith(
       '33333333-3333-4333-8333-333333333333',
       '44444444-4444-4444-8444-444444444444',
       'WHATSAPP_PROVIDER_NOT_CONFIGURED',
     );
+  });
+
+  it('surfaces stale ambiguous claims for review instead of replaying them', async () => {
+    repository.quarantineStaleClaims.mockResolvedValue(2);
+    repository.listCandidates.mockResolvedValue([]);
+
+    await expect(service.runForDate('2026-09-07')).resolves.toEqual({
+      discovered: 0,
+      claimed: 0,
+      sent: 0,
+      failed: 0,
+      deduplicated: 0,
+      reviewRequired: 2,
+    });
+    expect(communications.sendTemplateToUser).not.toHaveBeenCalled();
   });
 });
