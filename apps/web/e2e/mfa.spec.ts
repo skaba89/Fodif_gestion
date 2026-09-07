@@ -50,7 +50,12 @@ test.describe('TOTP multi-factor authentication', () => {
       await page.getByRole('button', { name: 'Activer et se connecter' }).click();
 
       await expect(page).toHaveURL(/\/comite\/dossiers$/);
+      // Account identifiers are intentionally absent from the global shell. They are exposed only
+      // on the dedicated profile page, including after an MFA enrollment round trip.
+      await expect(page.getByText(email)).toHaveCount(0);
+      await page.goto('/profil');
       await expect(page.getByText(email)).toBeVisible();
+      await page.goto('/comite/dossiers');
 
       // --- Log out and back in: the secret is now confirmed -> verification challenge only ---
       await page.getByRole('button', { name: 'Déconnexion' }).click();
