@@ -18,8 +18,8 @@ export interface AppShellNavItem {
  * Shared institutional shell for every authenticated portal.
  *
  * Navigation deliberately lives in one consistent hamburger drawer on desktop, tablet and mobile.
- * That keeps dense role-specific portals visually calm while preserving keyboard, focus and route
- * semantics through the reusable Drawer component.
+ * Account identifiers and role information never appear in this global chrome: those details are
+ * reserved for the dedicated profile page.
  */
 export default function AppShell({
   portalLabel,
@@ -60,7 +60,7 @@ export default function AppShell({
   }, [pathname]);
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-portal-context={portalLabel}>
       <a href="#main-content" className="skip-link">Aller au contenu principal</a>
       {demoMode && (
         <div className={styles.demoBanner} role="status">
@@ -73,14 +73,14 @@ export default function AppShell({
           <span className={styles.mark} aria-hidden="true">FD</span>
           <span className={styles.brandText}>
             <strong>FODIP DIGITAL</strong>
-            <span>{portalLabel}</span>
+            <span>Plateforme institutionnelle</span>
           </span>
         </Link>
 
         <div className={styles.headerContext} aria-hidden="true">
           <span className={styles.contextLabel}>Espace sécurisé</span>
           <span className={styles.contextDivider} />
-          <span className={styles.contextPortal}>{portalLabel}</span>
+          <span className={styles.contextPortal}>Session authentifiée</span>
         </div>
 
         <div className={styles.headerActions}>
@@ -106,12 +106,12 @@ export default function AppShell({
         </div>
       )}
 
-      <Drawer open={drawerOpen} onClose={closeDrawer} title={`Navigation ${portalLabel}`} side="left">
+      <Drawer open={drawerOpen} onClose={closeDrawer} title="Navigation principale" side="left">
         <div className={styles.drawerBrand}>
           <span className={styles.drawerMark} aria-hidden="true">FD</span>
           <div>
             <strong>FODIP DIGITAL</strong>
-            <span>{portalLabel}</span>
+            <span>Plateforme institutionnelle</span>
           </div>
         </div>
 
@@ -120,7 +120,7 @@ export default function AppShell({
           <span className={styles.drawerSectionRule} />
         </div>
 
-        <nav className={styles.drawerNav} aria-label={`Navigation ${portalLabel}`}>
+        <nav className={styles.drawerNav} aria-label="Navigation principale">
           {navItems.map((item) => {
             const active = pathname === item.href;
             return (
