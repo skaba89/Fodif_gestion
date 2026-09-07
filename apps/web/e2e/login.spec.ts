@@ -24,20 +24,35 @@ test.describe('Login flow', () => {
     await expect(page).toHaveURL(/\/administration\/utilisateurs$/);
   });
 
-  test('a PME account reaches its own space, navigates through the hamburger menu and can log out', async ({ page }) => {
+  test('a PME account keeps identity details in profile only, navigates through the hamburger menu and can log out', async ({ page }) => {
     await page.goto('/entrepreneur/connexion');
     await page.getByLabel('Email').fill('pme@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
     await expect(page).toHaveURL(/\/entrepreneur$/);
-    await expect(page.getByText('pme@fodip.local')).toBeVisible();
+    await expect(page.getByText('pme@fodip.local')).toHaveCount(0);
 
     const menuButton = page.getByRole('button', { name: 'Ouvrir le menu principal' });
     await expect(menuButton).toBeVisible();
     await menuButton.click();
 
-    const drawer = page.getByRole('dialog', { name: 'Navigation Espace PME' });
+    const drawer = page.getByRole('dialog', { name: 'Navigation principale' });
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText('pme@fodip.local')).toHaveCount(0);
+    await expect(drawer.getByText('PME', { exact: true })).toHaveCount(0);
+    await expect(drawer.getByRole('link', { name: 'Mon profil' })).toBeVisible();
+
+    await drawer.getByRole('link', { name: 'Mon profil' }).click();
+    await expect(page).toHaveURL(/\/profil$/);
+    await expect(page.getByTestId('profile-email')).toHaveText('pme@fodip.local');
+    await expect(page.getByTestId('profile-roles')).toContainText('PME');
+
+    await page.getByRole('button', { name: 'Retour à l’espace' }).click();
+    await expect(page).toHaveURL(/\/entrepreneur$/);
+    await expect(page.getByText('pme@fodip.local')).toHaveCount(0);
+
+    await menuButton.click();
     await expect(drawer).toBeVisible();
     await expect(drawer.getByRole('link', { name: 'Mon entreprise' })).toBeVisible();
     await drawer.getByRole('link', { name: 'Mon entreprise' }).click();
