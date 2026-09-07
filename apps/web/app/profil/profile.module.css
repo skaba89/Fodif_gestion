@@ -193,7 +193,7 @@
   border: 1px solid color-mix(in srgb, var(--success) 22%, var(--line));
   border-radius: 999px;
   background: color-mix(in srgb, var(--success-soft) 72%, var(--surface));
-  color: var(--success);
+  color: var(--green-strong);
   font-size: 0.68rem;
   font-weight: 820;
   letter-spacing: 0.025em;
