@@ -2,12 +2,22 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommunicationsRepository } from './communications.repository';
+import { WhatsAppInboundSupportService } from './whatsapp-inbound-support.service';
 
 interface MetaStatusPayload {
   id?: string;
   status?: string;
   timestamp?: string;
   errors?: Array<{ code?: number }>;
+}
+
+interface MetaMessagePayload {
+  id?: string;
+  from?: string;
+  type?: string;
+  text?: {
+    body?: string;
+  };
 }
 
 interface MetaWebhookPayload {
@@ -17,6 +27,7 @@ interface MetaWebhookPayload {
       field?: string;
       value?: {
         statuses?: MetaStatusPayload[];
+        messages?: MetaMessagePayload[];
       };
     }>;
   }>;
@@ -33,6 +44,7 @@ export class MetaWhatsAppWebhookService {
   constructor(
     private readonly config: ConfigService,
     private readonly communications: CommunicationsRepository,
+    private readonly inboundSupport: WhatsAppInboundSupportService,
   ) {}
 
   verifyChallenge(mode?: string, token?: string, challenge?: string): string | null {
@@ -63,10 +75,12 @@ export class MetaWhatsAppWebhookService {
     }
 
     const statuses: MetaStatusPayload[] = [];
+    const messages: MetaMessagePayload[] = [];
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         if (change.field !== 'messages') continue;
         statuses.push(...(change.value?.statuses ?? []));
+        messages.push(...(change.value?.messages ?? []));
       }
     }
 
@@ -94,6 +108,27 @@ export class MetaWhatsAppWebhookService {
       if (updated) summary.updated += 1;
       else summary.ignored += 1;
     }
+
+    for (const message of messages) {
+      const body = message.text?.body;
+      if (
+        message.type !== 'text'
+        || typeof message.id !== 'string'
+        || typeof message.from !== 'string'
+        || typeof body !== 'string'
+        || body.trim().length === 0
+      ) {
+        continue;
+      }
+
+      await this.inboundSupport.handle({
+        provider: 'meta',
+        providerMessageId: message.id,
+        from: message.from,
+        text: body,
+      });
+    }
+
     return summary;
   }
 
