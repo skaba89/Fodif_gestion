@@ -1,6 +1,8 @@
-# Default-deny inbound traffic, then expose only the documented web -> API path. Egress remains
-# open until the institutional hosting decision supplies stable PostgreSQL, S3, OIDC, DNS and
-# observability destinations that can be allow-listed without breaking production.
+# Default-deny inbound traffic, then expose only the documented web -> API and scheduler -> API
+# paths. General workload egress remains open until the institutional hosting decision supplies
+# stable PostgreSQL, S3, OIDC, DNS and observability destinations that can be allow-listed without
+# breaking production. The reminder scheduler is an exception: its egress is explicitly restricted
+# to the API because it needs no database, storage, provider or Internet access of its own.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -47,6 +49,46 @@ spec:
         - podSelector:
             matchLabels:
               app: fodip-web
+      ports:
+        - protocol: TCP
+          port: 4000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-reminder-scheduler-to-api
+  namespace: fodip
+spec:
+  podSelector:
+    matchLabels:
+      app: fodip-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: fodip-reminder-scheduler
+      ports:
+        - protocol: TCP
+          port: 4000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restrict-reminder-scheduler-egress
+  namespace: fodip
+spec:
+  podSelector:
+    matchLabels:
+      app: fodip-reminder-scheduler
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: fodip-api
       ports:
         - protocol: TCP
           port: 4000
