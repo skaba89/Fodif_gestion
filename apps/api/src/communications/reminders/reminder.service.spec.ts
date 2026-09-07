@@ -32,6 +32,20 @@ describe('ReminderService', () => {
     service = new ReminderService(repository, communications);
   });
 
+  it('runs the current reminder batch through the date-safe entrypoint', async () => {
+    repository.listCandidates.mockResolvedValue([]);
+
+    await expect(service.runCurrent()).resolves.toEqual({
+      discovered: 0,
+      claimed: 0,
+      sent: 0,
+      failed: 0,
+      deduplicated: 0,
+      reviewRequired: 0,
+    });
+    expect(repository.listCandidates).toHaveBeenCalledWith(undefined);
+  });
+
   it('deduplicates a reminder occurrence before calling the provider layer', async () => {
     repository.listCandidates.mockResolvedValue([candidate]);
     repository.claim.mockResolvedValue(null);
