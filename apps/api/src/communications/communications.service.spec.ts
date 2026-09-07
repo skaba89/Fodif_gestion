@@ -31,6 +31,7 @@ describe('CommunicationsService', () => {
 
     provider = {
       sendTemplate: jest.fn(),
+      sendText: jest.fn(),
     };
 
     service = new CommunicationsService(repository, provider);
@@ -126,5 +127,40 @@ describe('CommunicationsService', () => {
       'partner',
       'provider-message-1',
     );
+  });
+
+  it('sends a freeform reply only through the internal inbound support path', async () => {
+    repository.createOutboundAttempt.mockResolvedValue(
+      '66666666-6666-4666-8666-666666666666',
+    );
+    provider.sendText.mockResolvedValue({
+      accepted: true,
+      provider: 'meta',
+      providerMessageId: 'wamid.reply-1',
+    });
+
+    const result = await service.sendInboundSupportReply({
+      telephoneE164: '+224620000000',
+      userId: optedInPreference.userId,
+      preferenceId: optedInPreference.id,
+      text: 'Réponse institutionnelle de support.',
+    });
+
+    expect(result).toEqual({
+      sent: true,
+      messageId: '66666666-6666-4666-8666-666666666666',
+      providerMessageId: 'wamid.reply-1',
+    });
+    expect(repository.getPreference).not.toHaveBeenCalled();
+    expect(repository.createOutboundAttempt).toHaveBeenCalledWith({
+      userId: optedInPreference.userId,
+      preferenceId: optedInPreference.id,
+      telephoneE164: '+224620000000',
+      messageType: 'CHATBOT',
+    });
+    expect(provider.sendText).toHaveBeenCalledWith({
+      to: '+224620000000',
+      text: 'Réponse institutionnelle de support.',
+    });
   });
 });
