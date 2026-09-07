@@ -13,6 +13,14 @@ export interface SendWhatsAppTemplateInput {
   contextId?: string;
 }
 
+export interface SendWhatsAppInboundReplyInput {
+  telephoneE164: string;
+  userId?: string;
+  preferenceId?: string;
+  messageType?: 'SUPPORT' | 'CHATBOT';
+  text: string;
+}
+
 @Injectable()
 export class CommunicationsService {
   constructor(
@@ -80,6 +88,54 @@ export class CommunicationsService {
         to: preference.telephoneE164,
         templateKey: input.templateKey,
         variables: input.variables,
+      });
+
+      if (!result.accepted) {
+        const errorCode = result.errorCode ?? 'WHATSAPP_PROVIDER_REJECTED';
+        await this.communications.markFailed(messageId, result.provider, errorCode);
+        return { sent: false, messageId, reason: errorCode };
+      }
+
+      await this.communications.markSent(messageId, result.provider, result.providerMessageId);
+      return {
+        sent: true,
+        messageId,
+        providerMessageId: result.providerMessageId ?? null,
+      };
+    } catch {
+      await this.communications.markFailed(
+        messageId,
+        'unknown',
+        'WHATSAPP_PROVIDER_ERROR',
+      );
+      return { sent: false, messageId, reason: 'WHATSAPP_PROVIDER_ERROR' as const };
+    }
+  }
+
+  /**
+   * Internal-only response path for a user-initiated WhatsApp conversation.
+   * It deliberately bypasses proactive-message opt-in checks because it is called only
+   * while handling the verified inbound message that opened the support window.
+   */
+  async sendInboundSupportReply(input: SendWhatsAppInboundReplyInput) {
+    if (!/^\+[1-9][0-9]{7,14}$/.test(input.telephoneE164)) {
+      throw new BadRequestException('Invalid WhatsApp phone number');
+    }
+
+    const text = input.text.trim();
+    if (!text) throw new BadRequestException('WhatsApp reply cannot be empty');
+
+    const messageId = await this.communications.createOutboundAttempt({
+      userId: input.userId,
+      preferenceId: input.preferenceId,
+      telephoneE164: input.telephoneE164,
+      messageType: input.messageType ?? 'CHATBOT',
+    });
+
+    try {
+      const result = await this.provider.sendText({
+        to: input.telephoneE164,
+        text: text.slice(0, 4096),
       });
 
       if (!result.accepted) {
