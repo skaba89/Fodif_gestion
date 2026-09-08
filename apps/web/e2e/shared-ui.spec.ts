@@ -1,9 +1,34 @@
 import { expect, test } from '@playwright/test';
 
+const OFFICIAL_FODIP_LOGO = 'https://hom-app.fodip.gov.gn/assets/img/fodip.jpg';
+
 test.describe('Shared institutional UI', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/design-system');
     await expect(page.getByTestId('shared-ui-showcase')).toBeVisible();
+  });
+
+  test('official FODIP identity uses the institutional logo source and Republic of Guinea colors', async ({ page }) => {
+    await page.goto('/');
+
+    // Assert the canonical source, not network loading: CI must stay deterministic even if the
+    // public FODIP site is temporarily unreachable while the application itself is healthy.
+    await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
+
+    const colors = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      return {
+        red: root.getPropertyValue('--fodip-red').trim().toLowerCase(),
+        yellow: root.getPropertyValue('--fodip-yellow').trim().toLowerCase(),
+        green: root.getPropertyValue('--fodip-green').trim().toLowerCase(),
+      };
+    });
+
+    expect(colors).toEqual({ red: '#ce1126', yellow: '#fcd116', green: '#009460' });
+
+    await page.goto('/agent/connexion');
+    await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
+    await expect(page.getByText('Portail sécurisé')).toBeVisible();
   });
 
   test('Button exposes disabled/loading states and Dialog restores focus on Escape', async ({ page }) => {
