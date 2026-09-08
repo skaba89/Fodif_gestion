@@ -31,6 +31,14 @@ test.describe('Cycle complet d\'un dossier', () => {
     await expect(page).toHaveURL(/\/entrepreneur$/);
 
     await page.goto('/entrepreneur/demande');
+    // The programme is now the source of truth for its documentary requirements. The seed used by
+    // the presentation stack configures three mandatory items for CROISSANCE-PME; asserting them
+    // here locks the entire DB -> API -> BFF -> PME UI chain, not just a hard-coded frontend list.
+    await expect(page.getByText('Pièces et justificatifs à préparer')).toBeVisible();
+    await expect(page.getByText(/Registre du Commerce et du Crédit Mobilier/)).toBeVisible();
+    await expect(page.getByText(/Numéro d’Identification Fiscale/)).toBeVisible();
+    await expect(page.getByText(/Plan d’affaires/)).toBeVisible();
+
     await page.getByLabel('Montant demandé (GNF)').fill('500000000');
     await page.getByLabel('Objet du financement').fill('Extension de la ligne de transformation');
     await page.getByRole('button', { name: 'Enregistrer le brouillon' }).click();
@@ -39,6 +47,11 @@ test.describe('Cycle complet d\'un dossier', () => {
     const ownRow = page.locator('table tbody tr').first();
     const numeroDossier = (await ownRow.locator('td').first().innerText()).trim();
     expect(numeroDossier).toMatch(/^FODIP-/);
+    // This first lot makes completeness visible but intentionally does not block submission yet:
+    // operational enforcement comes only after the FODIP validates which programme requirements
+    // are truly mandatory. Until then the product must expose the gap without silently inventing a
+    // business rule. The dossier therefore starts at 0/3 and remains submit-able.
+    await expect(ownRow.getByText('0/3 · 0 %', { exact: true })).toBeVisible();
     await ownRow.getByRole('button', { name: 'Soumettre' }).click();
     await expect(ownRow.getByText('Soumis', { exact: true })).toBeVisible();
 
