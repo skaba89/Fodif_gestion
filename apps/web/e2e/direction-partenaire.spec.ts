@@ -55,7 +55,15 @@ test.describe('Direction cockpit', () => {
 
     await page.getByRole('link', { name: 'Gérer les financements' }).click();
     await expect(page).toHaveURL(/\/direction\/financements$/);
-    await expect(page.getByText('FIN-2026-DEMO01')).toBeVisible();
+
+    // ResponsiveTable keeps both semantic renderings in the DOM and switches them with CSS at
+    // 720px. Scope the assertion to the surface that is actually visible for the current project,
+    // instead of matching the same financing identifier in both the desktop table and mobile card.
+    const mobile = (page.viewportSize()?.width ?? 1280) <= 720;
+    const financingSurface = mobile
+      ? page.getByRole('list', { name: 'Financements FODIP — vue mobile' })
+      : page.getByRole('region', { name: 'Financements FODIP — tableau défilable horizontalement si nécessaire' });
+    await expect(financingSurface.getByText('FIN-2026-DEMO01', { exact: true })).toBeVisible();
   });
 });
 
