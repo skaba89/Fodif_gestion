@@ -22,8 +22,11 @@ export type MissingDocumentsExecutiveAlert = {
 
 /**
  * Executive alert backed by the same documentary truth as ApplicationsRepository:
- * - only active + mandatory requirements of the dossier's programme;
- * - only the current document version (superseded_by IS NULL);
+ * - a submitted dossier uses its immutable programme rule/checklist snapshot;
+ * - an unlocked draft would use the active rule version, then legacy requirements only if no
+ *   version exists (drafts are excluded from this executive alert, but the fallback keeps the
+ *   query safe for pre-versioning fixtures/imports);
+ * - only the current document version (superseded_by IS NULL) counts;
  * - a rejected document never satisfies a requirement.
  *
  * Drafts are deliberately excluded: the PME is still preparing them. Rejected/cancelled dossiers
@@ -42,20 +45,52 @@ export class MissingDocumentsAlertService {
         COALESCE(SUM(portfolio.montant_demande), 0)::text AS montant,
         COALESCE(SUM(missing.missing_count), 0)::int AS "piecesManquantes"
        FROM analytics.vw_dossier_portfolio portfolio
+       JOIN dossiers_financement dossier ON dossier.id = portfolio.dossier_id
        JOIN LATERAL (
          SELECT COUNT(*)::int AS missing_count
-         FROM programme_documents_requis requirement
-         WHERE requirement.programme_id = portfolio.programme_id
-           AND requirement.actif = TRUE
-           AND requirement.obligatoire = TRUE
-           AND NOT EXISTS (
-             SELECT 1
-             FROM dossier_documents document
-             WHERE document.dossier_id = portfolio.dossier_id
-               AND document.type_document = requirement.type_document
-               AND document.superseded_by IS NULL
-               AND document.statut_verification <> 'REJETE'
+         FROM (
+           SELECT versioned.type_document
+           FROM programme_regle_documents versioned
+           WHERE versioned.regle_version_id = COALESCE(
+             dossier.programme_regle_version_id,
+             (
+               SELECT version.id
+               FROM programme_regles_versions version
+               WHERE version.programme_id = portfolio.programme_id
+                 AND version.statut = 'ACTIVE'
+                 AND version.effective_from <= NOW()
+                 AND (version.effective_to IS NULL OR version.effective_to > NOW())
+               ORDER BY version.version DESC
+               LIMIT 1
+             )
            )
+             AND versioned.obligatoire = TRUE
+
+           UNION ALL
+
+           SELECT legacy.type_document
+           FROM programme_documents_requis legacy
+           WHERE dossier.programme_regle_version_id IS NULL
+             AND legacy.programme_id = portfolio.programme_id
+             AND legacy.actif = TRUE
+             AND legacy.obligatoire = TRUE
+             AND NOT EXISTS (
+               SELECT 1
+               FROM programme_regles_versions version
+               WHERE version.programme_id = portfolio.programme_id
+                 AND version.statut = 'ACTIVE'
+                 AND version.effective_from <= NOW()
+                 AND (version.effective_to IS NULL OR version.effective_to > NOW())
+             )
+         ) requirement
+         WHERE NOT EXISTS (
+           SELECT 1
+           FROM dossier_documents document
+           WHERE document.dossier_id = portfolio.dossier_id
+             AND document.type_document = requirement.type_document
+             AND document.superseded_by IS NULL
+             AND document.statut_verification <> 'REJETE'
+         )
        ) missing ON missing.missing_count > 0
        WHERE ($1::uuid IS NULL OR portfolio.region_id = $1)
          AND ($2::uuid IS NULL OR portfolio.programme_id = $2)

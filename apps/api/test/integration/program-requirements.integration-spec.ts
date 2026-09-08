@@ -77,6 +77,8 @@ describe('Programme requirements and dossier completeness (real PostgreSQL)', ()
       rccmRequis: true,
       nifRequis: true,
       slaInstructionJours: 12,
+      regleVersionId: null,
+      regleVersion: null,
     });
     expect(programme!.documentsRequis).toEqual([
       expect.objectContaining({ code: 'RCCM', typeDocument: 'RCCM', obligatoire: true }),
@@ -138,5 +140,126 @@ describe('Programme requirements and dossier completeness (real PostgreSQL)', ()
     expect(dossier.documentsPresents).toBe(0);
     expect(dossier.documentsManquants).toEqual([]);
     expect(dossier.completudeDocumentsPct).toBe(100);
+  });
+
+  it('freezes the rule version at first submission and prevents retroactive mutation', async () => {
+    const { programmeId, entrepriseId, dossierId } = await seedProgrammeAndDossier();
+    const user = await integrationDb.pool.query<{ id: string }>(
+      `INSERT INTO utilisateurs (email, nom, actif)
+       VALUES ($1, 'PME versioning QA', TRUE) RETURNING id`,
+      [`versioning-${randomUUID()}@fodip.test`],
+    );
+
+    const version1 = await integrationDb.pool.query<{ id: string }>(
+      `INSERT INTO programme_regles_versions (
+        programme_id, version, statut, effective_from, montant_min, montant_max, apport_min_pct,
+        anciennete_min_mois, rccm_requis, nif_requis, sla_instruction_jours
+      ) VALUES ($1, 1, 'ACTIVE', NOW() - INTERVAL '1 day', 100000, 5000000, 10, 6, TRUE, TRUE, 12)
+      RETURNING id`,
+      [programmeId],
+    );
+    await integrationDb.pool.query(
+      `INSERT INTO programme_regle_documents (
+        regle_version_id, code, libelle, type_document, obligatoire, ordre_affichage
+      ) VALUES
+        ($1, 'RCCM', 'RCCM', 'RCCM', TRUE, 10),
+        ($1, 'NIF', 'NIF', 'NIF', TRUE, 20),
+        ($1, 'BUSINESS_PLAN', 'Plan d’affaires', 'BUSINESS_PLAN', TRUE, 30)`,
+      [version1.rows[0].id],
+    );
+
+    const publishedV1 = (await programs.listActive()).find((entry) => entry.id === programmeId);
+    expect(publishedV1).toMatchObject({ regleVersionId: version1.rows[0].id, regleVersion: 1, apportMinPct: '10.00' });
+
+    const firstSubmission = await applications.submitOwned(dossierId, entrepriseId, user.rows[0].id);
+    expect(firstSubmission).toMatchObject({
+      statut: 'SOUMIS',
+      programmeRegleVersionId: version1.rows[0].id,
+      programmeRegleVersion: 1,
+      documentsRequis: 3,
+    });
+
+    await integrationDb.pool.query(
+      `UPDATE programme_regles_versions
+       SET statut = 'ARCHIVEE', effective_to = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [version1.rows[0].id],
+    );
+    const version2 = await integrationDb.pool.query<{ id: string }>(
+      `INSERT INTO programme_regles_versions (
+        programme_id, version, statut, effective_from, montant_min, montant_max, apport_min_pct,
+        anciennete_min_mois, rccm_requis, nif_requis, sla_instruction_jours
+      ) VALUES ($1, 2, 'ACTIVE', NOW() - INTERVAL '1 minute', 200000, 4000000, 15, 12, TRUE, FALSE, 10)
+      RETURNING id`,
+      [programmeId],
+    );
+    await integrationDb.pool.query(
+      `INSERT INTO programme_regle_documents (
+        regle_version_id, code, libelle, type_document, obligatoire, ordre_affichage
+      ) VALUES ($1, 'RCCM', 'RCCM', 'RCCM', TRUE, 10)`,
+      [version2.rows[0].id],
+    );
+
+    const publishedV2 = (await programs.listActive()).find((entry) => entry.id === programmeId);
+    expect(publishedV2).toMatchObject({ regleVersionId: version2.rows[0].id, regleVersion: 2, apportMinPct: '15.00' });
+    expect(publishedV2!.documentsRequis).toHaveLength(1);
+
+    const historical = await applications.findOwnedById(dossierId, entrepriseId);
+    expect(historical).toMatchObject({
+      programmeRegleVersionId: version1.rows[0].id,
+      programmeRegleVersion: 1,
+      documentsRequis: 3,
+    });
+
+    const secondDossier = await integrationDb.pool.query<{ id: string }>(
+      `INSERT INTO dossiers_financement (
+        numero_dossier, entreprise_id, programme_id, montant_demande, objet_financement, statut
+      ) VALUES ($1, $2, $3, 900000, 'Nouvelle version', 'BROUILLON') RETURNING id`,
+      [`DOS-V2-${randomUUID().slice(0, 8)}`, entrepriseId, programmeId],
+    );
+    const secondSubmission = await applications.submitOwned(secondDossier.rows[0].id, entrepriseId, user.rows[0].id);
+    expect(secondSubmission).toMatchObject({
+      programmeRegleVersionId: version2.rows[0].id,
+      programmeRegleVersion: 2,
+      documentsRequis: 1,
+    });
+
+    await expect(
+      integrationDb.pool.query(`UPDATE programme_regles_versions SET apport_min_pct = 99 WHERE id = $1`, [version1.rows[0].id]),
+    ).rejects.toThrow(/Referenced programme rule version cannot be modified/);
+
+    await expect(
+      integrationDb.pool.query(
+        `INSERT INTO programme_regle_documents
+          (regle_version_id, code, libelle, type_document, obligatoire)
+         VALUES ($1, 'GARANTIE', 'Garantie', 'GARANTIE', TRUE)`,
+        [version1.rows[0].id],
+      ),
+    ).rejects.toThrow(/Referenced programme rule checklist cannot be modified/);
+  });
+
+  it('does not allow changing programme after the dossier has entered complement remediation', async () => {
+    const { programmeId, entrepriseId, dossierId } = await seedProgrammeAndDossier();
+    const otherProgramme = await integrationDb.pool.query<{ id: string }>(
+      `INSERT INTO programmes_fodip (code, nom, statut)
+       VALUES ($1, 'Programme secondaire QA', 'ACTIVE') RETURNING id`,
+      [`PROG-SECOND-${randomUUID().slice(0, 8)}`],
+    );
+    await integrationDb.pool.query(
+      `UPDATE dossiers_financement SET statut = 'COMPLEMENT_REQUIS' WHERE id = $1`,
+      [dossierId],
+    );
+
+    const result = await applications.updateOwned(dossierId, entrepriseId, {
+      programmeId: otherProgramme.rows[0].id,
+      descriptionProjet: 'Tentative de changement de programme',
+    });
+
+    expect(result).toBeNull();
+    const row = await integrationDb.pool.query<{ programme_id: string }>(
+      `SELECT programme_id FROM dossiers_financement WHERE id = $1`,
+      [dossierId],
+    );
+    expect(row.rows[0].programme_id).toBe(programmeId);
   });
 });
