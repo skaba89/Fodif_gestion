@@ -47,8 +47,8 @@ describe('MissingDocumentsAlertService (real PostgreSQL)', () => {
     const dossier = await integrationDb.pool.query<{ id: string }>(
       `INSERT INTO dossiers_financement
         (numero_dossier, entreprise_id, programme_id, montant_demande, objet_financement, statut, date_soumission)
-       VALUES ($1, $2, $3, $4, 'Qualification alerte documentaire', $5,
-         CASE WHEN $5 = 'BROUILLON' THEN NULL ELSE NOW() END)
+       VALUES ($1, $2, $3, $4, 'Qualification alerte documentaire', $5::varchar(50),
+         CASE WHEN $5::varchar(50) = 'BROUILLON' THEN NULL ELSE NOW() END)
        RETURNING id`,
       [`DOS-ALERT-${randomUUID().slice(0, 8)}`, entreprise.rows[0].id, programmeId, montant, statut],
     );
