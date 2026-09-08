@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { clientApi } from '../../lib/client-api';
+import { resolveRoleHome } from '../../lib/portal-access';
 import ThemeToggle from '../_shared/ThemeToggle';
 import portal from '../entrepreneur/portal.module.css';
 
@@ -9,6 +11,9 @@ type Notification = {
   id: string; type: string; titre: string; message: string; lien?: string;
   luAt?: string | null; createdAt: string;
 };
+
+type NotificationsResponse = { items?: Notification[]; unread?: number };
+type SessionResponse = { roles?: string[] };
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<Notification[]>([]);
@@ -18,33 +23,33 @@ export default function NotificationsPage() {
   const [returnPath, setReturnPath] = useState('/entrepreneur');
 
   const load = useCallback(async () => {
-    const response = await fetch(`/api/notifications?unreadOnly=${unreadOnly}`, { cache: 'no-store' });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message ?? 'Chargement impossible');
+    const body = await clientApi<NotificationsResponse>(`/api/notifications?unreadOnly=${unreadOnly}`);
     setItems(body.items ?? []); setUnread(body.unread ?? 0);
   }, [unreadOnly]);
 
   useEffect(() => {
-    load().catch((error) => setMessage(error.message));
-    fetch('/api/session/me', { cache: 'no-store' }).then((response) => response.json()).then((user) => {
-      const roles: string[] = user.roles ?? [];
-      if (roles.includes('SUPER_ADMIN')) setReturnPath('/administration/utilisateurs');
-      else if (roles.some((role) => ['DIRECTION_FODIP', 'ANALYSTE'].includes(role))) setReturnPath('/direction/tableau-de-bord');
-      else if (roles.includes('AGENT_FODIP')) setReturnPath('/agent/dossiers');
-      else if (roles.includes('COMITE_FINANCEMENT')) setReturnPath('/comite/dossiers');
+    load().catch((error) => setMessage(error instanceof Error ? error.message : 'Chargement impossible'));
+    clientApi<SessionResponse>('/api/session/me').then((user) => {
+      setReturnPath(resolveRoleHome(user.roles ?? []) ?? '/entrepreneur');
     }).catch(() => undefined);
   }, [load]);
 
   async function markRead(id: string) {
-    const response = await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
-    if (!response.ok) return setMessage('Impossible de marquer la notification comme lue.');
-    await load();
+    try {
+      await clientApi(`/api/notifications/${id}/read`, { method: 'PATCH' });
+      await load();
+    } catch {
+      setMessage('Impossible de marquer la notification comme lue.');
+    }
   }
 
   async function markAll() {
-    const response = await fetch('/api/notifications/read-all', { method: 'PATCH' });
-    if (!response.ok) return setMessage('Impossible de mettre à jour les notifications.');
-    await load();
+    try {
+      await clientApi('/api/notifications/read-all', { method: 'PATCH' });
+      await load();
+    } catch {
+      setMessage('Impossible de mettre à jour les notifications.');
+    }
   }
 
   return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
