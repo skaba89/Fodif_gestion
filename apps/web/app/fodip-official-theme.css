@@ -1,0 +1,67 @@
+/*
+ * Identité visuelle institutionnelle FODIP / République de Guinée.
+ *
+ * Couleurs officielles de la République de Guinée (charte gouvernementale) :
+ *   rouge  #CE1126
+ *   jaune  #FCD116
+ *   vert   #009460
+ *
+ * Le vert/jaune/rouge de marque reste exact pour les éléments identitaires. Les teintes plus
+ * sombres servent uniquement au texte et aux contrôles interactifs afin de préserver WCAG AA.
+ */
+:root {
+  --fodip-red: #ce1126;
+  --fodip-yellow: #fcd116;
+  --fodip-green: #009460;
+
+  --primary-50: #eef9f5;
+  --primary-100: #d8f1e8;
+  --primary-200: #abe2cf;
+  --primary-300: #74cfaf;
+  --primary-400: #34b88a;
+  --primary-500: var(--fodip-green);
+  --primary-600: #007d51;
+  --primary-700: #006642;
+  --primary-800: #005137;
+  --primary-900: #003b29;
+
+  --accent-100: #fff8d3;
+  --accent-300: #ffe66f;
+  --accent-500: var(--fodip-yellow);
+  --accent-600: #e6b900;
+  --accent-700: #745d00;
+
+  --danger: var(--fodip-red);
+  --danger-strong: #9f0d1d;
+  --danger-soft: #fdebed;
+
+  --green: var(--primary-700);
+  --green-strong: var(--primary-800);
+  --green-soft: var(--primary-100);
+  --gold: var(--accent-600);
+  --focus-ring: 0 0 0 3px rgba(0, 148, 96, 0.28);
+}
+
+:root[data-theme='dark'] {
+  --green: #74cfaf;
+  --green-strong: #abe2cf;
+  --green-soft: #123126;
+  --gold: #ffe66f;
+  --danger: #ff7180;
+  --danger-strong: #ff9aa5;
+  --danger-soft: #341218;
+  --focus-ring: 0 0 0 3px rgba(116, 207, 175, 0.36);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --green: #74cfaf;
+    --green-strong: #abe2cf;
+    --green-soft: #123126;
+    --gold: #ffe66f;
+    --danger: #ff7180;
+    --danger-strong: #ff9aa5;
+    --danger-soft: #341218;
+    --focus-ring: 0 0 0 3px rgba(116, 207, 175, 0.36);
+  }
+}
