@@ -17,6 +17,12 @@ import {
 import styles from '../portal.module.css';
 import designStyles from '../entrepreneurDesign.module.css';
 
+type MissingDocument = {
+  code: string;
+  libelle: string;
+  typeDocument: string;
+};
+
 type Application = {
   id: string;
   numeroDossier: string;
@@ -25,6 +31,10 @@ type Application = {
   dateSoumission?: string;
   statut: string;
   createdAt: string;
+  documentsRequis?: number;
+  documentsPresents?: number;
+  documentsManquants?: MissingDocument[];
+  completudeDocumentsPct?: number;
 };
 
 const TONE_CLASS: Record<StatusTone, string> = {
@@ -45,8 +55,8 @@ export default function TrackingPage() {
   const load = useCallback(async () => {
     try {
       setDossiers(await clientApi<Application[]>('/api/pme/dossiers'));
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Chargement impossible');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Chargement impossible');
     }
   }, []);
 
@@ -59,40 +69,59 @@ export default function TrackingPage() {
       setMessage('Dossier soumis avec succès.');
       pushToast({ tone: 'success', title: 'Dossier soumis', message: 'Votre dossier a été transmis au FODIP pour traitement.' });
       await load();
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Soumission impossible');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Soumission impossible');
       pushToast({ tone: 'error', title: 'Soumission impossible', message: 'Le dossier n’a pas été soumis. Vérifiez les informations puis réessayez.' });
     }
   }, [load, pushToast]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return dossiers.filter((d) => {
-      const matchesStatus = statusFilter === 'TOUS' || d.statut === statusFilter;
+    return dossiers.filter((dossier) => {
+      const matchesStatus = statusFilter === 'TOUS' || dossier.statut === statusFilter;
       const matchesQuery = term.length === 0
-        || d.numeroDossier.toLowerCase().includes(term)
-        || (d.programmeNom ?? '').toLowerCase().includes(term);
+        || dossier.numeroDossier.toLowerCase().includes(term)
+        || (dossier.programmeNom ?? '').toLowerCase().includes(term);
       return matchesStatus && matchesQuery;
     });
   }, [dossiers, query, statusFilter]);
 
   const columns = useMemo<ResponsiveColumn<Application>[]>(() => [
-    { key: 'dossier', header: 'Dossier', render: (d) => <strong>{d.numeroDossier}</strong> },
-    { key: 'programme', header: 'Programme', render: (d) => d.programmeNom ?? '—' },
-    { key: 'montant', header: 'Montant', render: (d) => `${Number(d.montantDemande).toLocaleString('fr-FR')} GNF` },
-    { key: 'date', header: 'Date', render: (d) => new Date(d.dateSoumission ?? d.createdAt).toLocaleDateString('fr-FR') },
+    { key: 'dossier', header: 'Dossier', render: (dossier) => <strong>{dossier.numeroDossier}</strong> },
+    { key: 'programme', header: 'Programme', render: (dossier) => dossier.programmeNom ?? '—' },
+    { key: 'montant', header: 'Montant', render: (dossier) => `${Number(dossier.montantDemande).toLocaleString('fr-FR')} GNF` },
+    { key: 'date', header: 'Date', render: (dossier) => new Date(dossier.dateSoumission ?? dossier.createdAt).toLocaleDateString('fr-FR') },
+    {
+      key: 'documents',
+      header: 'Pièces',
+      render: (dossier) => {
+        const required = dossier.documentsRequis ?? 0;
+        const present = dossier.documentsPresents ?? 0;
+        const missing = dossier.documentsManquants ?? [];
+        if (required === 0) return <span className={styles.pillMuted}>Aucune exigence</span>;
+        const complete = present >= required;
+        return (
+          <span
+            className={complete ? designStyles.pillSuccess : styles.pill}
+            title={missing.length > 0 ? `Manquants : ${missing.map((document) => document.libelle).join(', ')}` : 'Toutes les pièces obligatoires sont présentes'}
+          >
+            {present}/{required} · {dossier.completudeDocumentsPct ?? Math.round((present / required) * 100)} %
+          </span>
+        );
+      },
+    },
     {
       key: 'statut',
       header: 'Statut',
-      render: (d) => <span className={TONE_CLASS[dossierStatusTone(d.statut)]}>{dossierStatusLabel(d.statut)}</span>,
+      render: (dossier) => <span className={TONE_CLASS[dossierStatusTone(dossier.statut)]}>{dossierStatusLabel(dossier.statut)}</span>,
     },
     {
       key: 'actions',
       header: 'Actions',
-      render: (d) => (
+      render: (dossier) => (
         <div className={styles.buttonRow}>
-          <Button variant="outline" href={`/entrepreneur/suivi/${d.id}/documents`}>Documents</Button>
-          {d.statut === 'BROUILLON' ? <Button onClick={() => submit(d.id)}>Soumettre</Button> : null}
+          <Button variant="outline" href={`/entrepreneur/suivi/${dossier.id}/documents`}>Documents</Button>
+          {dossier.statut === 'BROUILLON' ? <Button onClick={() => submit(dossier.id)}>Soumettre</Button> : null}
         </div>
       ),
     },
@@ -110,7 +139,7 @@ export default function TrackingPage() {
         <div>
           <p className={styles.eyebrow}>Mes dossiers</p>
           <h1 className={styles.title}>Suivi de mes demandes</h1>
-          <p className={styles.lead}>Cette liste est filtrée côté backend sur l’entreprise portée par votre session.</p>
+          <p className={styles.lead}>Suivez le statut et la complétude documentaire de chaque dossier avant et après sa transmission au FODIP.</p>
         </div>
         <Button href="/entrepreneur/demande">Nouvelle demande</Button>
       </div>
@@ -157,7 +186,7 @@ export default function TrackingPage() {
           <ResponsiveTable
             rows={filtered}
             columns={columns}
-            rowKey={(d) => d.id}
+            rowKey={(dossier) => dossier.id}
             caption="Suivi de mes demandes de financement"
             emptyMessage="Aucun dossier ne correspond à votre recherche."
           />
