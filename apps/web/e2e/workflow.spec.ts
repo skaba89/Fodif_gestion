@@ -40,7 +40,7 @@ test.describe('Cycle complet d\'un dossier', () => {
     const numeroDossier = (await ownRow.locator('td').first().innerText()).trim();
     expect(numeroDossier).toMatch(/^FODIP-/);
     await ownRow.getByRole('button', { name: 'Soumettre' }).click();
-    await expect(ownRow.getByText('SOUMIS')).toBeVisible();
+    await expect(ownRow.getByText('Soumis', { exact: true })).toBeVisible();
 
     await logout(page);
     await expect(page).toHaveURL(/\/entrepreneur\/connexion$/);
@@ -110,6 +110,10 @@ test.describe('Cycle complet d\'un dossier', () => {
     await login(page, '/entrepreneur/connexion', 'pme@fodip.local');
     await expect(page).toHaveURL(/\/entrepreneur$/);
     await page.goto('/entrepreneur/suivi');
-    await expect(page.locator('table tbody tr').first().getByText('APPROUVE')).toBeVisible();
+    // The shared PME status vocabulary introduced human-readable labels ("Approuvé" instead of
+    // the raw API enum "APPROUVE"). Scope to this test's dossier so the assertion is independent
+    // from other seeded or previously-created applications.
+    const approvedRow = page.getByRole('row', { name: new RegExp(numeroDossier) });
+    await expect(approvedRow.getByText('Approuvé', { exact: true })).toBeVisible();
   });
 });
