@@ -11,12 +11,6 @@
   text-align: center;
 }
 
-.brandLockup {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -166,10 +160,6 @@
 
   .header {
     text-align: left;
-  }
-
-  .brandLockup {
-    justify-content: flex-start;
   }
 
   .lead {
