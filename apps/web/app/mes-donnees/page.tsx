@@ -2,8 +2,12 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { clientApi } from '../../lib/client-api';
+import { resolveRoleHome } from '../../lib/portal-access';
 import ThemeToggle from '../_shared/ThemeToggle';
 import portal from '../entrepreneur/portal.module.css';
+
+type SessionResponse = { roles?: string[] };
 
 export default function MesDonneesPage() {
   const [message, setMessage] = useState('');
@@ -11,23 +15,15 @@ export default function MesDonneesPage() {
   const [returnPath, setReturnPath] = useState('/entrepreneur');
 
   useEffect(() => {
-    fetch('/api/session/me', { cache: 'no-store' }).then((response) => response.json()).then((user) => {
-      const roles: string[] = user.roles ?? [];
-      if (roles.includes('SUPER_ADMIN')) setReturnPath('/administration/utilisateurs');
-      else if (roles.some((role) => ['DIRECTION_FODIP', 'ANALYSTE'].includes(role))) setReturnPath('/direction/tableau-de-bord');
-      else if (roles.includes('AGENT_FODIP')) setReturnPath('/agent/dossiers');
-      else if (roles.includes('COMITE_FINANCEMENT')) setReturnPath('/comite/dossiers');
-      else if (roles.includes('PARTENAIRE_BANCAIRE')) setReturnPath('/partenaire/financements');
-      else if (roles.includes('AUDITEUR')) setReturnPath('/auditeur/tableau-de-bord');
+    clientApi<SessionResponse>('/api/session/me').then((user) => {
+      setReturnPath(resolveRoleHome(user.roles ?? []) ?? '/entrepreneur');
     }).catch(() => undefined);
   }, []);
 
   const download = useCallback(async () => {
     setMessage(''); setDownloading(true);
     try {
-      const response = await fetch('/api/data-rights/export', { cache: 'no-store' });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message ?? 'Export impossible');
+      const body = await clientApi<unknown>('/api/data-rights/export');
       const blob = new Blob([JSON.stringify(body, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
