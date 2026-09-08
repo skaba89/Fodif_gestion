@@ -3,9 +3,19 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  resolvePortalFromPath,
+  resolveRoleHome,
+  rolesCanAccessPortal,
+} from '../../lib/portal-access';
 import styles from './AccountMenu.module.css';
 
 const SESSION_CHECK_INTERVAL_MS = 60_000;
+const LAST_PORTAL_STORAGE_KEY = 'fodip:last-portal';
+
+interface SessionContext {
+  roles?: string[];
+}
 
 /**
  * Shared authenticated account controls and session guard for every portal.
@@ -19,6 +29,7 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
   const pathname = usePathname();
   const [authenticated, setAuthenticated] = useState(false);
   const intentionalLogout = useRef(false);
+  const portal = resolvePortalFromPath(pathname);
 
   const redirectExpiredSession = useCallback(() => {
     if (intentionalLogout.current || pathname === loginHref) return;
@@ -35,6 +46,19 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
     try {
       const response = await fetch('/api/session/me', { cache: 'no-store' });
       if (response.ok) {
+        const session = (await response.json().catch(() => ({}))) as SessionContext;
+        const roles = session.roles ?? [];
+
+        if (portal && !rolesCanAccessPortal(roles, portal)) {
+          // A valid session opened the wrong portal. Keep server-side RBAC authoritative, but do
+          // not strand the user on a shell whose API calls will all return 403.
+          setAuthenticated(false);
+          const roleHome = resolveRoleHome(roles);
+          router.replace(roleHome ?? '/');
+          router.refresh();
+          return;
+        }
+
         intentionalLogout.current = false;
         setAuthenticated(true);
         return;
@@ -47,9 +71,11 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
       // let the page-level error handling report connectivity problems instead of forcing logout.
       setAuthenticated(false);
     }
-  }, [pathname, loginHref, redirectExpiredSession]);
+  }, [pathname, loginHref, portal, redirectExpiredSession, router]);
 
   useEffect(() => {
+    if (portal) window.sessionStorage.setItem(LAST_PORTAL_STORAGE_KEY, portal);
+
     if (pathname === loginHref) {
       setAuthenticated(false);
       return;
@@ -69,7 +95,7 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [checkSession, loginHref, pathname]);
+  }, [checkSession, loginHref, pathname, portal]);
 
   async function logout() {
     intentionalLogout.current = true;

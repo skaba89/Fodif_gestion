@@ -1,10 +1,38 @@
 import { expect, test } from '@playwright/test';
+import { PORTAL_ACCESS, resolveRoleHome, rolesCanAccessPortal } from '../lib/portal-access';
 
 // Seeded by database/seeds/001_docker_demo.sql - see README.md "Comptes locaux de démonstration".
 // None of these accounts have mfa_required=true; the MFA flow itself is covered in mfa.spec.ts.
 const DEMO_PASSWORD = 'FodipDemo2026!';
 
 test.describe('Login flow', () => {
+  test('the canonical portal registry covers every RBAC role and portal', () => {
+    const expectedHomes: Array<[string, string]> = [
+      ['SUPER_ADMIN', '/administration/utilisateurs'],
+      ['DIRECTION_FODIP', '/direction/tableau-de-bord'],
+      ['ANALYSTE', '/direction/tableau-de-bord'],
+      ['AGENT_FODIP', '/agent/dossiers'],
+      ['COMITE_FINANCEMENT', '/comite/dossiers'],
+      ['AUDITEUR', '/auditeur/tableau-de-bord'],
+      ['PARTENAIRE_BANCAIRE', '/partenaire/financements'],
+      ['PME', '/entrepreneur'],
+    ];
+
+    for (const [role, home] of expectedHomes) expect(resolveRoleHome([role])).toBe(home);
+
+    expect(PORTAL_ACCESS.entrepreneur.loginHref).toBe('/entrepreneur/connexion');
+    expect(PORTAL_ACCESS.agent.loginHref).toBe('/agent/connexion');
+    expect(PORTAL_ACCESS.comite.loginHref).toBe('/comite/connexion');
+    expect(PORTAL_ACCESS.direction.loginHref).toBe('/direction/connexion');
+    expect(PORTAL_ACCESS.administration.loginHref).toBe('/administration/connexion');
+    expect(PORTAL_ACCESS.auditeur.loginHref).toBe('/auditeur/connexion');
+    expect(PORTAL_ACCESS.partenaire.loginHref).toBe('/partenaire/connexion');
+
+    expect(rolesCanAccessPortal(['SUPER_ADMIN'], 'direction')).toBe(true);
+    expect(rolesCanAccessPortal(['SUPER_ADMIN'], 'partenaire')).toBe(false);
+    expect(rolesCanAccessPortal(['PARTENAIRE_BANCAIRE'], 'direction')).toBe(false);
+  });
+
   test('a portal rejects an authenticated account without the right role', async ({ page }) => {
     await page.goto('/administration/connexion');
     await page.getByLabel('Email').fill('agent@fodip.local');

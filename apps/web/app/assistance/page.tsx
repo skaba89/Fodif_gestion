@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
+import { clientApi } from '../../lib/client-api';
 import styles from './support.module.css';
 
 type Message = {
@@ -42,29 +43,11 @@ export default function AssistancePage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/support/assistant', {
+      const result = await clientApi<SupportResponse>('/api/support/assistant', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ question: trimmed }),
       });
 
-      if (response.status === 401) {
-        setMessages((current) => [
-          ...current,
-          {
-            role: 'assistant',
-            text: "Votre session n'est pas active. Reconnectez-vous à votre espace FODIP avant d'utiliser l'assistant afin de conserver un accès sécurisé.",
-            actions: [{ label: 'Choisir mon espace', href: '/' }],
-          },
-        ]);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Support assistant returned ${response.status}`);
-      }
-
-      const result = (await response.json()) as SupportResponse;
       setMessages((current) => [
         ...current,
         {
@@ -73,7 +56,10 @@ export default function AssistancePage() {
           actions: result.actions,
         },
       ]);
-    } catch {
+    } catch (error) {
+      // clientApi handles expired sessions and wrong-portal 403s centrally. Only genuine service
+      // failures stay in the conversation as a support availability message.
+      if (error instanceof Error && error.name === 'AbortError') return;
       setMessages((current) => [
         ...current,
         {

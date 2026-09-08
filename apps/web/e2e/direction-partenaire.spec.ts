@@ -17,7 +17,7 @@ async function expectNoSeriousViolations(page: import('@playwright/test').Page) 
 }
 
 test.describe('Direction cockpit', () => {
-  test('the national dashboard loads seeded data, and the region filter re-queries it', async ({ page }) => {
+  test('the national dashboard loads seeded data, preserves portal routing and expires to Direction login', async ({ page, context }) => {
     await page.goto('/direction/connexion');
     await page.getByLabel('Email').fill('direction@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
@@ -64,15 +64,30 @@ test.describe('Direction cockpit', () => {
       ? page.getByRole('list', { name: 'Financements FODIP — vue mobile' })
       : page.getByRole('region', { name: 'Financements FODIP — tableau défilable horizontalement si nécessaire' });
     await expect(financingSurface.getByText('FIN-2026-DEMO01', { exact: true })).toBeVisible();
+
+    // Notifications is deliberately outside the Direction layout. The portal guard stores the
+    // last authenticated portal, and clientApi must reuse it when this global page later observes
+    // an expired session instead of falling back to the PME login.
+    await page.goto('/notifications');
+    await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+    await context.clearCookies();
+    await page.reload();
+    await expect(page).toHaveURL(/\/direction\/connexion\?reason=session-expired$/);
   });
 });
 
 test.describe('Portail Partenaire bancaire', () => {
-  test('the partner sees its correspondent financing, passes axe and can open its execution page', async ({ page }) => {
+  test('the partner stays in its authorized portal, passes axe and can open its execution page', async ({ page }) => {
     await page.goto('/partenaire/connexion');
     await page.getByLabel('Email').fill('partenaire@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
+    await expect(page).toHaveURL(/\/partenaire\/financements$/);
+
+    // A valid partner session must not remain on a Direction page. The shared session guard and
+    // 403 fallback both use the same role registry, so either first response safely returns the
+    // account to its canonical partner home without weakening the API's RBAC.
+    await page.goto('/direction/tableau-de-bord');
     await expect(page).toHaveURL(/\/partenaire\/financements$/);
 
     // FIN-2026-DEMO01 (database/seeds/002_analytics_demo.sql, correspondent bank assigned in
