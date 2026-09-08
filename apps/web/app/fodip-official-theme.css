@@ -1,0 +1,58 @@
+/*
+ * Identité visuelle FODIP alignée sur le logo actuellement publié par le site institutionnel.
+ *
+ * Le logo public est composé d'un vert foncé dominant et d'un vert clair secondaire. Aucune
+ * charte FODIP publique donnant des valeurs hexadécimales normatives n'a été trouvée : ces tokens
+ * d'interface sont donc calibrés sur l'actif visuel officiel, avec des variantes de contraste
+ * nécessaires à WCAG AA. Le logo lui-même reste l'actif de référence et n'est pas redessiné.
+ */
+:root {
+  --fodip-green-dark: #174b0b;
+  --fodip-green-light: #62a449;
+
+  --primary-50: #f2f8ee;
+  --primary-100: #e2f0da;
+  --primary-200: #c6e1b8;
+  --primary-300: #9ecb88;
+  --primary-400: #78b461;
+  --primary-500: #2e6b1e;
+  --primary-600: #245b16;
+  --primary-700: var(--fodip-green-dark);
+  --primary-800: #123d08;
+  --primary-900: #0b2e05;
+
+  --accent-100: #edf6e9;
+  --accent-300: #b7d9a7;
+  --accent-500: var(--fodip-green-light);
+  --accent-600: #4f8b39;
+  --accent-700: #39682a;
+
+  --danger: #b5402c;
+  --danger-strong: #8b3525;
+  --danger-soft: #fdeee9;
+
+  --green: var(--primary-700);
+  --green-strong: var(--primary-800);
+  --green-soft: var(--primary-100);
+  /* Backward-compatible semantic alias used by existing components; the FODIP accent is green. */
+  --gold: var(--accent-600);
+  --focus-ring: 0 0 0 3px rgba(23, 75, 11, 0.28);
+}
+
+:root[data-theme='dark'] {
+  --green: var(--primary-300);
+  --green-strong: var(--primary-200);
+  --green-soft: #182b12;
+  --gold: var(--accent-300);
+  --focus-ring: 0 0 0 3px rgba(158, 203, 136, 0.36);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --green: var(--primary-300);
+    --green-strong: var(--primary-200);
+    --green-soft: #182b12;
+    --gold: var(--accent-300);
+    --focus-ring: 0 0 0 3px rgba(158, 203, 136, 0.36);
+  }
+}

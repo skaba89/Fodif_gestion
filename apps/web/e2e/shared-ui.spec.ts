@@ -1,9 +1,33 @@
 import { expect, test } from '@playwright/test';
 
+const OFFICIAL_FODIP_LOGO = 'https://fodipgn.com/images/logo/1719846542.jpg';
+
 test.describe('Shared institutional UI', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/design-system');
     await expect(page.getByTestId('shared-ui-showcase')).toBeVisible();
+  });
+
+  test('FODIP identity uses the published logo and the product palette stays aligned to its green pair', async ({ page }) => {
+    await page.goto('/');
+
+    // Assert the canonical published source, not network loading: CI must stay deterministic even
+    // if the public FODIP website is temporarily unreachable while this platform itself is healthy.
+    await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
+
+    const colors = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      return {
+        dark: root.getPropertyValue('--fodip-green-dark').trim().toLowerCase(),
+        light: root.getPropertyValue('--fodip-green-light').trim().toLowerCase(),
+      };
+    });
+
+    expect(colors).toEqual({ dark: '#174b0b', light: '#62a449' });
+
+    await page.goto('/agent/connexion');
+    await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
+    await expect(page.getByText('Portail sécurisé')).toBeVisible();
   });
 
   test('Button exposes disabled/loading states and Dialog restores focus on Escape', async ({ page }) => {

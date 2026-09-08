@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import FodipOfficialBrand from './_shared/FodipOfficialBrand';
 import ThemeToggle from './_shared/ThemeToggle';
 import styles from './home.module.css';
 
@@ -52,11 +53,7 @@ export default function HomePage() {
     <main className={styles.shell}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <span className={styles.mark}>FD</span>
-          <span className={styles.brandText}>
-            <strong>FODIP DIGITAL</strong>
-            <span>2030</span>
-          </span>
+          <FodipOfficialBrand subtitle="FODIP Digital 2030" />
         </div>
         <div className={styles.headerActions}>
           <span className={styles.badge}>Plateforme institutionnelle</span>
@@ -88,7 +85,7 @@ export default function HomePage() {
       <div className={styles.principles}>
         <div className={styles.principle}>
           <strong>Isolation des données</strong>
-          <span>Chaque PME n’accède qu’à ses propres dossiers, contrôlé à chaque requête.</span>
+          <span>Chaque compte n’accède qu’à son périmètre autorisé, contrôlé à chaque requête par l’API.</span>
         </div>
         <div className={styles.principle}>
           <strong>Traçabilité complète</strong>
@@ -96,11 +93,11 @@ export default function HomePage() {
         </div>
         <div className={styles.principle}>
           <strong>Authentification renforcée</strong>
-          <span>Double authentification disponible pour les comptes sensibles.</span>
+          <span>Double authentification pour les comptes sensibles et SSO pour les espaces institutionnels configurés.</span>
         </div>
         <div className={styles.principle}>
           <strong>Contrôle d’accès strict</strong>
-          <span>Rôles et permissions dédiés à chaque métier : PME, agent, comité, direction.</span>
+          <span>Une session ouverte sur le mauvais portail est renvoyée vers l’espace autorisé par son rôle.</span>
         </div>
       </div>
 

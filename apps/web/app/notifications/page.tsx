@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
+import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
 import ThemeToggle from '../_shared/ThemeToggle';
 import portal from '../entrepreneur/portal.module.css';
 
@@ -53,8 +54,8 @@ export default function NotificationsPage() {
   }
 
   return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
-    <Link href={returnPath} className={portal.brand}><span className={portal.mark}>FD</span><span className={portal.brandText}><strong>FODIP DIGITAL</strong><span>Centre de notifications</span></span></Link>
-    <nav className={portal.nav}><Link href={returnPath}>Retour au portail</Link></nav>
+    <Link href={returnPath} className={portal.brand} aria-label="FODIP — retour à mon espace"><FodipOfficialBrand subtitle="Centre de notifications" compact /></Link>
+    <nav className={portal.nav}><Link href={returnPath}>Retour à mon espace</Link></nav>
     <ThemeToggle buttonClassName={portal.themeToggle} />
   </header><main id="main-content" tabIndex={-1} className={portal.main}>
     <p className={portal.eyebrow}>Activité personnelle</p><h1 className={portal.title}>Notifications</h1>

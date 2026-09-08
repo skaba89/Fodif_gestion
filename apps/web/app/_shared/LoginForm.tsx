@@ -4,6 +4,7 @@ import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { resolveRoleHome } from '../../lib/portal-access';
 import styles from '../entrepreneur/portal.module.css';
+import FodipOfficialBrand from './FodipOfficialBrand';
 import premium from './LoginForm.module.css';
 
 type Step = 'credentials' | 'setup' | 'verify';
@@ -18,6 +19,10 @@ interface SessionResponse {
   user?: { roles?: string[] };
 }
 
+interface ExistingSessionResponse {
+  roles?: string[];
+}
+
 export interface LoginFormProps {
   eyebrow: string;
   title: string;
@@ -26,20 +31,22 @@ export interface LoginFormProps {
   /** Roles allowed to use this portal. Omit to accept any authenticated account. */
   allowedRoles?: string[];
   deniedMessage?: string;
-  /** Redirect a recognized account to its canonical portal instead of logging it out on role mismatch. */
+  /** A recognized account that used the wrong portal is sent to its canonical role home. */
   redirectWrongRoleToHome?: boolean;
   /** 'narrow' renders a single centered card (used by /administration); 'wide' matches the other portals. */
   variant?: 'wide' | 'narrow';
   replaceHistory?: boolean;
-  /** Offers "sign in with SSO" for this portal when OIDC (docs/14 axe B4) is configured on the API.
-   * Omit for portals that shouldn't offer it (entrepreneur/PME accounts aren't institutional). */
+  /** Offers SSO for institutional portals when OIDC is configured on the API. */
   oidcPortal?: OidcPortal;
 }
 
 /**
- * Shared login flow for every portal. Handles the plain email/password case, the two-step TOTP
- * flow returned by the API for accounts flagged `mfa_required` (enrollment then verification, or
- * verification alone once enrolled), and resuming an OpenID Connect sign-in.
+ * Shared login flow for every portal.
+ *
+ * The backend remains authoritative for authentication, MFA and RBAC. If a valid account signs in
+ * from the wrong portal, the UI never grants that portal: it routes the session to the account's
+ * canonical role home. If a session already exists, the user can either continue it or explicitly
+ * sign out before changing account, avoiding accidental cross-account navigation.
  */
 export default function LoginForm(props: LoginFormProps) {
   return (
@@ -56,7 +63,7 @@ function LoginFormInner({
   redirectTo,
   allowedRoles,
   deniedMessage,
-  redirectWrongRoleToHome = false,
+  redirectWrongRoleToHome = true,
   variant = 'wide',
   replaceHistory = false,
   oidcPortal,
@@ -72,6 +79,8 @@ function LoginFormInner({
   const [secret, setSecret] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(() => Boolean(oidcToken));
+  const [checkingSession, setCheckingSession] = useState(() => !oidcToken);
+  const [existingSessionHome, setExistingSessionHome] = useState<string | null>(null);
 
   async function postJson(path: string, body: unknown): Promise<SessionResponse> {
     const response = await fetch(path, {
@@ -96,6 +105,23 @@ function LoginFormInner({
     }
     if (replaceHistory) router.replace(redirectTo); else router.push(redirectTo);
     router.refresh();
+  }
+
+  async function switchAccount() {
+    setLoading(true);
+    setError('');
+    try {
+      await fetch('/api/session/logout', { method: 'POST' });
+      setExistingSessionHome(null);
+      setEmail('');
+      setPassword('');
+      setCode('');
+      setStep('credentials');
+    } catch {
+      setError('Impossible de fermer la session actuelle. Réessayez.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function submitCredentials(event: FormEvent) {
@@ -160,12 +186,22 @@ function LoginFormInner({
         .finally(() => setLoading(false));
       return;
     }
+
     const oidcError = searchParams.get('oidc_error');
     if (oidcError === 'account_not_found') {
       setError('Aucun compte actif ne correspond à cette identité. Contactez un administrateur.');
     } else if (oidcError) {
       setError('La connexion via le fournisseur d’identité a échoué. Réessayez, ou utilisez votre mot de passe.');
     }
+
+    fetch('/api/session/me', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const session = (await response.json().catch(() => ({}))) as ExistingSessionResponse;
+        setExistingSessionHome(resolveRoleHome(session.roles ?? []) ?? null);
+      })
+      .catch(() => undefined)
+      .finally(() => setCheckingSession(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -174,12 +210,39 @@ function LoginFormInner({
   return (
     <main className={premium.main}>
       <div className={premium.header}>
+        <div className={premium.brandLockup}>
+          <FodipOfficialBrand subtitle="Portail sécurisé" />
+        </div>
         <p className={premium.eyebrow}>{eyebrow}</p>
         <h1 className={premium.title}>{title}</h1>
         <p className={premium.lead}>{lead}</p>
       </div>
 
-      {step === 'credentials' && (
+      {checkingSession && (
+        <div className={cardClassName} role="status" aria-live="polite">
+          <p className={premium.sessionTitle}>Vérification de la session sécurisée…</p>
+        </div>
+      )}
+
+      {!checkingSession && existingSessionHome && step === 'credentials' && (
+        <div className={cardClassName} data-testid="existing-session-card">
+          <p className={premium.sessionTitle}>Une session FODIP est déjà active.</p>
+          <p className={premium.lead}>
+            Continuez vers l’espace autorisé pour ce compte, ou fermez volontairement la session avant de changer d’utilisateur.
+          </p>
+          {error && <div className={`${styles.notice} ${premium.notice}`} role="alert">{error}</div>}
+          <div className={premium.actions}>
+            <button className={styles.primary} type="button" onClick={() => router.replace(existingSessionHome)}>
+              Continuer vers mon espace
+            </button>
+            <button className={styles.secondary} type="button" disabled={loading} onClick={switchAccount}>
+              {loading ? 'Fermeture…' : 'Changer d’utilisateur'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!checkingSession && !existingSessionHome && step === 'credentials' && (
         <form className={cardClassName} onSubmit={submitCredentials}>
           <div className={premium.formGrid}>
             <div className={premium.field}>

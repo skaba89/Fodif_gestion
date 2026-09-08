@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
+import { resolveRoleHome } from '../../lib/portal-access';
+import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
 import styles from './support.module.css';
 
 type Message = {
@@ -16,6 +18,8 @@ type SupportResponse = {
   humanHandoff: boolean;
   actions: Array<{ label: string; href: string }>;
 };
+
+type SessionResponse = { roles?: string[] };
 
 const QUICK_QUESTIONS = [
   'Quels documents dois-je préparer ?',
@@ -33,6 +37,24 @@ export default function AssistancePage() {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [loading, setLoading] = useState(false);
+  const [returnPath, setReturnPath] = useState('/');
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Assistance remains public. This lightweight session probe only improves the return link; a
+    // 401 is intentionally ignored so unauthenticated visitors can still use the public guidance.
+    fetch('/api/session/me', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const session = (await response.json().catch(() => ({}))) as SessionResponse;
+        const home = resolveRoleHome(session.roles ?? []);
+        if (home) {
+          setReturnPath(home);
+          setAuthenticated(true);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   async function ask(value: string) {
     const trimmed = value.trim();
@@ -57,8 +79,6 @@ export default function AssistancePage() {
         },
       ]);
     } catch (error) {
-      // clientApi handles expired sessions and wrong-portal 403s centrally. Only genuine service
-      // failures stay in the conversation as a support availability message.
       if (error instanceof Error && error.name === 'AbortError') return;
       setMessages((current) => [
         ...current,
@@ -82,13 +102,14 @@ export default function AssistancePage() {
       <section className={styles.shell} aria-labelledby="support-title">
         <header className={styles.header}>
           <div>
+            <FodipOfficialBrand subtitle="Assistance et orientation" compact />
             <p className={styles.eyebrow}>FODIP Digital 2030</p>
             <h1 id="support-title">Assistant d'orientation et de support</h1>
             <p className={styles.subtitle}>
               Un point d'entrée sécurisé pour comprendre les démarches et trouver le bon canal d'assistance.
             </p>
           </div>
-          <Link className={styles.homeLink} href="/">Retour aux espaces</Link>
+          <Link className={styles.homeLink} href={returnPath}>{authenticated ? 'Retour à mon espace' : 'Retour aux espaces'}</Link>
         </header>
 
         <aside className={styles.notice} aria-label="Limites de l'assistant">

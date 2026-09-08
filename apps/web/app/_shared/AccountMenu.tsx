@@ -21,13 +21,14 @@ interface SessionContext {
  * Shared authenticated account controls and session guard for every portal.
  *
  * Privacy rule: account identifiers and roles are deliberately absent from the global shell.
- * The shell only needs to know whether a session is valid. Identity details are loaded and shown
- * on the dedicated profile page, never in the header or navigation drawer.
+ * Identity remains on the dedicated profile page; this control stores only the canonical home
+ * resolved from the roles returned by the authenticated session.
  */
 export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref: string; loginLabel?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [authenticated, setAuthenticated] = useState(false);
+  const [accountHome, setAccountHome] = useState<string | null>(null);
   const intentionalLogout = useRef(false);
   const portal = resolvePortalFromPath(pathname);
 
@@ -40,6 +41,7 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
   const checkSession = useCallback(async () => {
     if (pathname === loginHref) {
       setAuthenticated(false);
+      setAccountHome(null);
       return;
     }
 
@@ -48,28 +50,30 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
       if (response.ok) {
         const session = (await response.json().catch(() => ({}))) as SessionContext;
         const roles = session.roles ?? [];
+        const roleHome = resolveRoleHome(roles) ?? null;
 
         if (portal && !rolesCanAccessPortal(roles, portal)) {
-          // A valid session opened the wrong portal. Keep server-side RBAC authoritative, but do
-          // not strand the user on a shell whose API calls will all return 403.
           setAuthenticated(false);
-          const roleHome = resolveRoleHome(roles);
+          setAccountHome(roleHome);
           router.replace(roleHome ?? '/');
           router.refresh();
           return;
         }
 
         intentionalLogout.current = false;
+        setAccountHome(roleHome);
         setAuthenticated(true);
         return;
       }
 
       setAuthenticated(false);
+      setAccountHome(null);
       if (response.status === 401) redirectExpiredSession();
     } catch {
       // A network outage is not the same thing as an expired session. Keep the portal mounted and
-      // let the page-level error handling report connectivity problems instead of forcing logout.
+      // let page-level error handling report connectivity problems instead of forcing logout.
       setAuthenticated(false);
+      setAccountHome(null);
     }
   }, [pathname, loginHref, portal, redirectExpiredSession, router]);
 
@@ -78,6 +82,7 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
 
     if (pathname === loginHref) {
       setAuthenticated(false);
+      setAccountHome(null);
       return;
     }
 
@@ -100,6 +105,7 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
   async function logout() {
     intentionalLogout.current = true;
     setAuthenticated(false);
+    setAccountHome(null);
     await fetch('/api/session/logout', { method: 'POST' });
     router.replace(loginHref);
     router.refresh();
@@ -111,6 +117,7 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
 
   return (
     <div className={styles.actions} aria-label="Actions du compte">
+      {accountHome && <Link className={styles.profileAction} href={accountHome}>Mon espace</Link>}
       <Link className={styles.profileAction} href="/assistance">Assistance</Link>
       <Link className={styles.profileAction} href="/profil">Mon profil</Link>
       <button className={styles.secondaryAction} type="button" onClick={logout}>Déconnexion</button>
