@@ -60,9 +60,10 @@ test.describe('Accessibility (axe A6)', () => {
     await expect(menuButton).toBeFocused();
 
     await page.getByRole('button', { name: /Passer au thème/ }).click();
-    // ThemeToggle applies data-theme synchronously; two animation frames let every browser repaint
-    // before axe samples contrast values, avoiding a transient mixed-theme snapshot on WebKit.
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    // AppShell and account controls deliberately animate color/background over 150 ms. Axe must
+    // sample the settled theme rather than an intermediate mixed palette whose transient contrast
+    // is not representative of either final theme. Keep a small margin over --duration-fast.
+    await page.waitForTimeout(200);
     await expectNoSeriousViolations(page);
 
     await menuButton.click();
