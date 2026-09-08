@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
+import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
 import styles from './profile.module.css';
 
 type SessionProfile = {
@@ -59,14 +60,10 @@ export default function ProfilePage() {
     <main className={styles.page}>
       <div className={styles.container}>
         <div className={styles.topbar}>
-          <Link href="/" className={styles.brand} aria-label="FODIP Digital - accueil">
-            <span className={styles.mark} aria-hidden="true">FD</span>
-            <span className={styles.brandCopy}>
-              <strong>FODIP DIGITAL</strong>
-              <span>Plateforme institutionnelle</span>
-            </span>
+          <Link href={resolveRoleHome(profile?.roles ?? []) ?? '/'} className={styles.brand} aria-label="FODIP — retour à mon espace">
+            <FodipOfficialBrand subtitle="Profil sécurisé" compact />
           </Link>
-          <button type="button" className={styles.backButton} onClick={goBack}>Retour à l’espace</button>
+          <button type="button" className={styles.backButton} onClick={goBack}>Retour à mon espace</button>
         </div>
 
         <section className={styles.hero} aria-labelledby="profile-title">
