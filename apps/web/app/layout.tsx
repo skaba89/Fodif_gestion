@@ -3,6 +3,7 @@ import { Public_Sans } from 'next/font/google';
 import ServiceWorkerRegistration from './_shared/ServiceWorkerRegistration';
 import { ToastProvider } from './_shared/Toast';
 import './globals.css';
+import './fodip-official-theme.css';
 import './_shared/business-workspaces.css';
 
 // Public Sans is the typeface behind the U.S. Web Design System — a deliberate choice for a
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#0f6b45' },
+    { media: '(prefers-color-scheme: light)', color: '#009460' },
     { media: '(prefers-color-scheme: dark)', color: '#0b1712' },
   ],
 };
