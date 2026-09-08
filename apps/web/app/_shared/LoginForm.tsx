@@ -4,7 +4,6 @@ import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { resolveRoleHome } from '../../lib/portal-access';
 import styles from '../entrepreneur/portal.module.css';
-import FodipOfficialBrand from './FodipOfficialBrand';
 import premium from './LoginForm.module.css';
 
 type Step = 'credentials' | 'setup' | 'verify';
@@ -210,9 +209,6 @@ function LoginFormInner({
   return (
     <main className={premium.main}>
       <div className={premium.header}>
-        <div className={premium.brandLockup}>
-          <FodipOfficialBrand subtitle="Portail sécurisé" />
-        </div>
         <p className={premium.eyebrow}>{eyebrow}</p>
         <h1 className={premium.title}>{title}</h1>
         <p className={premium.lead}>{lead}</p>
