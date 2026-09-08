@@ -62,13 +62,17 @@ const ROLE_HOME_PRIORITY: ReadonlyArray<readonly [string, string]> = [
   ['PME', PORTAL_ACCESS.entrepreneur.homeHref],
 ];
 
+export function isPortalId(value: string | null | undefined): value is PortalId {
+  return Boolean(value && Object.prototype.hasOwnProperty.call(PORTAL_ACCESS, value));
+}
+
 export function resolveRoleHome(roles: readonly string[]) {
   return ROLE_HOME_PRIORITY.find(([role]) => roles.includes(role))?.[1];
 }
 
 export function resolvePortalFromPath(pathname: string): PortalId | undefined {
-  const segment = pathname.split('/').filter(Boolean)[0] as PortalId | undefined;
-  return segment && Object.prototype.hasOwnProperty.call(PORTAL_ACCESS, segment) ? segment : undefined;
+  const segment = pathname.split('/').filter(Boolean)[0];
+  return isPortalId(segment) ? segment : undefined;
 }
 
 export function rolesCanAccessPortal(roles: readonly string[], portal: PortalId) {
