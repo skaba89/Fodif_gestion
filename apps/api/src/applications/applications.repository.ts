@@ -11,6 +11,16 @@ const APPLICATION_FIELDS: Record<string, string> = {
   nombreEmploisPrevus: 'nombre_emplois_prevus',
 };
 
+const ACTIVE_RULE_VERSION_SQL = `
+  SELECT version.id
+  FROM programme_regles_versions version
+  WHERE version.programme_id = d.programme_id
+    AND version.statut = 'ACTIVE'
+    AND version.effective_from <= NOW()
+    AND (version.effective_to IS NULL OR version.effective_to > NOW())
+  ORDER BY version.version DESC
+  LIMIT 1`;
+
 const DOCUMENT_COMPLETENESS_COLUMNS = `
         checklist.required_count AS "documentsRequis",
         checklist.present_count AS "documentsPresents",
@@ -50,10 +60,34 @@ const DOCUMENT_COMPLETENESS_JOIN = `
                 AND document.superseded_by IS NULL
                 AND document.statut_verification <> 'REJETE'
             ) AS present
-          FROM programme_documents_requis requirement
-          WHERE requirement.programme_id = d.programme_id
-            AND requirement.actif = TRUE
+          FROM programme_regle_documents requirement
+          WHERE requirement.regle_version_id = COALESCE(
+            d.programme_regle_version_id,
+            (${ACTIVE_RULE_VERSION_SQL})
+          )
             AND requirement.obligatoire = TRUE
+
+          UNION ALL
+
+          SELECT
+            legacy.code,
+            legacy.libelle,
+            legacy.type_document,
+            legacy.ordre_affichage,
+            EXISTS (
+              SELECT 1
+              FROM dossier_documents document
+              WHERE document.dossier_id = d.id
+                AND document.type_document = legacy.type_document
+                AND document.superseded_by IS NULL
+                AND document.statut_verification <> 'REJETE'
+            ) AS present
+          FROM programme_documents_requis legacy
+          WHERE d.programme_regle_version_id IS NULL
+            AND legacy.programme_id = d.programme_id
+            AND legacy.actif = TRUE
+            AND legacy.obligatoire = TRUE
+            AND NOT EXISTS (${ACTIVE_RULE_VERSION_SQL})
         ) item
       ) checklist ON TRUE`;
 
@@ -68,6 +102,8 @@ export class ApplicationsRepository {
         d.numero_dossier AS "numeroDossier",
         d.entreprise_id AS "entrepriseId",
         d.programme_id AS "programmeId",
+        d.programme_regle_version_id AS "programmeRegleVersionId",
+        locked_rule.version AS "programmeRegleVersion",
         p.nom AS "programmeNom",
         d.montant_demande AS "montantDemande",
         d.apport_personnel AS "apportPersonnel",
@@ -81,6 +117,7 @@ export class ApplicationsRepository {
 ${DOCUMENT_COMPLETENESS_COLUMNS}
       FROM dossiers_financement d
       LEFT JOIN programmes_fodip p ON p.id = d.programme_id
+      LEFT JOIN programme_regles_versions locked_rule ON locked_rule.id = d.programme_regle_version_id
 ${DOCUMENT_COMPLETENESS_JOIN}
       WHERE d.entreprise_id = $1
       ORDER BY d.created_at DESC`,
@@ -119,6 +156,8 @@ ${DOCUMENT_COMPLETENESS_JOIN}
         d.numero_dossier AS "numeroDossier",
         d.entreprise_id AS "entrepriseId",
         d.programme_id AS "programmeId",
+        d.programme_regle_version_id AS "programmeRegleVersionId",
+        locked_rule.version AS "programmeRegleVersion",
         p.nom AS "programmeNom",
         d.montant_demande AS "montantDemande",
         d.apport_personnel AS "apportPersonnel",
@@ -132,6 +171,7 @@ ${DOCUMENT_COMPLETENESS_JOIN}
 ${DOCUMENT_COMPLETENESS_COLUMNS}
       FROM dossiers_financement d
       LEFT JOIN programmes_fodip p ON p.id = d.programme_id
+      LEFT JOIN programme_regles_versions locked_rule ON locked_rule.id = d.programme_regle_version_id
 ${DOCUMENT_COMPLETENESS_JOIN}
       WHERE d.id = $1 AND d.entreprise_id = $2
       LIMIT 1`,
@@ -144,16 +184,20 @@ ${DOCUMENT_COMPLETENESS_JOIN}
     const entries = Object.entries(dto).filter(([key, value]) => APPLICATION_FIELDS[key] && value !== undefined);
     if (entries.length === 0) return this.findOwnedById(id, entrepriseId);
 
+    const changesProgramme = entries.some(([key]) => key === 'programmeId');
     const values = entries.map(([, value]) => value);
     const setters = entries.map(([key], index) => `${APPLICATION_FIELDS[key]} = $${index + 1}`);
     values.push(id, entrepriseId);
+    const editableStatusClause = changesProgramme
+      ? `statut = 'BROUILLON'`
+      : `statut IN ('BROUILLON', 'COMPLEMENT_REQUIS')`;
 
     const result = await this.db.query(
       `UPDATE dossiers_financement
        SET ${setters.join(', ')}, updated_at = NOW()
        WHERE id = $${values.length - 1}
          AND entreprise_id = $${values.length}
-         AND statut IN ('BROUILLON', 'COMPLEMENT_REQUIS')
+         AND ${editableStatusClause}
        RETURNING id`,
       values,
     );
@@ -164,10 +208,17 @@ ${DOCUMENT_COMPLETENESS_JOIN}
   async submitOwned(id: string, entrepriseId: string, userId: string) {
     const result = await this.db.query(
       `WITH updated AS (
-        UPDATE dossiers_financement
-        SET statut = 'SOUMIS', date_soumission = NOW(), updated_at = NOW()
-        WHERE id = $1 AND entreprise_id = $2 AND statut = 'BROUILLON'
-        RETURNING id, entreprise_id
+        UPDATE dossiers_financement d
+        SET
+          statut = 'SOUMIS',
+          date_soumission = NOW(),
+          programme_regle_version_id = COALESCE(
+            d.programme_regle_version_id,
+            (${ACTIVE_RULE_VERSION_SQL})
+          ),
+          updated_at = NOW()
+        WHERE d.id = $1 AND d.entreprise_id = $2 AND d.statut = 'BROUILLON'
+        RETURNING d.id, d.entreprise_id
       ), history AS (
         INSERT INTO dossier_statuts_historique (
           dossier_id, ancien_statut, nouveau_statut, commentaire, utilisateur_id
