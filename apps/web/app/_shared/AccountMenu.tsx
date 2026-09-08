@@ -53,10 +53,18 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
           // A valid session opened the wrong portal. Keep server-side RBAC authoritative, but do
           // not strand the user on a shell whose API calls will all return 403.
           setAuthenticated(false);
-          const roleHome = resolveRoleHome(roles);
-          router.replace(roleHome ?? '/');
-          router.refresh();
+          window.location.replace(resolveRoleHome(roles) ?? '/');
           return;
+        }
+
+        // Only remember a portal after the session has proved that it belongs there. Storing a
+        // wrong portal before this check would corrupt the return path used by global pages.
+        if (portal) {
+          try {
+            window.sessionStorage.setItem(LAST_PORTAL_STORAGE_KEY, portal);
+          } catch {
+            // Storage is optional; pathname-based routing remains sufficient inside a portal.
+          }
         }
 
         intentionalLogout.current = false;
@@ -71,11 +79,9 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
       // let the page-level error handling report connectivity problems instead of forcing logout.
       setAuthenticated(false);
     }
-  }, [pathname, loginHref, portal, redirectExpiredSession, router]);
+  }, [pathname, loginHref, portal, redirectExpiredSession]);
 
   useEffect(() => {
-    if (portal) window.sessionStorage.setItem(LAST_PORTAL_STORAGE_KEY, portal);
-
     if (pathname === loginHref) {
       setAuthenticated(false);
       return;
@@ -95,7 +101,7 @@ export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [checkSession, loginHref, pathname, portal]);
+  }, [checkSession, loginHref, pathname]);
 
   async function logout() {
     intentionalLogout.current = true;

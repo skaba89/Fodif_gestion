@@ -1,5 +1,6 @@
 import AppShell from '../_shared/AppShell';
 import { AccountMenu } from '../_shared/AccountMenu';
+import PortalAccessGuard from '../_shared/PortalAccessGuard';
 
 const navItems = [
   { label: 'Accueil', href: '/entrepreneur' },
@@ -19,7 +20,7 @@ export default function EntrepreneurLayout({ children }: { children: React.React
       accountMenu={<AccountMenu loginHref="/entrepreneur/connexion" />}
       footer="FODIP Digital 2030 · Portail PME sécurisé"
     >
-      {children}
+      <PortalAccessGuard portal="entrepreneur">{children}</PortalAccessGuard>
     </AppShell>
   );
 }

@@ -1,5 +1,6 @@
 import AppShell from '../_shared/AppShell';
 import { AccountMenu } from '../_shared/AccountMenu';
+import PortalAccessGuard from '../_shared/PortalAccessGuard';
 
 const navItems = [
   { label: 'Dossiers', href: '/agent/dossiers' },
@@ -16,7 +17,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
       accountMenu={<AccountMenu loginHref="/agent/connexion" loginLabel="Connexion agent" />}
       footer="FODIP Digital 2030 · Instruction sécurisée des dossiers"
     >
-      {children}
+      <PortalAccessGuard portal="agent">{children}</PortalAccessGuard>
     </AppShell>
   );
 }
