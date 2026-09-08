@@ -2,6 +2,7 @@
 
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { resolveRoleHome } from '../../lib/portal-access';
 import styles from '../entrepreneur/portal.module.css';
 import premium from './LoginForm.module.css';
 
@@ -15,21 +16,6 @@ interface SessionResponse {
   mfaChallenge?: string;
   secret?: string;
   user?: { roles?: string[] };
-}
-
-const ROLE_HOME_PRIORITY: Array<[string, string]> = [
-  ['SUPER_ADMIN', '/administration/utilisateurs'],
-  ['DIRECTION_FODIP', '/direction/tableau-de-bord'],
-  ['ANALYSTE', '/direction/tableau-de-bord'],
-  ['AGENT_FODIP', '/agent/dossiers'],
-  ['COMITE_FINANCEMENT', '/comite/dossiers'],
-  ['AUDITEUR', '/auditeur/tableau-de-bord'],
-  ['PARTENAIRE_BANCAIRE', '/partenaire/financements'],
-  ['PME', '/entrepreneur'],
-];
-
-function resolveRoleHome(roles: string[]) {
-  return ROLE_HOME_PRIORITY.find(([role]) => roles.includes(role))?.[1];
 }
 
 export interface LoginFormProps {
