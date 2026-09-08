@@ -18,13 +18,15 @@
   --primary-500: #2e6b1e;
   --primary-600: #245b16;
   --primary-700: var(--fodip-green-dark);
-  --primary-800: #123d08;
+  /* Dark enough against the official light-green accent to keep normal-size action text >= 4.5:1. */
+  --primary-800: #0f3506;
   --primary-900: #0b2e05;
 
   --accent-100: #edf6e9;
   --accent-300: #b7d9a7;
   --accent-500: var(--fodip-green-light);
-  --accent-600: #4f8b39;
+  /* Kept close to the published logo while preserving AA with --primary-900 action text. */
+  --accent-600: #5d9e45;
   --accent-700: #39682a;
 
   --danger: #b5402c;
