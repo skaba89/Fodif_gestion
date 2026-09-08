@@ -191,6 +191,7 @@ export default function AppShell({
                 onClick={closeDrawer}
                 aria-current={active ? 'page' : undefined}
                 className={active ? styles.drawerNavItemActive : styles.drawerNavItem}
+                style={{ transitionProperty: 'border-color, transform' }}
               >
                 <span className={styles.drawerNavLabel}>{item.label}</span>
                 <ChevronRightIcon className={styles.drawerNavChevron} aria-hidden />
