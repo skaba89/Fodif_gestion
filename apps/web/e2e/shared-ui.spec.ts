@@ -27,7 +27,7 @@ test.describe('Shared institutional UI', () => {
 
     await page.goto('/agent/connexion');
     await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
-    await expect(page.getByText('Portail sécurisé')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connexion Agent', exact: true })).toBeVisible();
   });
 
   test('Button exposes disabled/loading states and Dialog restores focus on Escape', async ({ page }) => {
