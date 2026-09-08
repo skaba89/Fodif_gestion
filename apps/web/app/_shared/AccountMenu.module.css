@@ -21,10 +21,11 @@
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+  /* Theme tokens change synchronously. Do not interpolate foreground/background between the light
+     and dark palettes: an intermediate color can momentarily fall below WCAG AA contrast. Keep
+     only non-color affordances animated. */
   transition:
     border-color var(--duration-fast) var(--ease),
-    background var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease),
     box-shadow var(--duration-fast) var(--ease),
     transform var(--duration-fast) var(--ease);
 }

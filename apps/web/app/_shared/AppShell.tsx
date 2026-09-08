@@ -2,7 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  PORTAL_ACCESS,
+  resolvePortalFromPath,
+  resolveRoleHome,
+  rolesCanAccessPortal,
+} from '../../lib/portal-access';
 import ThemeToggle from './ThemeToggle';
 import Drawer from './Drawer';
 import { ChevronRightIcon, MenuIcon } from './Icons';
@@ -13,6 +19,10 @@ export interface AppShellNavItem {
   label: string;
   href: string;
 }
+
+type SessionContext = {
+  roles?: string[];
+};
 
 /**
  * Shared institutional shell for every authenticated portal.
@@ -40,6 +50,12 @@ export default function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [validatedPath, setValidatedPath] = useState<string | null>(null);
+
+  const portal = useMemo(() => resolvePortalFromPath(pathname), [pathname]);
+  const loginHref = portal ? PORTAL_ACCESS[portal].loginHref : undefined;
+  const isLoginPage = Boolean(loginHref && pathname === loginHref);
+  const portalContentReady = isLoginPage || validatedPath === pathname;
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
@@ -58,6 +74,51 @@ export default function AppShell({
     setSessionExpired(reason === 'session-expired');
     setDrawerOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    // Login screens and non-portal routes must render immediately. Authenticated portal content,
+    // however, is deliberately not mounted until the session has proved it belongs to this
+    // portal. This prevents page-level API effects from racing the role-aware redirect with a
+    // legacy local 401/403 redirect of their own.
+    if (!portal || isLoginPage) {
+      setValidatedPath(pathname);
+      return;
+    }
+
+    let cancelled = false;
+    setValidatedPath(null);
+
+    fetch('/api/session/me', { cache: 'no-store' })
+      .then(async (response) => {
+        if (cancelled) return;
+        if (response.status === 401) {
+          window.location.replace(`${PORTAL_ACCESS[portal].loginHref}?reason=session-expired`);
+          return;
+        }
+        if (!response.ok) {
+          // A temporary upstream/session-check error is not proof of an expired session. Mount the
+          // page and let its existing error state describe the connectivity/permission failure.
+          setValidatedPath(pathname);
+          return;
+        }
+
+        const session = (await response.json().catch(() => ({}))) as SessionContext;
+        const roles = session.roles ?? [];
+        if (!rolesCanAccessPortal(roles, portal)) {
+          window.location.replace(resolveRoleHome(roles) ?? '/');
+          return;
+        }
+
+        setValidatedPath(pathname);
+      })
+      .catch(() => {
+        if (!cancelled) setValidatedPath(pathname);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoginPage, pathname, portal]);
 
   return (
     <div className={styles.shell} data-portal-context={portalLabel}>
@@ -130,6 +191,7 @@ export default function AppShell({
                 onClick={closeDrawer}
                 aria-current={active ? 'page' : undefined}
                 className={active ? styles.drawerNavItemActive : styles.drawerNavItem}
+                style={{ transitionProperty: 'border-color, transform' }}
               >
                 <span className={styles.drawerNavLabel}>{item.label}</span>
                 <ChevronRightIcon className={styles.drawerNavChevron} aria-hidden />
@@ -154,7 +216,9 @@ export default function AppShell({
         tabIndex={-1}
         className={`${styles.contentFrame} ${stability.stableContent}`}
       >
-        {children}
+        {portalContentReady ? children : (
+          <div role="status" aria-live="polite">Vérification de la session sécurisée…</div>
+        )}
       </div>
       <footer className={styles.footer}>{footer}</footer>
     </div>
