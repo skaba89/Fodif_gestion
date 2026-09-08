@@ -39,7 +39,9 @@ Exemples :
 - Agent → `/agent/connexion?reason=session-expired` ;
 - Partenaire → `/partenaire/connexion?reason=session-expired`.
 
-`AccountMenu` mémorise également le dernier portail dans `sessionStorage`. Cette information permet aux pages globales telles que `/notifications`, `/profil` et `/mes-donnees` de conserver le bon contexte de connexion après expiration de la session.
+`AccountMenu` mémorise également le dernier portail dans `sessionStorage`. Cette information permet aux pages globales telles que `/notifications`, `/profil`, `/mes-donnees` et `/assistance` de conserver le bon contexte de connexion après expiration de la session lorsqu'elles appellent une API authentifiée.
+
+La page `/assistance` reste consultable sans connexion et sans consommer de tentative d'authentification ; seul l'appel à l'assistant sécurisé passe par le client API partagé.
 
 Si aucun contexte de portail fiable n'existe, la plateforme revient à la page d'accueil publique au lieu de supposer un rôle.
 
@@ -64,11 +66,12 @@ Ainsi, un Partenaire bancaire qui tente d'ouvrir directement `/direction/tableau
 
 ## Pages globales
 
-Les pages suivantes utilisent le client API partagé et la résolution canonique des rôles :
+Les pages suivantes utilisent le client API partagé et la résolution canonique des rôles lorsqu'elles accèdent à une ressource authentifiée :
 
 - `/notifications` ;
 - `/profil` ;
-- `/mes-donnees`.
+- `/mes-donnees` ;
+- `/assistance`.
 
 Le profil utilise également les vrais codes RBAC (`DIRECTION_FODIP`, `ANALYSTE`, `COMITE_FINANCEMENT`) pour les libellés affichés.
 
@@ -81,7 +84,8 @@ Ce lot :
 - ne change aucune route backend ;
 - ne crée aucune migration ;
 - ne transforme jamais un `403` légitime en autorisation ;
-- conserve le comportement de déconnexion volontaire distinct d'une expiration.
+- conserve le comportement de déconnexion volontaire distinct d'une expiration ;
+- conserve l'accès public à la page d'assistance elle-même.
 
 ## Preuves automatisées
 
@@ -91,4 +95,5 @@ Les tests Playwright vérifient :
 - les sept pages de connexion canoniques ;
 - l'expiration d'une session Direction depuis la page globale `/notifications` ;
 - la réorientation d'un Partenaire bancaire depuis un portail Direction non autorisé ;
+- l'accessibilité publique de `/assistance` sans tentative de connexion ;
 - les comportements de connexion, profil, logout et expiration déjà existants.
