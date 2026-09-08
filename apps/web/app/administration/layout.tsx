@@ -1,5 +1,6 @@
 import AppShell from '../_shared/AppShell';
 import { AccountMenu } from '../_shared/AccountMenu';
+import PortalAccessGuard from '../_shared/PortalAccessGuard';
 
 const navItems = [
   { label: 'Utilisateurs et rôles', href: '/administration/utilisateurs' },
@@ -17,7 +18,7 @@ export default function AdministrationLayout({ children }: { children: React.Rea
       accountMenu={<AccountMenu loginHref="/administration/connexion" loginLabel="Connexion administration" />}
       footer="FODIP Digital 2030 · Administration auditée"
     >
-      {children}
+      <PortalAccessGuard portal="administration">{children}</PortalAccessGuard>
     </AppShell>
   );
 }

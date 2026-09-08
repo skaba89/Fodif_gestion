@@ -1,5 +1,6 @@
 import AppShell from '../_shared/AppShell';
 import { AccountMenu } from '../_shared/AccountMenu';
+import PortalAccessGuard from '../_shared/PortalAccessGuard';
 
 const navItems = [
   { label: 'Portefeuille', href: '/partenaire/financements' },
@@ -15,7 +16,7 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
       accountMenu={<AccountMenu loginHref="/partenaire/connexion" loginLabel="Connexion partenaire" />}
       footer="FODIP Digital 2030 · Accès strictement limité à votre périmètre, intégralement journalisé"
     >
-      {children}
+      <PortalAccessGuard portal="partenaire">{children}</PortalAccessGuard>
     </AppShell>
   );
 }

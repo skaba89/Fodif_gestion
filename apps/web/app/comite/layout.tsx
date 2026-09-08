@@ -1,5 +1,6 @@
 import AppShell from '../_shared/AppShell';
 import { AccountMenu } from '../_shared/AccountMenu';
+import PortalAccessGuard from '../_shared/PortalAccessGuard';
 
 const navItems = [
   { label: 'Séance décisionnelle', href: '/comite/dossiers' },
@@ -16,7 +17,7 @@ export default function CommitteeLayout({ children }: { children: React.ReactNod
       accountMenu={<AccountMenu loginHref="/comite/connexion" loginLabel="Connexion comité" />}
       footer="FODIP Digital 2030 · Décisions humaines, motivées et auditées"
     >
-      {children}
+      <PortalAccessGuard portal="comite">{children}</PortalAccessGuard>
     </AppShell>
   );
 }

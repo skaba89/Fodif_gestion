@@ -1,5 +1,6 @@
 import AppShell from '../_shared/AppShell';
 import { AccountMenu } from '../_shared/AccountMenu';
+import PortalAccessGuard from '../_shared/PortalAccessGuard';
 
 const navItems = [
   { label: 'Cockpit national', href: '/direction/tableau-de-bord' },
@@ -18,7 +19,7 @@ export default function DirectionLayout({ children }: { children: React.ReactNod
       accountMenu={<AccountMenu loginHref="/direction/connexion" loginLabel="Connexion Direction" />}
       footer="FODIP Digital 2030 · Pilotage national du portefeuille et de l’impact"
     >
-      {children}
+      <PortalAccessGuard portal="direction">{children}</PortalAccessGuard>
     </AppShell>
   );
 }

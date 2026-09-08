@@ -44,14 +44,17 @@
   box-shadow: 24px 0 80px rgba(5, 23, 15, 0.24);
 }
 
+/* Keep the drawer surface fully opaque throughout its entrance. A fading panel blends text and
+ * backgrounds with the dark backdrop mid-animation, which can transiently drop WCAG contrast
+ * below 4.5:1 when accessibility tooling or assistive technology samples the moving surface. */
 @keyframes slide-in-right {
-  from { transform: translateX(28px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from { transform: translateX(28px); }
+  to { transform: translateX(0); }
 }
 
 @keyframes slide-in-left {
-  from { transform: translateX(-28px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from { transform: translateX(-28px); }
+  to { transform: translateX(0); }
 }
 
 .panelHeader {
