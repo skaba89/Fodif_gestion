@@ -11,6 +11,7 @@ import {
 } from '../../lib/portal-access';
 import ThemeToggle from './ThemeToggle';
 import Drawer from './Drawer';
+import FodipOfficialBrand from './FodipOfficialBrand';
 import { ChevronRightIcon, MenuIcon } from './Icons';
 import styles from './AppShell.module.css';
 import stability from './AppShellStability.module.css';
@@ -24,12 +25,19 @@ type SessionContext = {
   roles?: string[];
 };
 
+function isNavigationItemActive(pathname: string, href: string) {
+  if (pathname === href) return true;
+  if (href === '/') return false;
+  return pathname.startsWith(`${href}/`);
+}
+
 /**
  * Shared institutional shell for every authenticated portal.
  *
- * Navigation deliberately lives in one consistent hamburger drawer on desktop, tablet and mobile.
- * Account identifiers and role information never appear in this global chrome: those details are
- * reserved for the dedicated profile page.
+ * The API remains the RBAC authority. Before portal children mount, this shell verifies the
+ * current session and redirects a valid account that opened the wrong portal to its canonical
+ * role home. Navigation is role-scoped by each portal layout and nested routes keep their parent
+ * menu entry active so users never lose context while reviewing a detail page.
  */
 export default function AppShell({
   portalLabel,
@@ -76,10 +84,6 @@ export default function AppShell({
   }, [pathname]);
 
   useEffect(() => {
-    // Login screens and non-portal routes must render immediately. Authenticated portal content,
-    // however, is deliberately not mounted until the session has proved it belongs to this
-    // portal. This prevents page-level API effects from racing the role-aware redirect with a
-    // legacy local 401/403 redirect of their own.
     if (!portal || isLoginPage) {
       setValidatedPath(pathname);
       return;
@@ -96,8 +100,8 @@ export default function AppShell({
           return;
         }
         if (!response.ok) {
-          // A temporary upstream/session-check error is not proof of an expired session. Mount the
-          // page and let its existing error state describe the connectivity/permission failure.
+          // A temporary upstream failure is not proof that the session expired. Keep the existing
+          // page-level connectivity handling instead of weakening or bypassing server-side RBAC.
           setValidatedPath(pathname);
           return;
         }
@@ -130,18 +134,14 @@ export default function AppShell({
       )}
 
       <header className={styles.header}>
-        <Link href={homeHref} className={styles.brand}>
-          <span className={styles.mark} aria-hidden="true">FD</span>
-          <span className={styles.brandText}>
-            <strong>FODIP DIGITAL</strong>
-            <span>Plateforme institutionnelle</span>
-          </span>
+        <Link href={homeHref} className={styles.brand} aria-label={`FODIP — ${portalLabel} — accueil`}>
+          <FodipOfficialBrand subtitle="Plateforme institutionnelle" compact />
         </Link>
 
         <div className={styles.headerContext} aria-hidden="true">
           <span className={styles.contextLabel}>Espace sécurisé</span>
           <span className={styles.contextDivider} />
-          <span className={styles.contextPortal}>Session authentifiée</span>
+          <span className={styles.contextPortal}>{portalLabel}</span>
         </div>
 
         <div className={styles.headerActions}>
@@ -169,11 +169,7 @@ export default function AppShell({
 
       <Drawer open={drawerOpen} onClose={closeDrawer} title="Navigation principale" side="left">
         <div className={styles.drawerBrand}>
-          <span className={styles.drawerMark} aria-hidden="true">FD</span>
-          <div>
-            <strong>FODIP DIGITAL</strong>
-            <span>Plateforme institutionnelle</span>
-          </div>
+          <FodipOfficialBrand subtitle={portalLabel} />
         </div>
 
         <div className={styles.drawerSectionHeader}>
@@ -181,9 +177,9 @@ export default function AppShell({
           <span className={styles.drawerSectionRule} />
         </div>
 
-        <nav className={styles.drawerNav} aria-label="Navigation principale">
+        <nav className={styles.drawerNav} aria-label={`Navigation ${portalLabel}`}>
           {navItems.map((item) => {
-            const active = pathname === item.href;
+            const active = isNavigationItemActive(pathname, item.href);
             return (
               <Link
                 key={item.href}
@@ -207,7 +203,7 @@ export default function AppShell({
 
         <div className={styles.drawerMeta}>
           <strong>FODIP Digital 2030</strong>
-          <span>Navigation institutionnelle sécurisée</span>
+          <span>Navigation institutionnelle sécurisée · accès limité au périmètre du compte</span>
         </div>
       </Drawer>
 
