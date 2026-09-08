@@ -11,6 +11,52 @@ const APPLICATION_FIELDS: Record<string, string> = {
   nombreEmploisPrevus: 'nombre_emplois_prevus',
 };
 
+const DOCUMENT_COMPLETENESS_COLUMNS = `
+        checklist.required_count AS "documentsRequis",
+        checklist.present_count AS "documentsPresents",
+        checklist.missing AS "documentsManquants",
+        CASE
+          WHEN checklist.required_count = 0 THEN 100
+          ELSE ROUND((checklist.present_count::numeric / checklist.required_count::numeric) * 100)::int
+        END AS "completudeDocumentsPct"`;
+
+const DOCUMENT_COMPLETENESS_JOIN = `
+      LEFT JOIN LATERAL (
+        SELECT
+          COUNT(*)::int AS required_count,
+          COUNT(*) FILTER (WHERE item.present)::int AS present_count,
+          COALESCE(
+            jsonb_agg(
+              jsonb_build_object(
+                'code', item.code,
+                'libelle', item.libelle,
+                'typeDocument', item.type_document
+              )
+              ORDER BY item.ordre_affichage ASC, item.libelle ASC
+            ) FILTER (WHERE NOT item.present),
+            '[]'::jsonb
+          ) AS missing
+        FROM (
+          SELECT
+            requirement.code,
+            requirement.libelle,
+            requirement.type_document,
+            requirement.ordre_affichage,
+            EXISTS (
+              SELECT 1
+              FROM dossier_documents document
+              WHERE document.dossier_id = d.id
+                AND document.type_document = requirement.type_document
+                AND document.superseded_by IS NULL
+                AND document.statut_verification <> 'REJETE'
+            ) AS present
+          FROM programme_documents_requis requirement
+          WHERE requirement.programme_id = d.programme_id
+            AND requirement.actif = TRUE
+            AND requirement.obligatoire = TRUE
+        ) item
+      ) checklist ON TRUE`;
+
 @Injectable()
 export class ApplicationsRepository {
   constructor(private readonly db: DatabaseService) {}
@@ -31,9 +77,11 @@ export class ApplicationsRepository {
         d.statut,
         d.date_soumission AS "dateSoumission",
         d.created_at AS "createdAt",
-        d.updated_at AS "updatedAt"
+        d.updated_at AS "updatedAt",
+${DOCUMENT_COMPLETENESS_COLUMNS}
       FROM dossiers_financement d
       LEFT JOIN programmes_fodip p ON p.id = d.programme_id
+${DOCUMENT_COMPLETENESS_JOIN}
       WHERE d.entreprise_id = $1
       ORDER BY d.created_at DESC`,
       [entrepriseId],
@@ -80,9 +128,11 @@ export class ApplicationsRepository {
         d.statut,
         d.date_soumission AS "dateSoumission",
         d.created_at AS "createdAt",
-        d.updated_at AS "updatedAt"
+        d.updated_at AS "updatedAt",
+${DOCUMENT_COMPLETENESS_COLUMNS}
       FROM dossiers_financement d
       LEFT JOIN programmes_fodip p ON p.id = d.programme_id
+${DOCUMENT_COMPLETENESS_JOIN}
       WHERE d.id = $1 AND d.entreprise_id = $2
       LIMIT 1`,
       [id, entrepriseId],
