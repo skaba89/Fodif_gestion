@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const OFFICIAL_FODIP_LOGO = 'https://hom-app.fodip.gov.gn/assets/img/fodip.jpg';
+const OFFICIAL_FODIP_LOGO = 'https://fodipgn.com/images/logo/1719846542.jpg';
 
 test.describe('Shared institutional UI', () => {
   test.beforeEach(async ({ page }) => {
@@ -8,23 +8,22 @@ test.describe('Shared institutional UI', () => {
     await expect(page.getByTestId('shared-ui-showcase')).toBeVisible();
   });
 
-  test('official FODIP identity uses the institutional logo source and Republic of Guinea colors', async ({ page }) => {
+  test('FODIP identity uses the published logo and the product palette stays aligned to its green pair', async ({ page }) => {
     await page.goto('/');
 
-    // Assert the canonical source, not network loading: CI must stay deterministic even if the
-    // public FODIP site is temporarily unreachable while the application itself is healthy.
+    // Assert the canonical published source, not network loading: CI must stay deterministic even
+    // if the public FODIP website is temporarily unreachable while this platform itself is healthy.
     await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
 
     const colors = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement);
       return {
-        red: root.getPropertyValue('--fodip-red').trim().toLowerCase(),
-        yellow: root.getPropertyValue('--fodip-yellow').trim().toLowerCase(),
-        green: root.getPropertyValue('--fodip-green').trim().toLowerCase(),
+        dark: root.getPropertyValue('--fodip-green-dark').trim().toLowerCase(),
+        light: root.getPropertyValue('--fodip-green-light').trim().toLowerCase(),
       };
     });
 
-    expect(colors).toEqual({ red: '#ce1126', yellow: '#fcd116', green: '#009460' });
+    expect(colors).toEqual({ dark: '#174b0b', light: '#62a449' });
 
     await page.goto('/agent/connexion');
     await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
