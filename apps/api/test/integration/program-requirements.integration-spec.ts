@@ -67,6 +67,7 @@ describe('Programme requirements and dossier completeness (real PostgreSQL)', ()
     const result = await programs.listActive();
     const programme = result.find((entry) => entry.id === programmeId);
 
+    expect(programme).toBeDefined();
     expect(programme).toMatchObject({
       montantMin: '100000.00',
       montantMax: '5000000.00',
@@ -77,7 +78,7 @@ describe('Programme requirements and dossier completeness (real PostgreSQL)', ()
       nifRequis: true,
       slaInstructionJours: 12,
     });
-    expect(programme.documentsRequis).toEqual([
+    expect(programme!.documentsRequis).toEqual([
       expect.objectContaining({ code: 'RCCM', typeDocument: 'RCCM', obligatoire: true }),
       expect.objectContaining({ code: 'NIF', typeDocument: 'NIF', obligatoire: true }),
       expect.objectContaining({ code: 'BUSINESS_PLAN', typeDocument: 'BUSINESS_PLAN', obligatoire: true }),
@@ -89,12 +90,13 @@ describe('Programme requirements and dossier completeness (real PostgreSQL)', ()
     const { entrepriseId, dossierId } = await seedProgrammeAndDossier();
 
     let dossier = (await applications.listByEnterprise(entrepriseId)).find((entry) => entry.id === dossierId);
+    expect(dossier).toBeDefined();
     expect(dossier).toMatchObject({
       documentsRequis: 3,
       documentsPresents: 0,
       completudeDocumentsPct: 0,
     });
-    expect(dossier.documentsManquants.map((entry: { code: string }) => entry.code)).toEqual(['RCCM', 'NIF', 'BUSINESS_PLAN']);
+    expect(dossier!.documentsManquants.map((entry: { code: string }) => entry.code)).toEqual(['RCCM', 'NIF', 'BUSINESS_PLAN']);
 
     await integrationDb.pool.query(
       `INSERT INTO dossier_documents (
@@ -106,12 +108,13 @@ describe('Programme requirements and dossier completeness (real PostgreSQL)', ()
     );
 
     dossier = (await applications.listByEnterprise(entrepriseId)).find((entry) => entry.id === dossierId);
+    expect(dossier).toBeDefined();
     expect(dossier).toMatchObject({
       documentsRequis: 3,
       documentsPresents: 1,
       completudeDocumentsPct: 33,
     });
-    expect(dossier.documentsManquants.map((entry: { code: string }) => entry.code)).toEqual(['NIF', 'BUSINESS_PLAN']);
+    expect(dossier!.documentsManquants.map((entry: { code: string }) => entry.code)).toEqual(['NIF', 'BUSINESS_PLAN']);
   });
 
   it('treats a programme with no mandatory checklist as complete instead of inventing missing documents', async () => {
