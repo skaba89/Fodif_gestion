@@ -113,4 +113,53 @@ describe('MissingDocumentsAlertService (real PostgreSQL)', () => {
     expect(alert).toMatchObject({ dossiers: 1, montant: 300_000 });
     expect(alert?.explication).toContain('2 pièce(s) obligatoire(s)');
   });
+
+  it('keeps the Direction alert on the dossier locked checklist after a new version becomes active', async () => {
+    const programmeId = await createProgramme(false);
+    const version1 = await integrationDb.pool.query<{ id: string }>(
+      `INSERT INTO programme_regles_versions
+        (programme_id, version, statut, effective_from)
+       VALUES ($1, 1, 'ACTIVE', NOW() - INTERVAL '1 day') RETURNING id`,
+      [programmeId],
+    );
+    await integrationDb.pool.query(
+      `INSERT INTO programme_regle_documents
+        (regle_version_id, code, libelle, type_document, obligatoire, ordre_affichage)
+       VALUES
+        ($1, 'RCCM', 'RCCM', 'RCCM', TRUE, 10),
+        ($1, 'NIF', 'NIF', 'NIF', TRUE, 20)`,
+      [version1.rows[0].id],
+    );
+
+    const dossierId = await createDossier(programmeId, 'SOUMIS', 650_000);
+    await integrationDb.pool.query(
+      `UPDATE dossiers_financement SET programme_regle_version_id = $2 WHERE id = $1`,
+      [dossierId, version1.rows[0].id],
+    );
+    await addDocument(dossierId, 'RCCM'); // V1 still misses NIF.
+
+    await integrationDb.pool.query(
+      `UPDATE programme_regles_versions
+       SET statut = 'ARCHIVEE', effective_to = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [version1.rows[0].id],
+    );
+    const version2 = await integrationDb.pool.query<{ id: string }>(
+      `INSERT INTO programme_regles_versions
+        (programme_id, version, statut, effective_from)
+       VALUES ($1, 2, 'ACTIVE', NOW() - INTERVAL '1 minute') RETURNING id`,
+      [programmeId],
+    );
+    await integrationDb.pool.query(
+      `INSERT INTO programme_regle_documents
+        (regle_version_id, code, libelle, type_document, obligatoire, ordre_affichage)
+       VALUES ($1, 'RCCM', 'RCCM', 'RCCM', TRUE, 10)`,
+      [version2.rows[0].id],
+    );
+
+    const alert = await service.build({ programmeId });
+
+    expect(alert).toMatchObject({ dossiers: 1, montant: 650_000 });
+    expect(alert?.explication).toContain('1 pièce(s) obligatoire(s)');
+  });
 });
