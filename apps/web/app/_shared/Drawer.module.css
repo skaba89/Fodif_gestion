@@ -44,14 +44,17 @@
   box-shadow: 24px 0 80px rgba(5, 23, 15, 0.24);
 }
 
+/* Keep the drawer text fully opaque throughout its entrance. Animating the parent opacity makes
+   foreground and background colors blend with the dark backdrop while axe/WebKit samples the
+   frame, creating a real transient WCAG contrast failure even though the resting state is valid. */
 @keyframes slide-in-right {
-  from { transform: translateX(28px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from { transform: translateX(28px); }
+  to { transform: translateX(0); }
 }
 
 @keyframes slide-in-left {
-  from { transform: translateX(-28px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from { transform: translateX(-28px); }
+  to { transform: translateX(0); }
 }
 
 .panelHeader {
