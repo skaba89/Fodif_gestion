@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { clientApi } from '../../lib/client-api';
+import { resolveRoleHome } from '../../lib/portal-access';
 import styles from './profile.module.css';
 
 type SessionProfile = {
@@ -15,8 +17,9 @@ const ROLE_LABELS: Record<string, string> = {
   AGENT_FODIP: 'Agent FODIP',
   PME: 'PME',
   PARTENAIRE_BANCAIRE: 'Partenaire bancaire',
-  DIRECTION: 'Direction',
-  COMITE: 'Comité de financement',
+  DIRECTION_FODIP: 'Direction FODIP',
+  ANALYSTE: 'Analyste',
+  COMITE_FINANCEMENT: 'Comité de financement',
   AUDITEUR: 'Auditeur',
 };
 
@@ -32,11 +35,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch('/api/session/me', { cache: 'no-store', signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('SESSION_UNAVAILABLE');
-        return response.json() as Promise<SessionProfile>;
-      })
+    clientApi<SessionProfile>('/api/session/me', { signal: controller.signal })
       .then((session) => {
         setProfile({
           email: session.email,
@@ -53,11 +52,7 @@ export default function ProfilePage() {
   }, []);
 
   function goBack() {
-    if (window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push('/');
+    router.push(resolveRoleHome(profile?.roles ?? []) ?? '/');
   }
 
   return (
