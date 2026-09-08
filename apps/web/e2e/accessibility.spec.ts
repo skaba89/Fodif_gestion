@@ -73,7 +73,7 @@ test.describe('Accessibility (axe A6)', () => {
     await expect(page.getByTestId('profile-roles')).toContainText('Auditeur');
     await expectNoSeriousViolations(page);
 
-    await page.getByRole('button', { name: 'Retour à l’espace' }).click();
+    await page.getByRole('button', { name: 'Retour à mon espace' }).click();
     await expect(page).toHaveURL(/\/auditeur\/tableau-de-bord$/);
     await expectNoSeriousViolations(page);
 
