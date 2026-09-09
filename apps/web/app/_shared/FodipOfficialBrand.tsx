@@ -1,9 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 import styles from './FodipOfficialBrand.module.css';
 
-// This exact logo asset is surfaced by the current FODIP institutional website. It is deliberately
-// referenced rather than redrawn so the application does not invent or approximate the emblem.
-export const FODIP_OFFICIAL_LOGO_URL = 'https://fodipgn.com/images/logo/1719846542.jpg';
+// Exact copy of the logo published by the current FODIP institutional website:
+// https://fodip.gov.gn/images/logo/1719846542.jpg
+// The application serves the copied asset locally so institutional branding remains available even
+// when the public website is slow, unavailable or blocks cross-site image embedding.
+export const FODIP_OFFICIAL_LOGO_URL = '/brand/fodip-official.jpg';
 
 export default function FodipOfficialBrand({
   subtitle = 'Plateforme institutionnelle',
@@ -19,9 +21,9 @@ export default function FodipOfficialBrand({
           className={styles.logo}
           src={FODIP_OFFICIAL_LOGO_URL}
           alt=""
-          loading="lazy"
+          loading="eager"
           decoding="async"
-          referrerPolicy="no-referrer"
+          fetchPriority="high"
         />
       </span>
       <span className={styles.copy}>
