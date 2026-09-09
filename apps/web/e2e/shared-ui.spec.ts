@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const OFFICIAL_FODIP_LOGO = 'https://fodipgn.com/images/logo/1719846542.jpg';
+const OFFICIAL_FODIP_LOGO = '/brand/fodip-official.jpg';
 
 test.describe('Shared institutional UI', () => {
   test.beforeEach(async ({ page }) => {
@@ -11,9 +11,9 @@ test.describe('Shared institutional UI', () => {
   test('FODIP identity uses the published logo and the product palette stays aligned to its green pair', async ({ page }) => {
     await page.goto('/');
 
-    // Assert the canonical published source, not network loading: CI must stay deterministic even
-    // if the public FODIP website is temporarily unreachable while this platform itself is healthy.
-    await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
+    const logo = page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`);
+    await expect(logo).toHaveCount(1);
+    await expect.poll(async () => logo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
 
     const colors = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement);
@@ -26,7 +26,9 @@ test.describe('Shared institutional UI', () => {
     expect(colors).toEqual({ dark: '#174b0b', light: '#62a449' });
 
     await page.goto('/agent/connexion');
-    await expect(page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`)).toHaveCount(1);
+    const agentLogo = page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`);
+    await expect(agentLogo).toHaveCount(1);
+    await expect.poll(async () => agentLogo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     await expect(page.getByRole('heading', { name: 'Connexion Agent', exact: true })).toBeVisible();
   });
 
