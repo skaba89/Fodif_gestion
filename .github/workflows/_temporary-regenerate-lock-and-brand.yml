@@ -1,0 +1,75 @@
+name: Temporary secure lockfile and FODIP brand asset
+
+on:
+  push:
+    branches:
+      - fix/security-multer-local-fodip-logo
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Regenerate lockfile with patched Multer override
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+
+      - name: Fetch exact official FODIP logo
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p apps/web/public/brand
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output apps/web/public/brand/fodip-official.jpg \
+            https://fodip.gov.gn/images/logo/1719846542.jpg
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/web/public/brand/fodip-official.jpg')
+          data = path.read_bytes()
+          if len(data) < 1000:
+              raise SystemExit(f'Official logo is unexpectedly small: {len(data)} bytes')
+          if not data.startswith(b'\xff\xd8\xff'):
+              raise SystemExit('Official FODIP asset is not a JPEG file')
+          print(f'Validated official FODIP JPEG: {len(data)} bytes')
+          PY
+
+      - name: Verify vulnerable Multer resolution is gone
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^  multer: 2.3.0$' pnpm-lock.yaml
+          if grep -q '^  multer@2.2.0:' pnpm-lock.yaml; then
+            echo 'multer 2.2.0 still exists in the regenerated lockfile' >&2
+            exit 1
+          fi
+
+      - name: Commit generated lockfile and exact brand asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pnpm-lock.yaml apps/web/public/brand/fodip-official.jpg
+          git rm .github/workflows/_temporary-regenerate-lock-and-brand.yml
+          git commit -m 'chore: regenerate secure lockfile and vendor official FODIP logo'
+          git push origin HEAD:${GITHUB_REF_NAME}
