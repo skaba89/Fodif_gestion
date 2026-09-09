@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import styles from './FodipOfficialBrand.module.css';
 
-// Exact copy of the logo published by the current FODIP institutional website:
-// https://fodip.gov.gn/images/logo/1719846542.jpg
+// Exact copy of the logo published by the FODIP government-hosted application:
+// https://hom-app.fodip.gov.gn/assets/img/fodip.jpg
 // The application serves the copied asset locally so institutional branding remains available even
 // when the public website is slow, unavailable or blocks cross-site image embedding.
 export const FODIP_OFFICIAL_LOGO_URL = '/brand/fodip-official.jpg';
