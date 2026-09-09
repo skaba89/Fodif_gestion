@@ -39,19 +39,39 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p apps/web/public/brand
-          curl --fail --location --retry 3 --retry-delay 2 \
-            --output apps/web/public/brand/fodip-official.jpg \
-            https://fodip.gov.gn/images/logo/1719846542.jpg
-          python - <<'PY'
+          tmp="$(mktemp)"
+          selected=''
+          for source in \
+            'https://hom-app.fodip.gov.gn/assets/img/fodip.jpg' \
+            'https://fodip.gov.gn/images/logo/1719846542.jpg'; do
+            echo "Trying official FODIP asset: ${source}"
+            if ! curl --fail --location --retry 3 --retry-delay 2 \
+              --user-agent 'Mozilla/5.0 FODIP-Digital-2030/1.0' \
+              --output "${tmp}" "${source}"; then
+              continue
+            fi
+            if SOURCE="${source}" FILE="${tmp}" python - <<'PY'
+          import os
           from pathlib import Path
-          path = Path('apps/web/public/brand/fodip-official.jpg')
+          path = Path(os.environ['FILE'])
           data = path.read_bytes()
           if len(data) < 1000:
-              raise SystemExit(f'Official logo is unexpectedly small: {len(data)} bytes')
+              raise SystemExit(1)
           if not data.startswith(b'\xff\xd8\xff'):
-              raise SystemExit('Official FODIP asset is not a JPEG file')
-          print(f'Validated official FODIP JPEG: {len(data)} bytes')
+              raise SystemExit(1)
+          print(f"Validated official FODIP JPEG from {os.environ['SOURCE']}: {len(data)} bytes")
           PY
+            then
+              selected="${source}"
+              break
+            fi
+          done
+          if [ -z "${selected}" ]; then
+            echo 'No official FODIP government host returned a valid JPEG asset.' >&2
+            exit 1
+          fi
+          mv "${tmp}" apps/web/public/brand/fodip-official.jpg
+          printf '%s\n' "${selected}" > /tmp/fodip-logo-source.txt
 
       - name: Verify vulnerable Multer resolution is gone
         shell: bash
