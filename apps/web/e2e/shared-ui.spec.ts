@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const OFFICIAL_FODIP_LOGO = 'https://fodipgn.com/images/logo/1719846542.jpg';
+const OFFICIAL_FODIP_LOGO = 'https://fodip.gov.gn/images/logo/1719846542.jpg';
 
 test.describe('Shared institutional UI', () => {
   test.beforeEach(async ({ page }) => {
