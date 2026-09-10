@@ -2,7 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as client from 'openid-client';
-import { OidcService } from '../src/auth/oidc/oidc.service';
+import { isOidcPortal, OidcService } from '../src/auth/oidc/oidc.service';
 import { deriveSecret } from '../src/security-policy';
 
 jest.mock('openid-client', () => ({
@@ -24,10 +24,6 @@ const ENABLED_ENV: Record<string, string> = {
   OIDC_REDIRECT_URI: 'https://api.example.org/api/v1/auth/oidc/callback',
 };
 
-// Axe E4 (durcissement OIDC) - a minimal in-memory stand-in for oidc_delivery_tokens_used's
-// claim-once behavior (INSERT ... ON CONFLICT DO NOTHING): the real concurrency-safety guarantee
-// (a real UNIQUE constraint under real concurrent claims) is proven separately against a real
-// database in test/integration/oidc.integration-spec.ts.
 function fakeDb() {
   const claimed = new Set<string>();
   const query = jest.fn(async (sql: string, values: unknown[] = []) => {
@@ -62,11 +58,11 @@ describe('OidcService', () => {
   });
 
   describe('beginAuthorization', () => {
-    it('returns the provider URL and a flow cookie that verifies back to the same state/nonce/verifier/portal', async () => {
+    it('returns the provider URL and a flow cookie that verifies back to the same state/nonce/verifier/entry point', async () => {
       (client.discovery as jest.Mock).mockResolvedValue({ __configuration: true });
       const service = makeService();
 
-      const { url, flowCookie } = await service.beginAuthorization('agent');
+      const { url, flowCookie } = await service.beginAuthorization('connexion');
 
       expect(url).toBe('https://idp.example.org/authorize?state=state-value');
       expect(client.buildAuthorizationUrl).toHaveBeenCalledWith(
@@ -85,14 +81,14 @@ describe('OidcService', () => {
         secret: deriveSecret('x'.repeat(40), 'fodip-oidc-flow-v1'),
         audience: 'fodip-oidc-flow',
       });
-      expect(decoded).toMatchObject({ state: 'state-value', nonce: 'nonce-value', codeVerifier: 'verifier', portal: 'agent' });
+      expect(decoded).toMatchObject({ state: 'state-value', nonce: 'nonce-value', codeVerifier: 'verifier', portal: 'connexion' });
     });
   });
 
   describe('completeAuthorization', () => {
     async function beginAndGetCookie(service: OidcService) {
       (client.discovery as jest.Mock).mockResolvedValue({ __configuration: true });
-      const { flowCookie } = await service.beginAuthorization('comite');
+      const { flowCookie } = await service.beginAuthorization('connexion');
       return flowCookie;
     }
 
@@ -112,7 +108,7 @@ describe('OidcService', () => {
         .rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it('exchanges the code and returns the verified email and originating portal', async () => {
+    it('exchanges the code and returns the verified email and originating entry point', async () => {
       const service = makeService();
       const flowCookie = await beginAndGetCookie(service);
       (client.authorizationCodeGrant as jest.Mock).mockResolvedValue({
@@ -121,7 +117,7 @@ describe('OidcService', () => {
 
       const result = await service.completeAuthorization(new URL('https://api.example.org/callback?code=abc&state=state-value'), flowCookie);
 
-      expect(result).toEqual({ email: 'agent@fodip.local', portal: 'comite' });
+      expect(result).toEqual({ email: 'agent@fodip.local', portal: 'connexion' });
       expect(client.authorizationCodeGrant).toHaveBeenCalledWith(
         { __configuration: true },
         expect.any(URL),
@@ -155,9 +151,6 @@ describe('OidcService', () => {
       await expect(service.resolveDeliveryToken(flowCookie)).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    // Axe E4 (durcissement OIDC) - the delivery token travels via a redirect URL query string
-    // (browser history, access logs) - a genuinely exposed channel, so redemption must be
-    // single-use, not just signature/expiry-checked.
     describe('replay protection', () => {
       it('rejects a second exchange of the same token, even though it has not expired', async () => {
         const db = fakeDb();
@@ -177,7 +170,7 @@ describe('OidcService', () => {
         await service.resolveDeliveryToken(token).catch(() => undefined);
 
         const claims = db.query.mock.calls.filter(([sql]) => (sql as string).startsWith('INSERT INTO oidc_delivery_tokens_used'));
-        expect(claims).toHaveLength(2); // attempted twice
+        expect(claims).toHaveLength(2);
       });
 
       it('lets two different delivery tokens for the same user each be redeemed once', async () => {
@@ -193,13 +186,13 @@ describe('OidcService', () => {
   });
 
   describe('loginPathFor / buildCurrentUrl', () => {
-    it('maps every portal to its login page', () => {
+    it('maps the canonical and every legacy OIDC entry point to the shared login page', () => {
       const service = makeService();
-      expect(service.loginPathFor('agent')).toBe('/agent/connexion');
-      expect(service.loginPathFor('comite')).toBe('/comite/connexion');
-      expect(service.loginPathFor('direction')).toBe('/direction/connexion');
-      expect(service.loginPathFor('administration')).toBe('/administration/connexion');
-      expect(service.loginPathFor('auditeur')).toBe('/auditeur/connexion');
+      for (const portal of ['connexion', 'agent', 'comite', 'direction', 'administration', 'auditeur'] as const) {
+        expect(isOidcPortal(portal)).toBe(true);
+        expect(service.loginPathFor(portal)).toBe('/connexion');
+      }
+      expect(isOidcPortal('partenaire')).toBe(false);
     });
 
     it('reconstructs the full callback URL from a path + query using the configured redirect origin', () => {

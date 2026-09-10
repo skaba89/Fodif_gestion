@@ -4,10 +4,11 @@ import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { resolveRoleHome } from '../../lib/portal-access';
 import styles from '../entrepreneur/portal.module.css';
+import FodipOfficialBrand from './FodipOfficialBrand';
 import premium from './LoginForm.module.css';
 
 type Step = 'credentials' | 'setup' | 'verify';
-type OidcPortal = 'agent' | 'comite' | 'direction' | 'administration' | 'auditeur';
+type OidcPortal = 'connexion' | 'agent' | 'comite' | 'direction' | 'administration' | 'auditeur';
 
 interface SessionResponse {
   message?: string;
@@ -26,26 +27,27 @@ export interface LoginFormProps {
   eyebrow: string;
   title: string;
   lead: string;
-  redirectTo: string;
+  /** Explicit destination kept for legacy callers. Omit to route from the authenticated roles. */
+  redirectTo?: string;
   /** Roles allowed to use this portal. Omit to accept any authenticated account. */
   allowedRoles?: string[];
   deniedMessage?: string;
   /** A recognized account that used the wrong portal is sent to its canonical role home. */
   redirectWrongRoleToHome?: boolean;
-  /** 'narrow' renders a single centered card (used by /administration); 'wide' matches the other portals. */
+  /** 'narrow' renders a single centered card; 'wide' is the default authentication layout. */
   variant?: 'wide' | 'narrow';
   replaceHistory?: boolean;
-  /** Offers SSO for institutional portals when OIDC is configured on the API. */
+  /** Offers SSO for institutional accounts when OIDC is configured on the API. */
   oidcPortal?: OidcPortal;
 }
 
 /**
- * Shared login flow for every portal.
+ * Shared login flow for every account type.
  *
- * The backend remains authoritative for authentication, MFA and RBAC. If a valid account signs in
- * from the wrong portal, the UI never grants that portal: it routes the session to the account's
- * canonical role home. If a session already exists, the user can either continue it or explicitly
- * sign out before changing account, avoiding accidental cross-account navigation.
+ * The backend remains authoritative for authentication, MFA and RBAC. The canonical /connexion
+ * page does not ask the user to choose a role: after authentication, the roles returned by the
+ * API determine the authorized home. Existing portal-specific props remain supported only for
+ * backward-compatible callers while legacy URLs redirect to /connexion.
  */
 export default function LoginForm(props: LoginFormProps) {
   return (
@@ -70,6 +72,7 @@ function LoginFormInner({
   const router = useRouter();
   const searchParams = useSearchParams();
   const oidcToken = searchParams.get('oidc_token');
+  const sessionExpired = searchParams.get('reason') === 'session-expired';
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -102,7 +105,14 @@ function LoginFormInner({
       await fetch('/api/session/logout', { method: 'POST' });
       throw new Error(deniedMessage ?? 'Ce compte ne possède pas les droits nécessaires.');
     }
-    if (replaceHistory) router.replace(redirectTo); else router.push(redirectTo);
+
+    const destination = redirectTo ?? resolveRoleHome(roles);
+    if (!destination) {
+      await fetch('/api/session/logout', { method: 'POST' });
+      throw new Error('Aucun espace FODIP n’est autorisé pour ce compte.');
+    }
+
+    if (replaceHistory) router.replace(destination); else router.push(destination);
     router.refresh();
   }
 
@@ -188,7 +198,7 @@ function LoginFormInner({
 
     const oidcError = searchParams.get('oidc_error');
     if (oidcError === 'account_not_found') {
-      setError('Aucun compte actif ne correspond à cette identité. Contactez un administrateur.');
+      setError('Aucun compte institutionnel actif ne correspond à cette identité. Utilisez votre mot de passe ou contactez un administrateur.');
     } else if (oidcError) {
       setError('La connexion via le fournisseur d’identité a échoué. Réessayez, ou utilisez votre mot de passe.');
     }
@@ -209,10 +219,18 @@ function LoginFormInner({
   return (
     <main className={premium.main}>
       <div className={premium.header}>
+        <FodipOfficialBrand subtitle="Connexion sécurisée" />
         <p className={premium.eyebrow}>{eyebrow}</p>
         <h1 className={premium.title}>{title}</h1>
         <p className={premium.lead}>{lead}</p>
       </div>
+
+      {sessionExpired && (
+        <div className={cardClassName} role="status" data-testid="session-expired-notice">
+          <p className={premium.sessionTitle}>Votre session a expiré.</p>
+          <p className={premium.lead}>Reconnectez-vous pour continuer dans l’espace autorisé pour votre compte.</p>
+        </div>
+      )}
 
       {checkingSession && (
         <div className={cardClassName} role="status" aria-live="polite">

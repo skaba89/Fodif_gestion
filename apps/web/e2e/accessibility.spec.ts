@@ -18,13 +18,8 @@ test.describe('Accessibility (axe A6)', () => {
     await expectNoSeriousViolations(page);
   });
 
-  test('the PME login page has no serious WCAG violations', async ({ page }) => {
-    await page.goto('/entrepreneur/connexion');
-    await expectNoSeriousViolations(page);
-  });
-
-  test('the administration login page has no serious WCAG violations', async ({ page }) => {
-    await page.goto('/administration/connexion');
+  test('the unified login page has no serious WCAG violations', async ({ page }) => {
+    await page.goto('/connexion');
     await expectNoSeriousViolations(page);
   });
 
@@ -37,7 +32,7 @@ test.describe('Accessibility (axe A6)', () => {
   // contrast, the dedicated profile and /mes-donnees with a single login. auditeur@fodip.local
   // avoids sharing the login rate-limit budget used by the PME workflow specs.
   test('the Auditeur portal, profile and institutional hamburger menu remain accessible', async ({ page }) => {
-    await page.goto('/auditeur/connexion');
+    await page.goto('/connexion');
     await page.getByLabel('Email').fill('auditeur@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
@@ -60,8 +55,6 @@ test.describe('Accessibility (axe A6)', () => {
     await expect(menuButton).toBeFocused();
 
     await page.getByRole('button', { name: /Passer au thème/ }).click();
-    // ThemeToggle applies data-theme synchronously; two animation frames let every browser repaint
-    // before axe samples contrast values, avoiding a transient mixed-theme snapshot on WebKit.
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await expectNoSeriousViolations(page);
 

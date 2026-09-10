@@ -5,43 +5,36 @@ import styles from './home.module.css';
 
 const portals = [
   {
-    href: '/entrepreneur/connexion',
     mark: 'PM',
     title: 'Espace PME',
     description: "Déposez et suivez vos dossiers de financement, gérez les informations de votre entreprise.",
   },
   {
-    href: '/agent/connexion',
     mark: 'AG',
     title: 'Agent FODIP',
     description: 'Instruisez les dossiers, vérifiez les documents et notez les demandes de financement.',
   },
   {
-    href: '/comite/connexion',
     mark: 'CO',
     title: 'Comité de financement',
     description: 'Consultez les dossiers prêts pour décision et statuez en toute traçabilité.',
   },
   {
-    href: '/direction/connexion',
     mark: 'DI',
     title: 'Direction',
     description: 'Pilotez le portefeuille national : indicateurs, impact économique et social, régions.',
   },
   {
-    href: '/administration/connexion',
     mark: 'AD',
     title: 'Administration',
     description: 'Gérez les comptes, rôles et permissions de la plateforme, sous contrôle et audit.',
   },
   {
-    href: '/auditeur/connexion',
     mark: 'AU',
     title: 'Auditeur',
     description: 'Consultez en lecture seule le portefeuille de financements et le journal d’audit de la plateforme.',
   },
   {
-    href: '/partenaire/connexion',
     mark: 'PB',
     title: 'Partenaire bancaire',
     description: 'Consultez vos financements correspondants et déclarez vos décaissements et remboursements pour le compte du FODIP.',
@@ -71,13 +64,13 @@ export default function HomePage() {
         </p>
       </div>
 
-      <nav className={styles.portals} aria-label="Choix de l’espace">
+      <nav className={styles.portals} aria-label="Espaces de la plateforme">
         {portals.map((portal) => (
-          <Link key={portal.href} href={portal.href} className={styles.portalCard}>
+          <Link key={portal.title} href="/connexion" className={styles.portalCard}>
             <span className={styles.portalIcon}>{portal.mark}</span>
             <h2>{portal.title}</h2>
             <p>{portal.description}</p>
-            <span className={styles.portalCta}>Accéder à l’espace →</span>
+            <span className={styles.portalCta}>Se connecter →</span>
           </Link>
         ))}
       </nav>
@@ -93,11 +86,11 @@ export default function HomePage() {
         </div>
         <div className={styles.principle}>
           <strong>Authentification renforcée</strong>
-          <span>Double authentification pour les comptes sensibles et SSO pour les espaces institutionnels configurés.</span>
+          <span>Double authentification pour les comptes sensibles et SSO pour les comptes institutionnels configurés.</span>
         </div>
         <div className={styles.principle}>
           <strong>Contrôle d’accès strict</strong>
-          <span>Une session ouverte sur le mauvais portail est renvoyée vers l’espace autorisé par son rôle.</span>
+          <span>Après authentification, chaque compte est dirigé vers l’espace autorisé par ses rôles.</span>
         </div>
       </div>
 

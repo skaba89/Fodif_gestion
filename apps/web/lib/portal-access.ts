@@ -7,6 +7,8 @@ export type PortalId =
   | 'auditeur'
   | 'partenaire';
 
+export const LOGIN_HREF = '/connexion';
+
 export interface PortalAccessRule {
   loginHref: string;
   homeHref: string;
@@ -15,37 +17,37 @@ export interface PortalAccessRule {
 
 export const PORTAL_ACCESS: Record<PortalId, PortalAccessRule> = {
   entrepreneur: {
-    loginHref: '/entrepreneur/connexion',
+    loginHref: LOGIN_HREF,
     homeHref: '/entrepreneur',
     allowedRoles: ['PME'],
   },
   agent: {
-    loginHref: '/agent/connexion',
+    loginHref: LOGIN_HREF,
     homeHref: '/agent/dossiers',
     allowedRoles: ['AGENT_FODIP', 'SUPER_ADMIN'],
   },
   comite: {
-    loginHref: '/comite/connexion',
+    loginHref: LOGIN_HREF,
     homeHref: '/comite/dossiers',
     allowedRoles: ['COMITE_FINANCEMENT', 'SUPER_ADMIN'],
   },
   direction: {
-    loginHref: '/direction/connexion',
+    loginHref: LOGIN_HREF,
     homeHref: '/direction/tableau-de-bord',
     allowedRoles: ['DIRECTION_FODIP', 'ANALYSTE', 'SUPER_ADMIN'],
   },
   administration: {
-    loginHref: '/administration/connexion',
+    loginHref: LOGIN_HREF,
     homeHref: '/administration/utilisateurs',
     allowedRoles: ['SUPER_ADMIN'],
   },
   auditeur: {
-    loginHref: '/auditeur/connexion',
+    loginHref: LOGIN_HREF,
     homeHref: '/auditeur/tableau-de-bord',
     allowedRoles: ['AUDITEUR', 'SUPER_ADMIN'],
   },
   partenaire: {
-    loginHref: '/partenaire/connexion',
+    loginHref: LOGIN_HREF,
     homeHref: '/partenaire/financements',
     allowedRoles: ['PARTENAIRE_BANCAIRE'],
   },

@@ -6,7 +6,9 @@ import * as client from 'openid-client';
 import { DatabaseService } from '../../database/database.service';
 import { deriveSecret, resolveJwtSecret } from '../../security-policy';
 
-export const OIDC_PORTALS = ['agent', 'comite', 'direction', 'administration', 'auditeur'] as const;
+// `connexion` is now the canonical browser entry point. The historical portal values remain
+// valid so an authorization flow started before the rollout can still complete safely.
+export const OIDC_PORTALS = ['connexion', 'agent', 'comite', 'direction', 'administration', 'auditeur'] as const;
 export type OidcPortal = (typeof OIDC_PORTALS)[number];
 
 export function isOidcPortal(value: unknown): value is OidcPortal {
@@ -14,17 +16,11 @@ export function isOidcPortal(value: unknown): value is OidcPortal {
 }
 
 /**
- * Where each portal's login page lives, so the OIDC callback can send the browser back to the
- * right one. Deliberately a fixed, server-side table keyed by a validated enum rather than
- * accepting a path from the client - the only alternative would be an open-redirect surface.
+ * OIDC never accepts a client-provided return path. Every validated flow, including a legacy
+ * portal flow that was already in progress, comes back through the single login page before the
+ * authenticated role determines the destination.
  */
-const LOGIN_PATH: Record<OidcPortal, string> = {
-  agent: '/agent/connexion',
-  comite: '/comite/connexion',
-  direction: '/direction/connexion',
-  administration: '/administration/connexion',
-  auditeur: '/auditeur/connexion',
-};
+const UNIFIED_LOGIN_PATH = '/connexion';
 
 export const OIDC_FLOW_COOKIE = 'fodip_oidc_flow';
 const FLOW_TTL_SECONDS = 10 * 60;
@@ -97,8 +93,8 @@ export class OidcService {
     return Boolean(this.issuerUrl && this.clientId && this.clientSecret && this.redirectUri);
   }
 
-  loginPathFor(portal: OidcPortal): string {
-    return LOGIN_PATH[portal];
+  loginPathFor(_portal: OidcPortal): string {
+    return UNIFIED_LOGIN_PATH;
   }
 
   /** Reconstructs the full callback URL from Express's `request.originalUrl` (path + query only)
