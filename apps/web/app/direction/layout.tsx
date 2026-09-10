@@ -3,6 +3,7 @@ import { AccountMenu } from '../_shared/AccountMenu';
 
 const navItems = [
   { label: 'Cockpit national', href: '/direction/tableau-de-bord' },
+  { label: 'Programmes', href: '/direction/programmes' },
   { label: 'Financements', href: '/direction/financements' },
   { label: 'Rapprochement', href: '/direction/rapprochements' },
   { label: 'Notifications', href: '/notifications' },
@@ -15,7 +16,7 @@ export default function DirectionLayout({ children }: { children: React.ReactNod
       portalLabel="Direction générale"
       homeHref="/direction/tableau-de-bord"
       navItems={navItems}
-      accountMenu={<AccountMenu loginHref="/direction/connexion" loginLabel="Connexion Direction" />}
+      accountMenu={<AccountMenu loginHref="/connexion" loginLabel="Connexion" />}
       footer="FODIP Digital 2030 · Pilotage national du portefeuille et de l’impact"
     >
       {children}
