@@ -37,7 +37,7 @@ test.describe('TOTP multi-factor authentication', () => {
 
     try {
       // --- First login: no confirmed secret yet -> enrollment challenge ---
-      await page.goto('/comite/connexion');
+      await page.goto('/connexion');
       await page.getByLabel('Email').fill(email);
       await page.getByLabel('Mot de passe').fill(TEST_PASSWORD);
       await page.getByRole('button', { name: 'Se connecter' }).click();
@@ -50,16 +50,14 @@ test.describe('TOTP multi-factor authentication', () => {
       await page.getByRole('button', { name: 'Activer et se connecter' }).click();
 
       await expect(page).toHaveURL(/\/comite\/dossiers$/);
-      // Account identifiers are intentionally absent from the global shell. They are exposed only
-      // on the dedicated profile page, including after an MFA enrollment round trip.
       await expect(page.getByText(email)).toHaveCount(0);
       await page.goto('/profil');
       await expect(page.getByText(email)).toBeVisible();
       await page.goto('/comite/dossiers');
 
-      // --- Log out and back in: the secret is now confirmed -> verification challenge only ---
+      // --- Log out and back in through the same shared login ---
       await page.getByRole('button', { name: 'Déconnexion' }).click();
-      await expect(page).toHaveURL(/\/comite\/connexion$/);
+      await expect(page).toHaveURL(/\/connexion$/);
 
       await page.getByLabel('Email').fill(email);
       await page.getByLabel('Mot de passe').fill(TEST_PASSWORD);
@@ -85,7 +83,7 @@ test.describe('TOTP multi-factor authentication', () => {
     const { id, email, admin } = await createMfaEnrolledUser(baseURL!);
 
     try {
-      await page.goto('/comite/connexion');
+      await page.goto('/connexion');
       await page.getByLabel('Email').fill(email);
       await page.getByLabel('Mot de passe').fill(TEST_PASSWORD);
       await page.getByRole('button', { name: 'Se connecter' }).click();
@@ -95,7 +93,7 @@ test.describe('TOTP multi-factor authentication', () => {
       await page.getByRole('button', { name: 'Activer et se connecter' }).click();
 
       await expect(page.getByTestId('login-error')).toBeVisible();
-      await expect(page).toHaveURL(/\/comite\/connexion$/);
+      await expect(page).toHaveURL(/\/connexion$/);
     } finally {
       await admin.patch(`/api/administration/users/${id}`, { data: { actif: false } }).catch(() => undefined);
       await admin.dispose();

@@ -1,6 +1,6 @@
 import {
   isPortalId,
-  PORTAL_ACCESS,
+  LOGIN_HREF,
   resolvePortalFromPath,
   resolveRoleHome,
   rolesCanAccessPortal,
@@ -43,12 +43,7 @@ function resolveBrowserPortal(): PortalId | undefined {
 
 function redirectExpiredSession() {
   if (typeof window === 'undefined') return;
-  const portal = resolveBrowserPortal();
-  if (!portal) {
-    window.location.replace('/');
-    return;
-  }
-  window.location.replace(`${PORTAL_ACCESS[portal].loginHref}?reason=session-expired`);
+  window.location.replace(`${LOGIN_HREF}?reason=session-expired`);
 }
 
 async function redirectWrongPortal() {

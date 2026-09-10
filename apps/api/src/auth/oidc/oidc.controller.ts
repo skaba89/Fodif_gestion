@@ -10,6 +10,18 @@ import { SessionTokenService } from '../session-token.service';
 import { isOidcPortal, OIDC_FLOW_COOKIE, OidcPortal, OidcService } from './oidc.service';
 
 const FLOW_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
+const INSTITUTIONAL_OIDC_ROLES = new Set([
+  'SUPER_ADMIN',
+  'DIRECTION_FODIP',
+  'ANALYSTE',
+  'AGENT_FODIP',
+  'COMITE_FINANCEMENT',
+  'AUDITEUR',
+]);
+
+function canUseInstitutionalOidc(roles: readonly string[]): boolean {
+  return roles.some((role) => INSTITUTIONAL_OIDC_ROLES.has(role));
+}
 
 @ApiTags('auth')
 @Controller('auth/oidc')
@@ -64,7 +76,10 @@ export class OidcController {
       portal = result.portal;
 
       const user = await this.users.findForAuthentication(result.email);
-      if (!user || !user.actif) {
+      // OIDC is an institutional authentication method, not a new entitlement path. PME and
+      // partner accounts continue to use the same unified page with their password, but cannot
+      // obtain an institutional SSO delivery token unless they also carry an institutional role.
+      if (!user || !user.actif || !canUseInstitutionalOidc(user.roles)) {
         response.redirect(`${webBaseUrl}${this.oidc.loginPathFor(portal)}?oidc_error=account_not_found`);
         return;
       }
@@ -72,7 +87,7 @@ export class OidcController {
       const token = await this.oidc.issueDeliveryToken(user.id);
       response.redirect(`${webBaseUrl}${this.oidc.loginPathFor(portal)}?oidc_token=${encodeURIComponent(token)}`);
     } catch {
-      const path = portal ? this.oidc.loginPathFor(portal) : '/agent/connexion';
+      const path = portal ? this.oidc.loginPathFor(portal) : '/connexion';
       response.redirect(`${webBaseUrl}${path}?oidc_error=login_failed`);
     }
   }

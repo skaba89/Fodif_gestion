@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  LOGIN_HREF,
   resolvePortalFromPath,
   resolveRoleHome,
   rolesCanAccessPortal,
@@ -23,10 +24,14 @@ interface SessionContext {
  * Privacy rule: account identifiers and roles are deliberately absent from the global shell.
  * Identity remains on the dedicated profile page; this control stores only the canonical home
  * resolved from the roles returned by the authenticated session.
+ *
+ * `loginHref` remains accepted temporarily so existing portal layouts stay source-compatible,
+ * but every account now uses the single canonical /connexion entry point.
  */
-export function AccountMenu({ loginHref, loginLabel = 'Connexion' }: { loginHref: string; loginLabel?: string }) {
+export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; loginLabel?: string }) {
   const router = useRouter();
   const pathname = usePathname();
+  const loginHref = LOGIN_HREF;
   const [authenticated, setAuthenticated] = useState(false);
   const [accountHome, setAccountHome] = useState<string | null>(null);
   const intentionalLogout = useRef(false);

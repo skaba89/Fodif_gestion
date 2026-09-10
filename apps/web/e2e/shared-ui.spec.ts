@@ -25,11 +25,11 @@ test.describe('Shared institutional UI', () => {
 
     expect(colors).toEqual({ dark: '#174b0b', light: '#62a449' });
 
-    await page.goto('/agent/connexion');
-    const agentLogo = page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`);
-    await expect(agentLogo).toHaveCount(1);
-    await expect.poll(async () => agentLogo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
-    await expect(page.getByRole('heading', { name: 'Connexion Agent', exact: true })).toBeVisible();
+    await page.goto('/connexion');
+    const loginLogo = page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`);
+    await expect(loginLogo).toHaveCount(1);
+    await expect.poll(async () => loginLogo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+    await expect(page.getByRole('heading', { name: 'Connexion FODIP', exact: true })).toBeVisible();
   });
 
   test('Button exposes disabled/loading states and Dialog restores focus on Escape', async ({ page }) => {

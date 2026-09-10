@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { publicBackendUrl } from '../../../../../lib/backend';
 
-const PORTALS = new Set(['agent', 'comite', 'direction', 'administration', 'auditeur']);
+// `connexion` is the canonical entry point. Legacy portal values stay accepted so an old bookmark
+// or an in-flight institutional flow remains valid across the rollout; the API redirects every
+// successful callback to /connexion before role-based routing.
+const PORTALS = new Set(['connexion', 'agent', 'comite', 'direction', 'administration', 'auditeur']);
 
 export async function GET(request: Request) {
   const portal = new URL(request.url).searchParams.get('portal');
