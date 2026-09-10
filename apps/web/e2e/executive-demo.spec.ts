@@ -127,11 +127,11 @@ test.describe('Scénario de démonstration Direction générale', () => {
     try {
       // --- 1. Accueil institutionnel ---
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: /référentiel unique du financement/ })).toBeVisible();
-      await expect(page.locator('a[href="/direction/connexion"]')).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Piloter le financement des PME guinéennes de la demande jusqu’à l’impact/ })).toBeVisible();
+      await expect(page.locator('a[href="/connexion"]', { hasText: 'Accéder à la plateforme' })).toBeVisible();
 
       // --- 2. Connexion Direction + 3. MFA ---
-      const directionSecret = await login(page, '/direction/connexion', direction.email, password);
+      const directionSecret = await login(page, '/connexion', direction.email, password);
       expect(directionSecret, 'DIRECTION_FODIP is a privileged role - MFA enrollment was expected').toBeTruthy();
       await expect(page).toHaveURL(/\/direction\/tableau-de-bord$/);
 
@@ -146,10 +146,10 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await page.getByText('Réinitialiser').click();
 
       await logout(page);
-      await expect(page).toHaveURL(/\/direction\/connexion$/);
+      await expect(page).toHaveURL(/\/connexion$/);
 
       // --- Deposit the dossier this demo will carry all the way to a live financing ---
-      await login(page, '/entrepreneur/connexion', pme.email, password);
+      await login(page, '/connexion', pme.email, password);
       await expect(page).toHaveURL(/\/entrepreneur$/);
       await page.goto('/entrepreneur/demande');
       await page.getByLabel('Montant demandé (GNF)').fill('300000000');
@@ -160,11 +160,11 @@ test.describe('Scénario de démonstration Direction générale', () => {
       const numeroDossier = (await ownRow.locator('td').first().innerText()).trim();
       expect(numeroDossier).toMatch(/^FODIP-/);
       await ownRow.getByRole('button', { name: 'Soumettre' }).click();
-      await expect(ownRow.getByText('SOUMIS')).toBeVisible();
+      await expect(ownRow.getByText('Soumis', { exact: true })).toBeVisible();
       await logout(page);
 
       // --- 6. Dossier PME (agent's 360° view, instruction and transmission to committee) ---
-      await login(page, '/agent/connexion', agent.email, password);
+      await login(page, '/connexion', agent.email, password);
       await expect(page).toHaveURL(/\/agent\/dossiers$/);
       await page.getByLabel('Recherche').fill(numeroDossier);
       await page.getByRole('button', { name: 'Filtrer' }).click();
@@ -187,7 +187,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await logout(page);
 
       // --- 7. Décision comité ---
-      await login(page, '/comite/connexion', comite.email, password);
+      await login(page, '/connexion', comite.email, password);
       await expect(page).toHaveURL(/\/comite\/dossiers$/);
       await page.goto(dossierUrl.replace('/agent/dossiers/', '/comite/dossiers/'));
       await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
@@ -199,7 +199,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await logout(page);
 
       // --- 8. Financement (Direction turns the approved decision into a live financing) ---
-      await loginWithMfa(page, '/direction/connexion', direction.email, password, directionSecret!);
+      await loginWithMfa(page, '/connexion', direction.email, password, directionSecret!);
       await expect(page).toHaveURL(/\/direction\/tableau-de-bord$/);
 
       await page.goto('/direction/financements');
@@ -223,8 +223,8 @@ test.describe('Scénario de démonstration Direction générale', () => {
       // confirm it - a second Direction officer must. Switch to `direction2` for this one action,
       // then switch back to continue the rest of the demo as `direction`.
       await logout(page);
-      await expect(page).toHaveURL(/\/direction\/connexion$/);
-      const direction2Secret = await login(page, '/direction/connexion', direction2.email, password);
+      await expect(page).toHaveURL(/\/connexion$/);
+      const direction2Secret = await login(page, '/connexion', direction2.email, password);
       expect(direction2Secret, 'DIRECTION_FODIP is a privileged role - MFA enrollment was expected').toBeTruthy();
       await expect(page).toHaveURL(/\/direction\/tableau-de-bord$/);
       await page.goto(financingUrl);
@@ -234,9 +234,9 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await disbursementRowAsChecker.getByRole('button', { name: 'Confirmer aujourd’hui' }).click();
       await expect(page.getByText('Décaissement confirmé et intégré au cockpit.')).toBeVisible();
       await logout(page);
-      await expect(page).toHaveURL(/\/direction\/connexion$/);
+      await expect(page).toHaveURL(/\/connexion$/);
 
-      await loginWithMfa(page, '/direction/connexion', direction.email, password, directionSecret!);
+      await loginWithMfa(page, '/connexion', direction.email, password, directionSecret!);
       await expect(page).toHaveURL(/\/direction\/tableau-de-bord$/);
       await page.goto(financingUrl);
       await expect(page.getByRole('heading', { name: /^FIN-/ })).toBeVisible();

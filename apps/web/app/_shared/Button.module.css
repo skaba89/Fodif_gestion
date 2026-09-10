@@ -22,13 +22,16 @@
   transform: translateY(1px);
 }
 
+/* Keep the filled action on the dark-enough primary scale in both themes. The semantic --green
+   token intentionally becomes lighter in dark mode for links and text, but white text on that
+   lighter value does not meet WCAG AA. */
 .primary {
-  background: var(--green);
+  background: var(--primary-500);
   color: var(--neutral-0);
 }
 
 .primary:not([aria-disabled="true"]):not(:disabled):hover {
-  background: var(--green-strong);
+  background: var(--primary-700);
 }
 
 .secondary {
