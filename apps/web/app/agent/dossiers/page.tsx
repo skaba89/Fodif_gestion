@@ -4,8 +4,10 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Breadcrumbs from '../../_shared/Breadcrumbs';
 import Button from '../../_shared/Button';
 import FilterBar, { FilterField } from '../../_shared/FilterBar';
+import KpiCard from '../../_shared/KpiCard';
 import Pagination from '../../_shared/Pagination';
 import ResponsiveTable, { type ResponsiveColumn } from '../../_shared/ResponsiveTable';
+import { DossierStatusBadge } from '../../_shared/StatusBadge';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from '../agent.module.css';
 
@@ -49,8 +51,8 @@ export default function AgentDossiersPage() {
     { key: 'dossier', header: 'Dossier', render: (dossier) => <strong>{dossier.numeroDossier}</strong> },
     { key: 'entreprise', header: 'Entreprise', render: (dossier) => dossier.raisonSociale },
     { key: 'programme', header: 'Programme', render: (dossier) => dossier.programmeNom ?? '—' },
-    { key: 'montant', header: 'Montant', render: (dossier) => `${Number(dossier.montantDemande).toLocaleString('fr-FR')} GNF` },
-    { key: 'statut', header: 'Statut', render: (dossier) => <span className={portal.pill}>{dossier.statut}</span> },
+    { key: 'montant', header: 'Montant demandé', render: (dossier) => `${Number(dossier.montantDemande).toLocaleString('fr-FR')} GNF` },
+    { key: 'statut', header: 'Statut', render: (dossier) => <DossierStatusBadge status={dossier.statut} /> },
     { key: 'action', header: 'Action', render: (dossier) => <Button variant="outline" href={`/agent/dossiers/${dossier.id}`}>Vue 360°</Button> },
   ], []);
 
@@ -58,17 +60,20 @@ export default function AgentDossiersPage() {
 
   return <main className={portal.main}>
     <Breadcrumbs items={[
-      { label: 'Agent', href: '/agent' },
+      { label: 'Agent', href: '/agent/dossiers' },
       { label: 'Dossiers' },
     ]} />
-    <p className={portal.eyebrow}>Portefeuille d’instruction</p><h1 className={portal.title}>Dossiers de financement</h1>
-    <p className={portal.lead}>Priorisez les nouvelles demandes, prenez en charge un dossier et accédez à sa vue 360°.</p>
-    <section className={styles.metrics}>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{result.total}</strong><span>Dossiers trouvés</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{counts.SOUMIS ?? 0}</strong><span>À prendre en charge (page)</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{counts.EN_INSTRUCTION ?? 0}</strong><span>En instruction (page)</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{counts.PRET_COMITE ?? 0}</strong><span>Prêts pour comité (page)</span></article>
+    <p className={portal.eyebrow}>Portefeuille d’instruction</p>
+    <h1 className={portal.title}>Dossiers de financement</h1>
+    <p className={portal.lead}>Priorisez les nouvelles demandes, prenez en charge un dossier et accédez à sa vue 360° avec des statuts métier lisibles.</p>
+
+    <section className={styles.metrics} aria-label="Synthèse du portefeuille d’instruction">
+      <KpiCard label="Dossiers trouvés" value={String(result.total)} definition="Nombre total de dossiers correspondant aux filtres actuels, toutes pages confondues." />
+      <KpiCard label="À prendre en charge" value={String(counts.SOUMIS ?? 0)} definition="Dossiers soumis visibles sur la page courante et encore à prendre en charge." />
+      <KpiCard label="En instruction" value={String(counts.EN_INSTRUCTION ?? 0)} definition="Dossiers actuellement en instruction sur la page courante." />
+      <KpiCard label="Prêts pour comité" value={String(counts.PRET_COMITE ?? 0)} definition="Dossiers prêts à être transmis au comité sur la page courante." />
     </section>
+
     <form className={portal.section} onSubmit={filter}>
       <FilterBar
         activeCount={activeFilterCount}
@@ -78,11 +83,11 @@ export default function AgentDossiersPage() {
       >
         <FilterField label="Statut" htmlFor="statut">
           <select id="statut" value={statut} onChange={(event) => setStatut(event.target.value)}>
-            <option value="">Tous</option>
+            <option value="">Tous les statuts</option>
             <option value="SOUMIS">Soumis</option>
             <option value="EN_INSTRUCTION">En instruction</option>
-            <option value="COMPLEMENT_REQUIS">Complément requis</option>
-            <option value="PRET_COMITE">Prêt comité</option>
+            <option value="COMPLEMENT_REQUIS">Compléments requis</option>
+            <option value="PRET_COMITE">Prêt pour le comité</option>
           </select>
         </FilterField>
         <FilterField label="Recherche" htmlFor="recherche">
@@ -90,8 +95,16 @@ export default function AgentDossiersPage() {
         </FilterField>
       </FilterBar>
     </form>
-    {message && <div className={portal.notice}>{message}</div>}
+
+    {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
+
     <section className={portal.section}>
+      <div className={portal.sectionHeader}>
+        <div>
+          <h2>File d’instruction</h2>
+          <p>Les dossiers les plus pertinents restent accessibles en vue détaillée, sur ordinateur comme sur mobile.</p>
+        </div>
+      </div>
       <ResponsiveTable
         rows={result.items}
         columns={columns}
