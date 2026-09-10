@@ -62,7 +62,11 @@ export default function AppShell({
 
   const portal = useMemo(() => resolvePortalFromPath(pathname), [pathname]);
   const loginHref = portal ? PORTAL_ACCESS[portal].loginHref : undefined;
-  const isLoginPage = Boolean(loginHref && pathname === loginHref);
+  // Legacy portal login routes still live below each protected portal layout so old bookmarks can
+  // redirect to the single /connexion page. Let those tiny redirect pages render before the
+  // session guard runs; otherwise AppShell can observe their legacy pathname first and incorrectly
+  // turn a normal unauthenticated visit into /connexion?reason=session-expired.
+  const isLoginPage = pathname === '/connexion' || Boolean(portal && pathname.endsWith('/connexion'));
   const portalContentReady = isLoginPage || validatedPath === pathname;
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
