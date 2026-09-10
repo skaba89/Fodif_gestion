@@ -160,7 +160,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
       const numeroDossier = (await ownRow.locator('td').first().innerText()).trim();
       expect(numeroDossier).toMatch(/^FODIP-/);
       await ownRow.getByRole('button', { name: 'Soumettre' }).click();
-      await expect(ownRow.getByText('SOUMIS')).toBeVisible();
+      await expect(ownRow.getByText('Soumis', { exact: true })).toBeVisible();
       await logout(page);
 
       // --- 6. Dossier PME (agent's 360° view, instruction and transmission to committee) ---
