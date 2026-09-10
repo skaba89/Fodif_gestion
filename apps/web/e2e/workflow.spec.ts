@@ -13,8 +13,8 @@ import { expect, Page, test } from '@playwright/test';
 // if this spec has run before against a stack that was never reset.
 const DEMO_PASSWORD = 'FodipDemo2026!';
 
-async function login(page: Page, path: string, email: string) {
-  await page.goto(path);
+async function login(page: Page, email: string) {
+  await page.goto('/connexion');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
   await page.getByRole('button', { name: 'Se connecter' }).click();
@@ -27,7 +27,7 @@ async function logout(page: Page) {
 test.describe('Cycle complet d\'un dossier', () => {
   test('dépôt PME, instruction et scoring agent, décision du comité', async ({ page }) => {
     // --- PME: draft and submit a new funding application ---
-    await login(page, '/entrepreneur/connexion', 'pme@fodip.local');
+    await login(page, 'pme@fodip.local');
     await expect(page).toHaveURL(/\/entrepreneur$/);
 
     await page.goto('/entrepreneur/demande');
@@ -56,10 +56,10 @@ test.describe('Cycle complet d\'un dossier', () => {
     await expect(ownRow.getByText('Soumis', { exact: true })).toBeVisible();
 
     await logout(page);
-    await expect(page).toHaveURL(/\/entrepreneur\/connexion$/);
+    await expect(page).toHaveURL(/\/connexion$/);
 
     // --- Agent: claim, score against the active model, transmit to committee ---
-    await login(page, '/agent/connexion', 'agent@fodip.local');
+    await login(page, 'agent@fodip.local');
     await expect(page).toHaveURL(/\/agent\/dossiers$/);
 
     await page.getByLabel('Recherche').fill(numeroDossier);
@@ -92,12 +92,12 @@ test.describe('Cycle complet d\'un dossier', () => {
     await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
 
     await logout(page);
-    await expect(page).toHaveURL(/\/agent\/connexion$/);
+    await expect(page).toHaveURL(/\/connexion$/);
 
     // --- Committee: review the score and decide, going straight to the dossier this test just
     // prepared (comite/dossiers itself is an undated, unfiltered queue - not worth paginating
     // through when the dossier's own id, shared with the agent-side route, is already known) ---
-    await login(page, '/comite/connexion', 'comite@fodip.local');
+    await login(page, 'comite@fodip.local');
     await expect(page).toHaveURL(/\/comite\/dossiers$/);
 
     const committeeUrl = dossierUrl.replace('/agent/dossiers/', '/comite/dossiers/');
@@ -120,7 +120,7 @@ test.describe('Cycle complet d\'un dossier', () => {
     await logout(page);
 
     // --- Closing the loop: the PME sees its dossier approved ---
-    await login(page, '/entrepreneur/connexion', 'pme@fodip.local');
+    await login(page, 'pme@fodip.local');
     await expect(page).toHaveURL(/\/entrepreneur$/);
     await page.goto('/entrepreneur/suivi');
     // The shared PME status vocabulary introduced human-readable labels ("Approuvé" instead of
