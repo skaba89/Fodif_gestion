@@ -17,8 +17,8 @@ async function expectNoSeriousViolations(page: import('@playwright/test').Page) 
 }
 
 test.describe('Direction cockpit', () => {
-  test('the national dashboard loads seeded data, preserves portal routing and expires to Direction login', async ({ page, context }) => {
-    await page.goto('/direction/connexion');
+  test('the national dashboard loads seeded data, preserves portal routing and expires to the shared login', async ({ page, context }) => {
+    await page.goto('/connexion');
     await page.getByLabel('Email').fill('direction@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
@@ -65,20 +65,20 @@ test.describe('Direction cockpit', () => {
       : page.getByRole('region', { name: 'Financements FODIP — tableau défilable horizontalement si nécessaire' });
     await expect(financingSurface.getByText('FIN-2026-DEMO01', { exact: true })).toBeVisible();
 
-    // Notifications is deliberately outside the Direction layout. The portal guard stores the
-    // last authenticated portal, and clientApi must reuse it when this global page later observes
-    // an expired session instead of falling back to the PME login.
+    // Notifications is deliberately outside the Direction layout. After a real session expiry the
+    // app must return to the single shared login and preserve the explicit expiry reason; the
+    // backend role remains authoritative when the user authenticates again.
     await page.goto('/notifications');
     await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
     await context.clearCookies();
     await page.reload();
-    await expect(page).toHaveURL(/\/direction\/connexion\?reason=session-expired$/);
+    await expect(page).toHaveURL(/\/connexion\?reason=session-expired$/);
   });
 });
 
 test.describe('Portail Partenaire bancaire', () => {
   test('the partner stays in its authorized portal, passes axe and can open its execution page', async ({ page }) => {
-    await page.goto('/partenaire/connexion');
+    await page.goto('/connexion');
     await page.getByLabel('Email').fill('partenaire@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
