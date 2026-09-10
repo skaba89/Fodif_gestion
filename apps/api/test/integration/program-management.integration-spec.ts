@@ -2,6 +2,24 @@ import { randomUUID } from 'node:crypto';
 import { ProgramsRepository } from '../../src/programs/programs.repository';
 import { IntegrationDatabase, startIntegrationDatabase } from './support/database';
 
+type ManagementVersion = {
+  id: string;
+  version: number;
+  statut: string;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
+  documents: Array<Record<string, unknown>>;
+};
+type ManagementView = {
+  id: string;
+  code: string;
+  statut: string;
+  createdVersion?: number;
+  versions: ManagementVersion[];
+};
+const view = (value: unknown) => value as ManagementView;
+
 describe('Programme institutional lifecycle (real PostgreSQL)', () => {
   let integrationDb: IntegrationDatabase;
   let programs: ProgramsRepository;
@@ -33,7 +51,7 @@ describe('Programme institutional lifecycle (real PostgreSQL)', () => {
     const checker = await actor('checker');
     const code = `PROG-${randomUUID().slice(0, 8).toUpperCase()}`;
 
-    const created = await programs.createProgram(maker, {
+    const created = view(await programs.createProgram(maker, {
       code,
       nom: 'Programme institutionnel QA',
       description: 'Qualification du cycle programmes',
@@ -49,42 +67,34 @@ describe('Programme institutional lifecycle (real PostgreSQL)', () => {
         { code: 'RCCM', libelle: 'RCCM', typeDocument: 'RCCM', obligatoire: true, ordreAffichage: 10 },
         { code: 'BUSINESS_PLAN', libelle: "Plan d'affaires", typeDocument: 'BUSINESS_PLAN', obligatoire: true, ordreAffichage: 20 },
       ],
-    });
+    }));
 
     expect(created).toMatchObject({ code, statut: 'BROUILLON' });
     expect(created.versions[0]).toMatchObject({ version: 1, statut: 'BROUILLON' });
     expect((await programs.listActive()).some((entry) => entry.id === created.id)).toBe(false);
 
-    const submitted = await programs.submitVersion(maker, created.id as string, 1);
+    const submitted = view(await programs.submitVersion(maker, created.id, 1));
     expect(submitted.versions[0].submittedAt).toBeTruthy();
 
-    await expect(programs.approveVersion(maker, created.id as string, 1))
-      .rejects.toThrow(/second acteur/i);
+    await expect(programs.approveVersion(maker, created.id, 1)).rejects.toThrow(/second acteur/i);
 
-    const approved = await programs.approveVersion(checker, created.id as string, 1);
+    const approved = view(await programs.approveVersion(checker, created.id, 1));
     expect(approved.versions[0].approvedAt).toBeTruthy();
     expect(approved.versions[0].approvedBy).toBe(checker);
 
-    const activated = await programs.activateVersion(checker, created.id as string, 1);
+    const activated = view(await programs.activateVersion(checker, created.id, 1));
     expect(activated).toMatchObject({ statut: 'ACTIVE' });
     expect(activated.versions[0]).toMatchObject({ version: 1, statut: 'ACTIVE' });
 
     const published = (await programs.listActive()).find((entry) => entry.id === created.id);
-    expect(published).toMatchObject({
-      code,
-      regleVersion: 1,
-      apportMinPct: '10.00',
-      ancienneteMinMois: 6,
-      rccmRequis: true,
-      nifRequis: true,
-    });
+    expect(published).toMatchObject({ code, regleVersion: 1, apportMinPct: '10.00', ancienneteMinMois: 6, rccmRequis: true, nifRequis: true });
     expect(published!.documentsRequis).toEqual([
       expect.objectContaining({ code: 'RCCM', obligatoire: true }),
       expect.objectContaining({ code: 'BUSINESS_PLAN', obligatoire: true }),
     ]);
   });
 
-  it('creates V2 from V1, resets approval after edits and archives V1 on activation without changing a dossier locked on V1', async () => {
+  it('creates V2 from V1 and archives V1 without changing a dossier locked on V1', async () => {
     const maker = await actor('maker-v2');
     const checker = await actor('checker-v2');
     const enterprise = await integrationDb.pool.query<{ id: string }>(
@@ -93,19 +103,19 @@ describe('Programme institutional lifecycle (real PostgreSQL)', () => {
       [`PME-${randomUUID().slice(0, 8)}`],
     );
 
-    const created = await programs.createProgram(maker, {
+    const created = view(await programs.createProgram(maker, {
       code: `LIFE-${randomUUID().slice(0, 8).toUpperCase()}`,
       nom: 'Programme lifecycle QA',
       montantMin: 100_000,
       montantMax: 1_000_000,
       apportMinPct: 5,
       documents: [{ code: 'RCCM', libelle: 'RCCM', typeDocument: 'RCCM', obligatoire: true }],
-    });
-    await programs.submitVersion(maker, created.id as string, 1);
-    await programs.approveVersion(checker, created.id as string, 1);
-    await programs.activateVersion(checker, created.id as string, 1);
+    }));
+    await programs.submitVersion(maker, created.id, 1);
+    await programs.approveVersion(checker, created.id, 1);
+    await programs.activateVersion(checker, created.id, 1);
 
-    const v1 = (await programs.getManagement(created.id as string)).versions.find((version) => version.version === 1)!;
+    const v1 = view(await programs.getManagement(created.id)).versions.find((version) => version.version === 1)!;
     const dossier = await integrationDb.pool.query<{ id: string }>(
       `INSERT INTO dossiers_financement (
          numero_dossier, entreprise_id, programme_id, programme_regle_version_id,
@@ -114,26 +124,24 @@ describe('Programme institutional lifecycle (real PostgreSQL)', () => {
       [`DOS-${randomUUID().slice(0, 8)}`, enterprise.rows[0].id, created.id, v1.id],
     );
 
-    let withDraft = await programs.createDraftVersion(maker, created.id as string);
-    expect(withDraft.createdVersion).toBe(2);
-    expect(withDraft.versions.find((version: { version: number }) => version.version === 2)?.documents)
-      .toEqual([expect.objectContaining({ code: 'RCCM' })]);
+    let current = view(await programs.createDraftVersion(maker, created.id));
+    expect(current.createdVersion).toBe(2);
+    expect(current.versions.find((version) => version.version === 2)?.documents).toEqual([expect.objectContaining({ code: 'RCCM' })]);
 
-    withDraft = await programs.updateDraftVersion(maker, created.id as string, 2, {
+    current = view(await programs.updateDraftVersion(maker, created.id, 2, {
       montantMin: 200_000,
       montantMax: 2_000_000,
       apportMinPct: 15,
       documents: [{ code: 'NIF', libelle: 'NIF', typeDocument: 'NIF', obligatoire: true }],
-    });
-    const draft = withDraft.versions.find((version: { version: number }) => version.version === 2)!;
-    expect(draft.approvedAt).toBeNull();
+    }));
+    expect(current.versions.find((version) => version.version === 2)?.approvedAt).toBeNull();
 
-    await programs.submitVersion(maker, created.id as string, 2);
-    await programs.approveVersion(checker, created.id as string, 2);
-    const activated = await programs.activateVersion(checker, created.id as string, 2);
+    await programs.submitVersion(maker, created.id, 2);
+    await programs.approveVersion(checker, created.id, 2);
+    const activated = view(await programs.activateVersion(checker, created.id, 2));
 
-    expect(activated.versions.find((version: { version: number }) => version.version === 1)).toMatchObject({ statut: 'ARCHIVEE' });
-    expect(activated.versions.find((version: { version: number }) => version.version === 2)).toMatchObject({ statut: 'ACTIVE' });
+    expect(activated.versions.find((version) => version.version === 1)).toMatchObject({ statut: 'ARCHIVEE' });
+    expect(activated.versions.find((version) => version.version === 2)).toMatchObject({ statut: 'ACTIVE' });
 
     const locked = await integrationDb.pool.query<{ programme_regle_version_id: string }>(
       `SELECT programme_regle_version_id FROM dossiers_financement WHERE id = $1`, [dossier.rows[0].id],
@@ -154,7 +162,6 @@ describe('Programme institutional lifecycle (real PostgreSQL)', () => {
       WHERE p.code IN ('program.read', 'program.manage', 'program.approve')
       ORDER BY r.code, p.code
     `);
-
     const grants = rows.rows.map((row) => `${row.role}:${row.permission}`);
     expect(grants).toContain('PME:program.read');
     expect(grants).toContain('AGENT_FODIP:program.read');
