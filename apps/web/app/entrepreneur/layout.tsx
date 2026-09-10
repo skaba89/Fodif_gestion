@@ -3,6 +3,7 @@ import { AccountMenu } from '../_shared/AccountMenu';
 
 const navItems = [
   { label: 'Accueil', href: '/entrepreneur' },
+  { label: 'Programmes', href: '/entrepreneur/programmes' },
   { label: 'Mon entreprise', href: '/entrepreneur/entreprise' },
   { label: 'Nouvelle demande', href: '/entrepreneur/demande' },
   { label: 'Mes dossiers', href: '/entrepreneur/suivi' },
@@ -16,7 +17,7 @@ export default function EntrepreneurLayout({ children }: { children: React.React
       portalLabel="Espace PME"
       homeHref="/entrepreneur"
       navItems={navItems}
-      accountMenu={<AccountMenu loginHref="/entrepreneur/connexion" />}
+      accountMenu={<AccountMenu loginHref="/connexion" />}
       footer="FODIP Digital 2030 · Portail PME sécurisé"
     >
       {children}
