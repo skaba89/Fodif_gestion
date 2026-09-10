@@ -1,13 +1,21 @@
 'use client';
 
-import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Breadcrumbs from '../../_shared/Breadcrumbs';
+import Button from '../../_shared/Button';
+import KpiCard from '../../_shared/KpiCard';
 import Pagination from '../../_shared/Pagination';
+import ResponsiveTable, { type ResponsiveColumn } from '../../_shared/ResponsiveTable';
+import { RiskBadge } from '../../_shared/StatusBadge';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from '../../agent/agent.module.css';
 
 type Item = { id: string; numeroDossier: string; raisonSociale: string; programmeNom?: string; montantDemande: number | string; scoreTotal?: number | string; niveauRisque?: string; recommandation?: string };
 type Result = { items: Item[]; total: number; page: number; limite: number };
+
+function scoreLabel(value?: number | string) {
+  return value === undefined || value === null || value === '' ? '—' : `${value}/100`;
+}
 
 export default function CommitteeApplicationsPage() {
   const [result, setResult] = useState<Result>({ items: [], total: 0, page: 1, limite: 25 });
@@ -24,17 +32,52 @@ export default function CommitteeApplicationsPage() {
   useEffect(() => { load(1); }, [load]);
   const { items } = result;
   const amount = items.reduce((sum, item) => sum + Number(item.montantDemande), 0);
+  const lowRiskCount = items.filter((item) => item.niveauRisque === 'FAIBLE').length;
+  const highRiskCount = items.filter((item) => ['ELEVE', 'ÉLEVÉ', 'ELEVEE', 'ÉLEVÉE'].includes(item.niveauRisque ?? '')).length;
+
+  const columns = useMemo<ResponsiveColumn<Item>[]>(() => [
+    { key: 'dossier', header: 'Dossier', render: (item) => <strong>{item.numeroDossier}</strong> },
+    { key: 'entreprise', header: 'Entreprise', render: (item) => item.raisonSociale },
+    { key: 'programme', header: 'Programme', render: (item) => item.programmeNom ?? '—' },
+    { key: 'montant', header: 'Montant demandé', render: (item) => `${Number(item.montantDemande).toLocaleString('fr-FR')} GNF` },
+    { key: 'score', header: 'Score', render: (item) => scoreLabel(item.scoreTotal) },
+    { key: 'risque', header: 'Risque', render: (item) => <RiskBadge level={item.niveauRisque} /> },
+    { key: 'action', header: 'Action', render: (item) => <Button variant="outline" href={`/comite/dossiers/${item.id}`}>Examiner</Button> },
+  ], []);
+
   return <main className={portal.main}>
-    <p className={portal.eyebrow}>Séance décisionnelle</p><h1 className={portal.title}>Dossiers prêts pour le comité</h1>
-    <p className={portal.lead}>Analysez le dossier complet, son scoring explicable et les pièces vérifiées avant toute décision.</p>
-    <section className={styles.metrics}>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{result.total}</strong><span>Dossiers à statuer</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{amount.toLocaleString('fr-FR')}</strong><span>GNF demandés (page)</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{items.filter((item) => item.niveauRisque === 'FAIBLE').length}</strong><span>Risque faible (page)</span></article>
-      <article className={`${portal.card} ${styles.metric}`}><strong>{items.filter((item) => item.niveauRisque === 'ELEVE').length}</strong><span>Risque élevé (page)</span></article>
+    <Breadcrumbs items={[
+      { label: 'Comité', href: '/comite/dossiers' },
+      { label: 'Séance décisionnelle' },
+    ]} />
+    <p className={portal.eyebrow}>Séance décisionnelle</p>
+    <h1 className={portal.title}>Dossiers prêts pour le comité</h1>
+    <p className={portal.lead}>Analysez les dossiers complets à partir d’une synthèse lisible : financement demandé, score explicable, niveau de risque et pièces vérifiées avant toute décision humaine.</p>
+
+    <section className={styles.metrics} aria-label="Synthèse de la séance décisionnelle">
+      <KpiCard label="Dossiers à statuer" value={String(result.total)} definition="Nombre total de dossiers actuellement prêts à être examinés par le comité." />
+      <KpiCard label="Montant demandé" value={amount.toLocaleString('fr-FR')} unit="GNF" definition="Somme des montants demandés par les dossiers affichés sur la page courante." />
+      <KpiCard label="Risque faible" value={String(lowRiskCount)} definition="Dossiers de la page courante classés en risque faible par le scoring disponible." />
+      <KpiCard label="Risque élevé" value={String(highRiskCount)} definition="Dossiers de la page courante classés en risque élevé et nécessitant une vigilance renforcée." goodDirection="down" />
     </section>
-    {message && <div className={`${portal.notice} ${portal.section}`}>{message}</div>}
-    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran"><table className={portal.table}><thead><tr><th>Dossier</th><th>Entreprise</th><th>Programme</th><th>Montant</th><th>Score</th><th>Risque</th><th>Action</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.numeroDossier}</strong></td><td>{item.raisonSociale}</td><td>{item.programmeNom ?? '—'}</td><td>{Number(item.montantDemande).toLocaleString('fr-FR')} GNF</td><td>{item.scoreTotal ?? '—'}/100</td><td><span className={portal.pill}>{item.niveauRisque ?? '—'}</span></td><td><Link className={portal.secondary} href={`/comite/dossiers/${item.id}`}>Examiner</Link></td></tr>)}</tbody></table>{items.length === 0 && <p className={portal.lead}>Aucun dossier en attente de décision.</p>}</section>
+
+    {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
+
+    <section className={portal.section}>
+      <div className={portal.sectionHeader}>
+        <div>
+          <h2>Ordre du jour</h2>
+          <p>Chaque dossier ouvre une vue détaillée avant décision ; aucune décision n’est prise depuis cette liste.</p>
+        </div>
+      </div>
+      <ResponsiveTable
+        rows={items}
+        columns={columns}
+        rowKey={(item) => item.id}
+        caption="Dossiers prêts pour la séance décisionnelle"
+        emptyMessage="Aucun dossier n’est en attente de décision."
+      />
+    </section>
     <Pagination page={result.page} limite={result.limite} total={result.total} onChange={load} buttonClassName={portal.secondary} rowClassName={portal.buttonRow} />
   </main>;
 }

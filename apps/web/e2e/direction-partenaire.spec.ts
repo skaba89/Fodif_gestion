@@ -90,14 +90,17 @@ test.describe('Portail Partenaire bancaire', () => {
     await page.goto('/direction/tableau-de-bord');
     await expect(page).toHaveURL(/\/partenaire\/financements$/);
 
-    // FIN-2026-DEMO01 (database/seeds/002_analytics_demo.sql, correspondent bank assigned in
-    // 003_partner_bank_demo.sql) - the demo partner's only financing, reachable through both of
-    // axe D1's scoping mechanisms (correspondent bank, and client-portfolio) at once.
-    const financingRow = page.getByRole('row', { name: /FIN-2026-DEMO01/ });
-    await expect(financingRow).toBeVisible();
+    // The partner portfolio now uses the same ResponsiveTable primitive as Direction. Keep the
+    // assertion scoped to the actually visible rendering so this test covers desktop tables and
+    // mobile cards without depending on hidden duplicate DOM content.
+    const mobile = (page.viewportSize()?.width ?? 1280) <= 720;
+    const financingSurface = mobile
+      ? page.getByRole('list', { name: 'Financements du partenaire bancaire — vue mobile' })
+      : page.getByRole('region', { name: 'Financements du partenaire bancaire — tableau défilable horizontalement si nécessaire' });
+    await expect(financingSurface.getByText('FIN-2026-DEMO01', { exact: true })).toBeVisible();
     await expectNoSeriousViolations(page);
 
-    await financingRow.getByRole('link', { name: 'Gérer' }).click();
+    await financingSurface.getByRole('link', { name: 'Gérer' }).click();
     await expect(page).toHaveURL(/\/partenaire\/financements\/[0-9a-f-]+$/);
     await expect(page.getByRole('heading', { name: 'FIN-2026-DEMO01' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Décaissements' })).toBeVisible();
