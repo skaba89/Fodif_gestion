@@ -232,7 +232,7 @@ export default function AppShell({
 
           <form className={styles.quickSearch} role="search" onSubmit={submitSearch}>
             <SearchIcon />
-            <label className="sr-only" htmlFor="workspace-search">Recherche rapide</label>
+            <label className="sr-only" htmlFor="workspace-search">Navigation rapide</label>
             <input
               id="workspace-search"
               type="search"
