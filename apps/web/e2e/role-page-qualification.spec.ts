@@ -11,6 +11,7 @@ type RoleCase = {
   portal: PortalId;
   home: string;
   forbidden: string;
+  canReadNotifications?: boolean;
 };
 
 const DEMO_PASSWORD = 'FodipDemo2026!';
@@ -114,7 +115,7 @@ const ROLE_CASES: RoleCase[] = [
   },
   {
     role: 'PARTENAIRE_BANCAIRE', roleLabel: 'Partenaire bancaire', email: 'qualification-partenaire@fodip.local', portal: 'partenaire',
-    home: '/partenaire/financements', forbidden: '/direction/tableau-de-bord',
+    home: '/partenaire/financements', forbidden: '/direction/tableau-de-bord', canReadNotifications: false,
   },
   {
     role: 'SUPER_ADMIN', roleLabel: 'Super administrateur', email: 'qualification-admin@fodip.local', portal: 'administration',
@@ -199,6 +200,13 @@ test.describe('Exhaustive route and role qualification', () => {
   for (const roleCase of ROLE_CASES) {
     test(`${roleCase.role} reaches its authorized pages, shared account pages and is rejected by a forbidden portal`, async ({ page }, testInfo) => {
       test.setTimeout(120_000);
+
+      // The unified login intentionally probes /api/session/me before rendering the credentials
+      // form. A 401 from that unauthenticated probe is expected and must not be confused with an
+      // authorization failure after login, so start collecting API failures only once the role's
+      // authenticated home has been reached.
+      await login(page, roleCase);
+
       const apiErrors: string[] = [];
       page.on('response', (response) => {
         const url = new URL(response.url());
@@ -206,8 +214,6 @@ test.describe('Exhaustive route and role qualification', () => {
           apiErrors.push(`${response.status()} ${url.pathname}`);
         }
       });
-
-      await login(page, roleCase);
 
       const isMobileQualification = testInfo.project.name === 'Pixel 7' || testInfo.project.name === 'iPhone 14';
       const routes = isMobileQualification
@@ -222,9 +228,14 @@ test.describe('Exhaustive route and role qualification', () => {
       await expect(page.getByTestId('profile-email')).toHaveText(roleCase.email);
       await expect(page.getByTestId('profile-roles')).toContainText(roleCase.roleLabel);
 
-      await page.goto('/notifications');
-      await expect(page).toHaveURL(/\/notifications$/);
-      await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+      // notification.read is deliberately withheld from PARTENAIRE_BANCAIRE by migration 008;
+      // its portal does not expose this route. Keep that RBAC boundary instead of granting a
+      // permission merely to make an exhaustive UI test pass.
+      if (roleCase.canReadNotifications !== false) {
+        await page.goto('/notifications');
+        await expect(page).toHaveURL(/\/notifications$/);
+        await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+      }
 
       if (!isMobileQualification) {
         await page.goto('/mes-donnees');
