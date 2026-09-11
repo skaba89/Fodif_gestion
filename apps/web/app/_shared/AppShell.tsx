@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  INTENTIONAL_LOGOUT_EVENT,
   PORTAL_ACCESS,
   resolvePortalFromPath,
   resolveRoleHome,
@@ -59,9 +60,9 @@ export default function AppShell({
   const [demoMode, setDemoMode] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [validatedPath, setValidatedPath] = useState<string | null>(null);
+  const intentionalLogout = useRef(false);
 
   const portal = useMemo(() => resolvePortalFromPath(pathname), [pathname]);
-  const loginHref = portal ? PORTAL_ACCESS[portal].loginHref : undefined;
   // Legacy portal login routes still live below each protected portal layout so old bookmarks can
   // redirect to the single /connexion page. Let those tiny redirect pages render before the
   // session guard runs; otherwise AppShell can observe their legacy pathname first and incorrectly
@@ -71,6 +72,12 @@ export default function AppShell({
 
   const openDrawer = useCallback(() => setDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  useEffect(() => {
+    const onIntentionalLogout = () => { intentionalLogout.current = true; };
+    window.addEventListener(INTENTIONAL_LOGOUT_EVENT, onIntentionalLogout);
+    return () => window.removeEventListener(INTENTIONAL_LOGOUT_EVENT, onIntentionalLogout);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -100,7 +107,10 @@ export default function AppShell({
       .then(async (response) => {
         if (cancelled) return;
         if (response.status === 401) {
-          window.location.replace(`${PORTAL_ACCESS[portal].loginHref}?reason=session-expired`);
+          const destination = intentionalLogout.current
+            ? PORTAL_ACCESS[portal].loginHref
+            : `${PORTAL_ACCESS[portal].loginHref}?reason=session-expired`;
+          window.location.replace(destination);
           return;
         }
         if (!response.ok) {

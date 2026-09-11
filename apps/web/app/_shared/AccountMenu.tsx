@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  INTENTIONAL_LOGOUT_EVENT,
   LOGIN_HREF,
   resolvePortalFromPath,
   resolveRoleHome,
@@ -36,6 +37,15 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
   const [accountHome, setAccountHome] = useState<string | null>(null);
   const intentionalLogout = useRef(false);
   const portal = resolvePortalFromPath(pathname);
+
+  // AppShell renders account controls in both the desktop header and mobile drawer. Synchronize
+  // the two instances so a session check already in flight in the non-clicked instance cannot
+  // mistake an explicit logout for an expired session.
+  useEffect(() => {
+    const onIntentionalLogout = () => { intentionalLogout.current = true; };
+    window.addEventListener(INTENTIONAL_LOGOUT_EVENT, onIntentionalLogout);
+    return () => window.removeEventListener(INTENTIONAL_LOGOUT_EVENT, onIntentionalLogout);
+  }, []);
 
   const redirectExpiredSession = useCallback(() => {
     if (intentionalLogout.current || pathname === loginHref) return;
@@ -109,6 +119,7 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
 
   async function logout() {
     intentionalLogout.current = true;
+    window.dispatchEvent(new Event(INTENTIONAL_LOGOUT_EVENT));
     setAuthenticated(false);
     setAccountHome(null);
     await fetch('/api/session/logout', { method: 'POST' });
