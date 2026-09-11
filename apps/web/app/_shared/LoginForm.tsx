@@ -293,7 +293,7 @@ function LoginFormInner({
                   <button
                     className={premium.passwordToggle}
                     type="button"
-                    aria-label={showPassword ? 'Masquer la valeur saisie' : 'Afficher la valeur saisie'}
+                    aria-label={showPassword ? 'Masquer les caractères saisis' : 'Afficher les caractères saisis'}
                     aria-pressed={showPassword}
                     onClick={() => setShowPassword((value) => !value)}
                   >
