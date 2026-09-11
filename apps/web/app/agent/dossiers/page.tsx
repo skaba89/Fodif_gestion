@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Breadcrumbs from '../../_shared/Breadcrumbs';
 import Button from '../../_shared/Button';
 import FilterBar, { FilterField } from '../../_shared/FilterBar';
@@ -37,12 +38,14 @@ function submittedAt(dossier: Dossier) {
 }
 
 export default function AgentDossiersPage() {
+  const router = useRouter();
   const [result, setResult] = useState<Result>({ items: [], total: 0, page: 1, limite: 25 });
   const [statut, setStatut] = useState('');
   const [recherche, setRecherche] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('priorite');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [startingId, setStartingId] = useState<string | null>(null);
 
   const load = useCallback(async (page = 1, status = '', search = '') => {
     setLoading(true);
@@ -76,6 +79,23 @@ export default function AgentDossiersPage() {
     return statusDelta !== 0 ? statusDelta : submittedAt(left) - submittedAt(right);
   }), [result.items, sortMode]);
 
+  const startInstruction = useCallback(async (dossier: Dossier) => {
+    setMessage('');
+    setStartingId(dossier.id);
+    try {
+      if (!dossier.agentResponsableId) {
+        if (!navigator.onLine) throw new Error('Connexion requise pour prendre en charge un dossier.');
+        const response = await fetch(`/api/agent/dossiers/${dossier.id}/claim`, { method: 'POST' });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body?.message ?? 'Prise en charge impossible');
+      }
+      router.push(`/agent/dossiers/${dossier.id}`);
+    } catch (error) {
+      setStartingId(null);
+      setMessage(error instanceof Error ? error.message : 'Ouverture impossible');
+    }
+  }, [router]);
+
   function filter(event: FormEvent) {
     event.preventDefault();
     setMessage('');
@@ -107,10 +127,23 @@ export default function AgentDossiersPage() {
       render: (dossier) => dossier.dateSoumission ? new Date(dossier.dateSoumission).toLocaleDateString('fr-FR') : '—',
     },
     { key: 'statut', header: 'Statut', render: (dossier) => <DossierStatusBadge status={dossier.statut} /> },
-    { key: 'action', header: 'Action', render: (dossier) => <Button href={`/agent/dossiers/${dossier.id}`}>Instruire</Button> },
-  ], []);
+    {
+      key: 'action',
+      header: 'Action',
+      render: (dossier) => (
+        <Button
+          onClick={() => void startInstruction(dossier)}
+          loading={startingId === dossier.id}
+          disabled={startingId !== null && startingId !== dossier.id}
+        >
+          {dossier.agentResponsableId ? 'Continuer' : 'Prendre et instruire'}
+        </Button>
+      ),
+    },
+  ], [startInstruction, startingId]);
 
   const activeFilterCount = Number(Boolean(statut)) + Number(Boolean(recherche.trim()));
+  const nextDossier = sortedRows[0];
 
   return <main className={portal.main}>
     <Breadcrumbs items={[{ label: 'Agent', href: '/agent/dossiers' }, { label: 'Dossiers' }]} />
@@ -136,9 +169,13 @@ export default function AgentDossiersPage() {
         </div>
       </div>
       <aside className={role.priorityAside}>
-        <div className={role.nextAction}><span>Action recommandée</span><strong>Ouvrir le premier dossier « À prendre » et démarrer l’instruction.</strong></div>
-        {sortedRows[0] ? <Button href={`/agent/dossiers/${sortedRows[0].id}`}>Instruire le prochain dossier</Button> : null}
-        <p className={portal.lead}>Les volumes ci-dessus concernent la page courante ; le total filtré reste affiché dans les indicateurs.</p>
+        <div className={role.nextAction}><span>Action recommandée</span><strong>Prendre le premier dossier prioritaire et ouvrir directement son poste d’instruction.</strong></div>
+        {nextDossier ? (
+          <Button onClick={() => void startInstruction(nextDossier)} loading={startingId === nextDossier.id} disabled={startingId !== null && startingId !== nextDossier.id}>
+            {nextDossier.agentResponsableId ? 'Continuer le prochain dossier' : 'Prendre et instruire le prochain dossier'}
+          </Button>
+        ) : null}
+        <p className={portal.lead}>Pour un dossier non attribué, la prise en charge et l’ouverture sont regroupées en une seule action.</p>
       </aside>
     </section>
 
@@ -177,7 +214,7 @@ export default function AgentDossiersPage() {
 
     <section className={portal.section} aria-busy={loading}>
       <div className={role.queueToolbar}>
-        <div><h2>File d’instruction</h2><p className={portal.lead}>25 lignes maximum par page : aucune virtualisation coûteuse n’est nécessaire tant que cette pagination serveur reste en place.</p></div>
+        <div><h2>File d’instruction</h2><p className={portal.lead}>La pagination serveur limite l’affichage à 25 dossiers par page, ce qui évite de rendre plus de 100 lignes sur les appareils modestes.</p></div>
       </div>
       <ResponsiveTable
         rows={sortedRows}
