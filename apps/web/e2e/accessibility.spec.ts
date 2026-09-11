@@ -46,7 +46,7 @@ test.describe('Accessibility (WCAG 2.2 AA guardrails)', () => {
     await page.getByRole('button', { name: 'Se connecter' }).click();
     await expect(page).toHaveURL(/\/auditeur\/tableau-de-bord$/);
 
-    const desktopNavigation = page.getByRole('navigation', { name: 'Navigation Auditeur' });
+    const desktopNavigation = page.getByRole('navigation', { name: 'Navigation principale Auditeur' });
     await expect(desktopNavigation).toBeVisible();
     await expect(desktopNavigation.getByRole('link', { name: 'Supervision' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('button', { name: 'Ouvrir le menu principal' })).toBeHidden();
