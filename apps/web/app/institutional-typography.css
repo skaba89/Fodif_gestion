@@ -61,7 +61,7 @@ body {
   font-variant-ligatures: none;
 }
 
-/* App shell: calmer, more administrative than a marketing SaaS sidebar. */
+/* Legacy/global shell selectors retained for screens outside AppShell. */
 .brand strong {
   font-size: 0.96rem;
   font-weight: 800;
@@ -193,6 +193,66 @@ body {
   line-height: 1.5;
 }
 
+/*
+ * AppShell's operational presentation sheet deliberately uses portal-context selectors. Repeat
+ * that same specificity here so this last-loaded typography layer wins by cascade rather than by
+ * !important. This keeps the design system predictable and makes the refinement truly apply to
+ * PME, Agent, Comité, Direction, Administration, Auditeur and Partenaire workspaces alike.
+ */
+[data-portal-context] #main-content > main > h1 {
+  max-width: 24ch;
+  font-size: clamp(1.95rem, 3.35vw, 2.85rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.038em;
+}
+
+[data-portal-context] #main-content main h2 {
+  max-width: 32ch;
+  font-size: clamp(1.3rem, 2.1vw, 1.72rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.024em;
+}
+
+[data-portal-context] #main-content main h3 {
+  font-size: clamp(1rem, 1.4vw, 1.14rem);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+}
+
+[data-portal-context] #main-content main label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.005em;
+}
+
+[data-portal-context] #main-content main :is(input, select, textarea) {
+  font-size: 0.93rem;
+  line-height: 1.45;
+  letter-spacing: -0.004em;
+}
+
+[data-portal-context] #main-content main button {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: -0.002em;
+}
+
+[data-portal-context] #main-content main thead th {
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+}
+
+[data-portal-context] #main-content main tbody td {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  letter-spacing: -0.003em;
+}
+
 /* Shared top bar and content density. */
 .content {
   padding-top: clamp(24px, 3vw, 34px);
@@ -226,12 +286,14 @@ body {
 }
 
 @media (max-width: 900px) {
-  #main-content h1 {
+  #main-content h1,
+  [data-portal-context] #main-content > main > h1 {
     max-width: 30ch;
     font-size: clamp(1.8rem, 6vw, 2.45rem);
   }
 
-  #main-content h2 {
+  #main-content h2,
+  [data-portal-context] #main-content main h2 {
     font-size: clamp(1.22rem, 4vw, 1.55rem);
   }
 }
@@ -249,13 +311,15 @@ body {
     font-size: 0.94rem;
   }
 
-  #main-content h1 {
+  #main-content h1,
+  [data-portal-context] #main-content > main > h1 {
     font-size: clamp(1.72rem, 9vw, 2.18rem);
     line-height: 1.1;
     letter-spacing: -0.032em;
   }
 
-  #main-content h2 {
+  #main-content h2,
+  [data-portal-context] #main-content main h2 {
     line-height: 1.24;
   }
 
@@ -264,7 +328,8 @@ body {
     margin-top: 28px;
   }
 
-  #main-content table {
+  #main-content table,
+  [data-portal-context] #main-content main tbody td {
     font-size: 0.84rem;
   }
 }
