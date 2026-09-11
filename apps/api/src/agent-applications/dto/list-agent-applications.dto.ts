@@ -12,6 +12,10 @@ export class ListAgentApplicationsDto {
   recherche?: string;
 
   @IsOptional()
+  @IsIn(['A_PRENDRE', 'MES_DOSSIERS', 'COMPLEMENTS', 'PRET_COMITE', 'HISTORIQUE'])
+  vue?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
