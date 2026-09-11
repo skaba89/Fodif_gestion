@@ -1,26 +1,24 @@
 -- Local Docker demonstration data only. Never apply to a hosted production database.
-
-INSERT INTO regions (id, code, nom)
-VALUES ('10000000-0000-4000-8000-000000000001', 'CONAKRY', 'Conakry')
-ON CONFLICT (code) DO NOTHING;
-
-INSERT INTO secteurs_activite (id, code, nom)
-VALUES ('20000000-0000-4000-8000-000000000001', 'AGRO', 'Agro-industrie')
-ON CONFLICT (code) DO NOTHING;
+--
+-- Regions and activity sectors are institutional reference data created by migration 029.
+-- Demo rows resolve them by stable business code instead of assuming generated UUID values.
 
 INSERT INTO entreprises (
     id, code_fodip, raison_sociale, nom_commercial, rccm, nif, secteur_id,
     description_activite, nombre_employes, chiffre_affaires_annuel,
     telephone, email, region_id, adresse
 )
-VALUES (
+SELECT
     '30000000-0000-4000-8000-000000000001', 'FODIP-PME-DEMO',
     'Kankan Agro Transformation SARL', 'KAT SARL', 'GN.CKY.2026.DEMO', 'NIF-DEMO-2026',
-    '20000000-0000-4000-8000-000000000001',
+    secteur.id,
     'Transformation et conditionnement de produits agricoles locaux', 18, 2400000000,
     '+224 600 00 00 00', 'contact@kat-demo.local',
-    '10000000-0000-4000-8000-000000000001', 'Conakry, Guinée'
-)
+    region.id, 'Conakry, Guinée'
+FROM secteurs_activite secteur
+CROSS JOIN regions region
+WHERE secteur.code = 'AGRO_INDUSTRIE'
+  AND region.code = 'CONAKRY'
 ON CONFLICT (code_fodip) DO NOTHING;
 
 INSERT INTO entreprise_dirigeants (
