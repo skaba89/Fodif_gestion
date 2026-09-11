@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import Button from '../_shared/Button';
+import InstitutionalIllustration from '../_shared/InstitutionalIllustration';
 import KpiCard from '../_shared/KpiCard';
 import Skeleton from '../_shared/Skeleton';
 import { DossierStatusBadge } from '../_shared/StatusBadge';
@@ -92,7 +93,7 @@ export default function EntrepreneurDashboard() {
   const missingDocuments = leadDossier?.documentsManquants ?? [];
   const leadNumber = leadDossier?.numeroDossier ?? 'Dossier en cours';
   const leadDocumentsHref = leadDossier ? `/entrepreneur/suivi/${leadDossier.id}/documents` : '/entrepreneur/demande';
-  const primaryActionHref = missingDocuments.length > 0 ? leadDocumentsHref : leadDossier?.statut === 'BROUILLON' ? '/entrepreneur/suivi' : '/entrepreneur/suivi';
+  const primaryActionHref = missingDocuments.length > 0 ? leadDocumentsHref : '/entrepreneur/suivi';
   const primaryActionLabel = missingDocuments.length > 0 ? 'Compléter mes pièces' : leadDossier ? 'Voir le suivi' : 'Créer une demande';
 
   return (
@@ -110,7 +111,7 @@ export default function EntrepreneurDashboard() {
       {error ? <div className={styles.notice} role="alert">{error}</div> : null}
 
       {!loading ? (
-        <section className={role.priorityCard} aria-labelledby="pme-priority-title">
+        <section className={`${role.priorityCard} ${role.pmeHeroCard}`} aria-labelledby="pme-priority-title">
           <div className={role.priorityMain}>
             <p className={role.priorityLabel}>Votre demande maintenant</p>
             <h2 className={role.priorityTitle} id="pme-priority-title">{leadDossier ? leadNumber : 'Aucune demande en cours'}</h2>
@@ -125,13 +126,15 @@ export default function EntrepreneurDashboard() {
                 <div className={role.statusLine}>
                   <strong>Statut actuel</strong>
                   <DossierStatusBadge status={leadDossier.statut} />
-                  <span className={styles.pillMuted}>{Number(leadDossier.montantDemande).toLocaleString('fr-FR')} GNF</span>
+                  <span className={styles.pillMuted} data-financial>{Number(leadDossier.montantDemande).toLocaleString('fr-FR')} GNF</span>
                 </div>
                 <div className={role.stepperWrap}>
-                  <WorkflowStepper steps={WORKFLOW_STEPS} currentIndex={workflowIndex(leadDossier.statut)} />
+                  <WorkflowStepper steps={WORKFLOW_STEPS} currentIndex={workflowIndex(leadDossier.statut)} tone="inverse" />
                 </div>
               </>
-            ) : null}
+            ) : (
+              <InstitutionalIllustration variant="pme-onboarding" className={role.pmeIllustration} />
+            )}
           </div>
 
           <aside className={role.priorityAside} aria-label="Prochaine action PME">
@@ -145,7 +148,7 @@ export default function EntrepreneurDashboard() {
                 <span>{missingDocuments.slice(0, 2).map((document) => document.libelle).join(' · ')}{missingDocuments.length > 2 ? ` · +${missingDocuments.length - 2}` : ''}</span>
               </div>
             ) : null}
-            <Button href={leadDossier ? primaryActionHref : '/entrepreneur/demande'}>{primaryActionLabel}</Button>
+            <Button variant="secondary" href={leadDossier ? primaryActionHref : '/entrepreneur/demande'}>{primaryActionLabel}</Button>
             {leadDossier ? <Button variant="outline" href="/entrepreneur/suivi">Historique et tous les dossiers</Button> : null}
             <dl className={role.compactMeta}>
               <div><dt>Référence PME</dt><dd>{company?.codeFodip ?? '—'}</dd></div>

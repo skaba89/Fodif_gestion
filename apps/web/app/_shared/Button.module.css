@@ -26,7 +26,7 @@
 
 .primary {
   background: var(--fodip-primary, var(--primary-700));
-  color: #fff;
+  color: var(--fodip-ivory);
 }
 
 .primary:not([aria-disabled="true"]):not(:disabled):hover {
@@ -35,7 +35,7 @@
 
 .secondary {
   background: var(--gold);
-  color: #1a2e22;
+  color: var(--fodip-text);
 }
 
 .secondary:not([aria-disabled="true"]):not(:disabled):hover {
@@ -62,11 +62,29 @@
 
 .destructive {
   background: var(--danger);
-  color: #fff;
+  color: var(--fodip-ivory);
 }
 
 .destructive:not([aria-disabled="true"]):not(:disabled):hover {
   background: var(--danger-strong);
+}
+
+.success {
+  border-color: color-mix(in srgb, var(--success) 38%, transparent);
+  background: var(--success-soft);
+  color: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.successIcon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--success);
+  color: var(--surface);
+  animation: success-pop 220ms var(--ease) both;
 }
 
 .button:disabled,
@@ -101,9 +119,18 @@
   to { transform: translateX(65%); }
 }
 
+@keyframes success-pop {
+  from { transform: scale(0.72); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .loadingBar {
+  .loadingBar,
+  .successIcon {
     animation: none;
+  }
+
+  .loadingBar {
     transform: none;
     background: currentColor;
     opacity: 0.45;
