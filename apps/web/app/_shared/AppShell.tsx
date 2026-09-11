@@ -66,6 +66,7 @@ export default function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [sessionValidationFailed, setSessionValidationFailed] = useState(false);
   const [validatedPath, setValidatedPath] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [online, setOnline] = useState(true);
@@ -144,11 +145,14 @@ export default function AppShell({
 
   useEffect(() => {
     if (!portal || isLoginPage) {
+      setSessionValidationFailed(false);
       setValidatedPath(pathname);
       return;
     }
 
+    const controller = new AbortController();
     let cancelled = false;
+    setSessionValidationFailed(false);
     setValidatedPath(null);
 
     const redirectToLogin = () => {
@@ -158,11 +162,15 @@ export default function AppShell({
       window.location.replace(destination);
     };
 
-    fetch('/api/session/me', { cache: 'no-store' })
+    fetch('/api/session/me', { cache: 'no-store', signal: controller.signal })
       .then(async (response) => {
         if (cancelled) return;
-        if (!response.ok) {
+        if (response.status === 401) {
           redirectToLogin();
+          return;
+        }
+        if (!response.ok) {
+          setSessionValidationFailed(true);
           return;
         }
 
@@ -175,12 +183,14 @@ export default function AppShell({
 
         setValidatedPath(pathname);
       })
-      .catch(() => {
-        if (!cancelled) redirectToLogin();
+      .catch((error: unknown) => {
+        if (cancelled || (error instanceof DOMException && error.name === 'AbortError')) return;
+        setSessionValidationFailed(true);
       });
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [isLoginPage, pathname, portal]);
 
@@ -258,7 +268,9 @@ export default function AppShell({
         {sessionExpired ? <div className={styles.notice} role="alert" data-testid="session-expired-notice">Votre session a expiré pour des raisons de sécurité. Reconnectez-vous pour continuer.</div> : null}
 
         <div id="main-content" tabIndex={-1} className={`${styles.contentFrame} ${stability.stableContent}`}>
-          {portalContentReady ? children : (
+          {portalContentReady ? children : sessionValidationFailed ? (
+            <div role="alert" className={styles.notice}>Impossible de vérifier la session sécurisée. Vérifiez votre connexion puis rechargez la page.</div>
+          ) : (
             <div role="status" aria-live="polite" className={styles.notice}>Vérification de la session sécurisée…</div>
           )}
         </div>
