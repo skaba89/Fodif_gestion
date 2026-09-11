@@ -5,6 +5,7 @@ import { ToastProvider } from './_shared/Toast';
 import './globals.css';
 import './fodip-official-theme.css';
 import './_shared/business-workspaces.css';
+import './institutional-typography.css';
 
 // Public Sans is the typeface behind the U.S. Web Design System — a deliberate choice for a
 // state-grade platform: built for long-form reading and dense data tables, distinct from
