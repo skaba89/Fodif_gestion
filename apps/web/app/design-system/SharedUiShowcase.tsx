@@ -6,12 +6,16 @@ import Breadcrumbs from '../_shared/Breadcrumbs';
 import Button from '../_shared/Button';
 import ConfirmDialog from '../_shared/ConfirmDialog';
 import Dialog from '../_shared/Dialog';
+import DisbursementCurve from '../_shared/DisbursementCurve';
 import Drawer from '../_shared/Drawer';
 import EmptyState from '../_shared/EmptyState';
 import ErrorState from '../_shared/ErrorState';
 import ExecutiveAlert from '../_shared/ExecutiveAlert';
 import FilterBar, { FilterField } from '../_shared/FilterBar';
+import GuineaRegionMap from '../_shared/GuineaRegionMap';
+import InstitutionalIllustration from '../_shared/InstitutionalIllustration';
 import KpiCard from '../_shared/KpiCard';
+import PortfolioDonut from '../_shared/PortfolioDonut';
 import ResponsiveTable, { type ResponsiveColumn } from '../_shared/ResponsiveTable';
 import Skeleton from '../_shared/Skeleton';
 import StatusBadge, { DossierStatusBadge } from '../_shared/StatusBadge';
@@ -39,12 +43,40 @@ const WORKFLOW = [
   { label: 'Suivi', description: 'Impact' },
 ];
 
+const DEMO_CURVE = [
+  { label: 'Jan', value: 120000000 },
+  { label: 'Fév', value: 185000000 },
+  { label: 'Mar', value: 158000000 },
+  { label: 'Avr', value: 244000000 },
+  { label: 'Mai', value: 302000000 },
+  { label: 'Juin', value: 348000000 },
+];
+
+const DEMO_PORTFOLIO = [
+  { label: 'Instruction', value: 38 },
+  { label: 'Comité', value: 18 },
+  { label: 'Financé', value: 29 },
+  { label: 'Suivi', value: 15 },
+];
+
+const DEMO_REGIONS = {
+  Boké: 18,
+  Conakry: 42,
+  Kindia: 34,
+  Labé: 21,
+  Mamou: 17,
+  Faranah: 26,
+  Kankan: 31,
+  Nzérékoré: 23,
+};
+
 export default function SharedUiShowcase() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [success, setSuccess] = useState(false);
   const { pushToast } = useToast();
 
   const columns = useMemo<ResponsiveColumn<ExampleRow>[]>(() => [
@@ -55,6 +87,11 @@ export default function SharedUiShowcase() {
   ], []);
 
   const activeCount = Number(Boolean(search.trim())) + Number(Boolean(status));
+
+  function showSuccessState() {
+    setSuccess(true);
+    window.setTimeout(() => setSuccess(false), 1400);
+  }
 
   return (
     <div className={styles.stack} data-testid="shared-ui-showcase">
@@ -69,7 +106,7 @@ export default function SharedUiShowcase() {
 
       <section className={styles.group} id="shared-buttons">
         <h3>Button</h3>
-        <p className={styles.lead}>Trois niveaux principaux plus états destructif, discret et chargement. Les cibles tactiles font au moins 44 px et le chargement utilise une barre linéaire, jamais un spinner.</p>
+        <p className={styles.lead}>Trois niveaux principaux plus états destructif, discret, chargement et succès temporaire. Les cibles tactiles font au moins 44 px et le chargement utilise une barre linéaire, jamais un spinner.</p>
         <div className={styles.row}>
           <Button>Primaire</Button>
           <Button variant="secondary">Action clé or</Button>
@@ -78,6 +115,7 @@ export default function SharedUiShowcase() {
           <Button variant="destructive">Destructif</Button>
           <Button disabled>Désactivé</Button>
           <Button loading>Chargement</Button>
+          <Button success={success} onClick={showSuccessState}>{success ? 'Enregistré' : 'Tester le succès'}</Button>
           <Button iconOnly ariaLabel="Ajouter un élément" title="Ajouter">+</Button>
         </div>
       </section>
@@ -99,9 +137,32 @@ export default function SharedUiShowcase() {
 
       <section className={styles.group} id="shared-workflow">
         <h3>WorkflowStepper</h3>
-        <p className={styles.lead}>La chaîne de valeur de la landing devient un composant produit : horizontale sur desktop, verticale sur mobile, avec étape courante annoncée par <code>aria-current</code>.</p>
+        <p className={styles.lead}>La chaîne de valeur de la landing devient un composant produit : horizontale sur desktop, verticale sur mobile, avec progression animée et étape courante annoncée par <code>aria-current</code>.</p>
         <div className={styles.surface}>
           <WorkflowStepper steps={WORKFLOW} currentIndex={1} />
+        </div>
+        <div className={`${styles.surface} ${styles.inverseSurface}`}>
+          <WorkflowStepper steps={WORKFLOW} currentIndex={2} tone="inverse" label="Progression sur surface institutionnelle sombre" />
+        </div>
+      </section>
+
+      <section className={styles.group} id="shared-visual-language">
+        <h3>Illustrations institutionnelles</h3>
+        <p className={styles.lead}>Trois SVG maison inspirés des géométries textiles guinéennes. Ils utilisent uniquement les tokens vert/or/ivoire du produit.</p>
+        <div className={styles.visualGrid}>
+          <InstitutionalIllustration variant="empty-dossiers" />
+          <InstitutionalIllustration variant="pme-onboarding" />
+          <InstitutionalIllustration variant="network-error" />
+        </div>
+      </section>
+
+      <section className={styles.group} id="shared-dataviz">
+        <h3>Dataviz SVG</h3>
+        <p className={styles.lead}>Spécimens visuels utilisant des données de démonstration explicitement non métier. Les composants attendent des données API réelles lorsqu’ils sont intégrés à un écran produit.</p>
+        <div className={styles.visualGrid}>
+          <DisbursementCurve points={DEMO_CURVE} title="Courbe de décaissements" description="Spécimen animé — données de démonstration" />
+          <PortfolioDonut segments={DEMO_PORTFOLIO} centerLabel="dossiers" />
+          <GuineaRegionMap values={DEMO_REGIONS} title="Portefeuille par région" />
         </div>
       </section>
 
@@ -155,6 +216,7 @@ export default function SharedUiShowcase() {
         <h3>Composants de données, chargement et états</h3>
         <div className={styles.grid}>
           <KpiCard label="KPI d’exemple" value="45" unit="Mds GNF" definition="Composant de démonstration du design system, sans donnée métier réelle." />
+          <KpiCard tone="inverse" label="KPI exécutif" value="72,4" unit="%" definition="Variante sombre pour bandeaux de pilotage." />
           <div className={styles.surface}><Skeleton lines={2} /></div>
           <EmptyState title="État vide" message="Exemple de liste ne contenant aucune donnée." actionHref="/design-system" actionLabel="Action" />
           <ErrorState message="Exemple d’état d’erreur utilisateur sans détail technique." />
@@ -216,7 +278,7 @@ export default function SharedUiShowcase() {
           <Link href="#shared-buttons" onClick={() => setDrawerOpen(false)}>Boutons</Link>
           <Link href="#shared-statuses" onClick={() => setDrawerOpen(false)}>Statuts</Link>
           <Link href="#shared-workflow" onClick={() => setDrawerOpen(false)}>Workflow</Link>
-          <Link href="#shared-responsive-table" onClick={() => setDrawerOpen(false)}>Tableaux responsives</Link>
+          <Link href="#shared-dataviz" onClick={() => setDrawerOpen(false)}>Dataviz</Link>
         </nav>
       </Drawer>
     </div>

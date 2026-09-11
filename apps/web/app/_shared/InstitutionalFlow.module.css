@@ -11,7 +11,7 @@
   border-bottom: 1px solid color-mix(in srgb, var(--warning) 28%, var(--line));
   background: color-mix(in srgb, var(--warning-soft) 94%, var(--surface));
   color: var(--warning);
-  font-size: 0.78rem;
+  font-size: var(--text-body-sm);
   font-weight: 700;
   text-align: center;
 }
@@ -57,10 +57,13 @@
   right: 0;
   height: 2px;
   background: var(--line);
+  transform-origin: left center;
+  transition: background var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
 
 .stepDone:not(:last-child)::after {
   background: var(--success);
+  animation: step-progress-in 420ms var(--ease) both;
 }
 
 .stepMarker {
@@ -75,21 +78,23 @@
   background: var(--surface);
   color: var(--muted);
   font-family: var(--font-display);
-  font-size: 0.72rem;
-  font-weight: 850;
+  font-size: var(--text-caption);
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  transition: transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
 }
 
 .stepDone .stepMarker {
   border-color: var(--success);
   background: var(--success);
-  color: #fff;
+  color: var(--surface);
 }
 
 .stepCurrent .stepMarker {
   border-color: var(--green-strong);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--green-soft) 88%, transparent);
   color: var(--green-strong);
+  animation: step-pulse 2.4s var(--ease) infinite;
 }
 
 .stepText {
@@ -104,7 +109,7 @@
 
 .stepText strong {
   color: var(--ink);
-  font-size: 0.78rem;
+  font-size: var(--text-body-sm);
   line-height: 1.25;
 }
 
@@ -115,8 +120,60 @@
 .stepText small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: var(--text-caption);
   line-height: 1.35;
+}
+
+.stepperInverse .step {
+  color: color-mix(in srgb, var(--fodip-ivory) 70%, transparent);
+}
+
+.stepperInverse .step:not(:last-child)::after {
+  background: color-mix(in srgb, var(--fodip-ivory) 24%, transparent);
+}
+
+.stepperInverse .stepDone:not(:last-child)::after {
+  background: var(--gold);
+}
+
+.stepperInverse .stepMarker {
+  border-color: color-mix(in srgb, var(--fodip-ivory) 42%, transparent);
+  background: color-mix(in srgb, var(--primary-900) 58%, transparent);
+  color: var(--fodip-ivory);
+}
+
+.stepperInverse .stepDone .stepMarker {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--fodip-text);
+}
+
+.stepperInverse .stepCurrent .stepMarker {
+  border-color: var(--fodip-ivory);
+  color: var(--fodip-ivory);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 28%, transparent);
+}
+
+.stepperInverse .stepText strong {
+  color: var(--fodip-ivory);
+}
+
+.stepperInverse .stepCurrent .stepText strong {
+  color: var(--gold);
+}
+
+.stepperInverse .stepText small {
+  color: color-mix(in srgb, var(--fodip-ivory) 72%, transparent);
+}
+
+@keyframes step-progress-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes step-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 @media (max-width: 680px) {
@@ -136,6 +193,7 @@
     right: auto;
     width: 2px;
     height: auto;
+    transform-origin: top center;
   }
 
   .stepText {
@@ -144,7 +202,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .connectivity {
+  .connectivity,
+  .stepDone:not(:last-child)::after,
+  .stepCurrent .stepMarker {
+    animation: none;
     transition: none;
   }
 }

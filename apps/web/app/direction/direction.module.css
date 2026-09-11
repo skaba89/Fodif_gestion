@@ -13,10 +13,16 @@
   border: 1px solid color-mix(in srgb, var(--green) 15%, var(--line));
   border-radius: 22px;
   background:
-    radial-gradient(circle at 92% 0%, rgba(229, 182, 56, 0.13), transparent 22rem),
-    radial-gradient(circle at 0% 100%, rgba(15, 107, 69, 0.10), transparent 24rem),
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--gold) 13%, transparent), transparent 22rem),
+    radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--green) 10%, transparent), transparent 24rem),
     var(--surface);
-  box-shadow: 0 18px 46px rgba(20, 35, 27, 0.07);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+}
+
+.cockpitHeader:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .cockpitHeader::after {
@@ -38,7 +44,7 @@
 
 .freshnessInline {
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: var(--text-body-sm);
   font-weight: 600;
 }
 
@@ -55,12 +61,12 @@
   min-height: 40px;
   border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
   background: color-mix(in srgb, var(--surface) 88%, var(--surface-soft));
-  box-shadow: 0 5px 14px rgba(20, 35, 27, 0.035);
+  box-shadow: var(--shadow-sm);
 }
 
 .headerButtons button:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--green) 35%, var(--line));
-  box-shadow: 0 8px 18px rgba(15, 107, 69, 0.07);
+  box-shadow: var(--shadow-md);
 }
 
 .headerButtons svg {
@@ -73,9 +79,9 @@
   margin: 34px 0 14px;
   padding-left: 13px;
   color: var(--ink);
-  font-size: 1.12rem;
-  font-weight: 850;
-  letter-spacing: -0.025em;
+  font-size: 1.22rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .sectionTitle::before {
@@ -102,11 +108,31 @@
   list-style: none;
 }
 
+/* First row = executive moment. Four KPI cards create one deep-green financial band. */
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 15px;
   margin: 26px 0 30px;
+  padding: 14px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 26rem),
+    linear-gradient(180deg, var(--primary-800) 0 220px, transparent 220px);
+}
+
+.kpiGrid > :global([data-kpi-card]):nth-child(-n+4) {
+  --kpi-surface: color-mix(in srgb, var(--primary-800) 92%, var(--primary-900));
+  --kpi-ink: var(--fodip-ivory);
+  --kpi-muted: color-mix(in srgb, var(--fodip-ivory) 72%, transparent);
+  --kpi-line: color-mix(in srgb, var(--fodip-ivory) 18%, transparent);
+  --kpi-accent: var(--gold);
+  border-color: color-mix(in srgb, var(--fodip-ivory) 12%, transparent);
+  box-shadow: none;
+}
+
+.kpiGrid > :global([data-kpi-card]):nth-child(-n+4):hover {
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--primary-900) 24%, transparent);
 }
 
 .filterBar {
@@ -120,7 +146,7 @@
   border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
   border-radius: 18px;
   background: color-mix(in srgb, var(--surface) 96%, transparent);
-  box-shadow: 0 10px 30px rgba(20, 35, 27, 0.045);
+  box-shadow: var(--shadow-card);
 }
 
 .filterField {
@@ -131,7 +157,7 @@
 
 .filterField label {
   color: var(--muted);
-  font-size: 0.67rem;
+  font-size: var(--text-caption);
   font-weight: 850;
   text-transform: uppercase;
   letter-spacing: 0.075em;
@@ -146,9 +172,9 @@
   border-radius: 11px;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 2px 5px rgba(20, 35, 27, 0.025);
+  box-shadow: var(--shadow-sm);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--text-body-sm);
   transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
 }
 
@@ -171,13 +197,13 @@
 .freshness {
   align-self: center;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--text-body-sm);
   line-height: 1.5;
 }
 
 .freshness strong {
   color: var(--ink);
-  font-size: 0.69rem;
+  font-size: var(--text-caption);
   font-weight: 800;
   letter-spacing: 0.035em;
   text-transform: uppercase;
@@ -211,12 +237,13 @@
   gap: 13px;
   min-height: 38px;
   padding: 3px 0;
-  font-size: 0.8rem;
+  font-size: var(--text-body-sm);
 }
 
 .sectorRow strong {
   color: var(--ink);
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .secondaryMetric {
@@ -225,12 +252,14 @@
   gap: 18px;
   padding: 13px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
-  font-size: 0.8rem;
+  font-size: var(--text-body-sm);
 }
 
 .secondaryMetric strong {
   color: var(--green-strong);
   text-align: right;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
 }
 
 .sourceBadge {
@@ -242,7 +271,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--success-soft) 72%, var(--surface));
   color: var(--green-strong);
-  font-size: 0.64rem;
+  font-size: var(--text-caption);
   font-weight: 850;
   letter-spacing: 0.045em;
   text-transform: uppercase;
@@ -261,7 +290,7 @@
 .filterSummary {
   margin: 0;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: var(--text-body-sm);
   line-height: 1.6;
 }
 
@@ -272,18 +301,23 @@
   border-radius: 11px;
   background: color-mix(in srgb, var(--green-soft) 64%, var(--surface));
   color: var(--green-strong);
-  font-size: 0.8rem;
+  font-size: var(--text-body-sm);
   font-weight: 820;
   transition: border-color var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
 }
 
 .reset:hover {
   border-color: color-mix(in srgb, var(--green) 38%, var(--line));
-  box-shadow: 0 6px 15px rgba(15, 107, 69, 0.07);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 @media (max-width: 1120px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    background: var(--primary-800);
+  }
+
   .filterBar {
     grid-template-columns: repeat(3, minmax(160px, 1fr));
   }
@@ -306,6 +340,12 @@
 @media (max-width: 620px) {
   .cockpitHeader {
     padding: 20px;
+    border-radius: 18px;
+  }
+
+  .kpiGrid {
+    grid-template-columns: 1fr;
+    padding: 10px;
     border-radius: 18px;
   }
 
@@ -339,9 +379,15 @@
     box-shadow: none;
     background: transparent;
   }
+
+  .kpiGrid {
+    padding: 0;
+    background: transparent;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .cockpitHeader,
   .reset,
   .headerButtons button,
   .filterField input,

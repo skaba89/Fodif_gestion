@@ -23,6 +23,12 @@
   border-radius: 18px;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+}
+
+.priorityCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .priorityMain {
@@ -42,7 +48,7 @@
 .priorityLabel {
   margin: 0 0 7px;
   color: var(--green-strong);
-  font-size: 0.67rem;
+  font-size: var(--text-caption);
   font-weight: 850;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -51,16 +57,17 @@
 .priorityTitle {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(1.45rem, 2.4vw, 2.05rem);
-  line-height: 1.1;
-  letter-spacing: -0.035em;
+  font-size: clamp(1.65rem, 2.7vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
 }
 
 .priorityDescription {
   max-width: 68ch;
-  margin: 8px 0 20px;
+  margin: 9px 0 20px;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
 }
 
 .statusLine {
@@ -93,14 +100,14 @@
 
 .nextAction span {
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: var(--text-caption);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .nextAction strong {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   line-height: 1.35;
 }
 
@@ -112,7 +119,7 @@
   border-radius: 10px;
   background: var(--warning-soft);
   color: var(--warning);
-  font-size: 0.78rem;
+  font-size: var(--text-body-sm);
   line-height: 1.45;
 }
 
@@ -136,16 +143,83 @@
 
 .compactMeta dt {
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: var(--text-caption);
 }
 
 .compactMeta dd {
   margin: 0;
   color: var(--ink);
-  font-size: 0.75rem;
+  font-size: var(--text-body-sm);
   font-weight: 750;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* PME signature moment: dark institutional hero with a white/gold workflow. */
+.pmeHeroCard {
+  border-color: color-mix(in srgb, var(--gold) 22%, var(--primary-800));
+  background:
+    radial-gradient(circle at 86% 8%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 26rem),
+    radial-gradient(circle at 12% 112%, color-mix(in srgb, var(--green) 22%, transparent), transparent 30rem),
+    var(--primary-800);
+  color: var(--fodip-ivory);
+  box-shadow: 0 24px 58px color-mix(in srgb, var(--primary-900) 26%, transparent);
+}
+
+.pmeHeroCard .priorityTitle,
+.pmeHeroCard .statusLine strong {
+  color: var(--fodip-ivory);
+}
+
+.pmeHeroCard .priorityLabel,
+.pmeHeroCard .stepperWrap + * {
+  color: var(--gold);
+}
+
+.pmeHeroCard .priorityDescription {
+  color: color-mix(in srgb, var(--fodip-ivory) 76%, transparent);
+}
+
+.pmeHeroCard .stepperWrap {
+  border-color: color-mix(in srgb, var(--fodip-ivory) 16%, transparent);
+  background: color-mix(in srgb, var(--primary-900) 52%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.pmeHeroCard .priorityAside {
+  border-left-color: color-mix(in srgb, var(--fodip-ivory) 14%, transparent);
+  background: color-mix(in srgb, var(--primary-900) 64%, transparent);
+}
+
+.pmeHeroCard .nextAction {
+  border-left-color: var(--gold);
+  background: color-mix(in srgb, var(--fodip-ivory) 8%, transparent);
+}
+
+.pmeHeroCard .nextAction span {
+  color: var(--gold);
+}
+
+.pmeHeroCard .nextAction strong {
+  color: var(--fodip-ivory);
+}
+
+.pmeHeroCard .compactMeta div {
+  border-bottom-color: color-mix(in srgb, var(--fodip-ivory) 14%, transparent);
+}
+
+.pmeHeroCard .compactMeta dt {
+  color: color-mix(in srgb, var(--fodip-ivory) 66%, transparent);
+}
+
+.pmeHeroCard .compactMeta dd {
+  color: var(--fodip-ivory);
+}
+
+.pmeIllustration {
+  max-width: 260px;
+  margin: 4px auto 0;
+  background: color-mix(in srgb, var(--fodip-ivory) 7%, transparent);
 }
 
 .kpiGrid {
@@ -166,6 +240,13 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+}
+
+.contextCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .contextCard h2,
@@ -176,7 +257,7 @@
 .contextCard p {
   margin-bottom: 0;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: var(--text-body-sm);
 }
 
 .list {
@@ -195,7 +276,7 @@
   min-height: 44px;
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
-  font-size: 0.8rem;
+  font-size: var(--text-body-sm);
 }
 
 .list li:last-child {
@@ -224,7 +305,7 @@
   border-radius: 999px;
   background: var(--surface-soft);
   color: var(--green-strong);
-  font-size: 0.7rem;
+  font-size: var(--text-caption);
   font-weight: 750;
 }
 
@@ -235,7 +316,7 @@
   align-items: center;
   padding: 0 9px;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: var(--text-caption);
   font-weight: 800;
 }
 
@@ -262,6 +343,10 @@
   .priorityAside {
     border-top: 1px solid var(--line);
     border-left: 0;
+  }
+
+  .pmeHeroCard .priorityAside {
+    border-top-color: color-mix(in srgb, var(--fodip-ivory) 14%, transparent);
   }
 }
 
@@ -297,5 +382,12 @@
   .queueToolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .priorityCard,
+  .contextCard {
+    transition: none;
   }
 }

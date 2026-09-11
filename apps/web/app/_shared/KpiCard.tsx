@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AnimatedKpiValue from './AnimatedKpiValue';
 import { TrendDownIcon, TrendFlatIcon, TrendUpIcon } from './Icons';
 import styles from './KpiCard.module.css';
 
@@ -13,6 +14,7 @@ export default function KpiCard({
   trend,
   detailHref,
   goodDirection = 'up',
+  tone = 'default',
 }: {
   label: string;
   value: string | null;
@@ -21,10 +23,11 @@ export default function KpiCard({
   trend?: KpiTrend | null;
   detailHref?: string;
   goodDirection?: 'up' | 'down';
+  tone?: 'default' | 'inverse';
 }) {
   const trendIsGood = trend?.direction && (trend.direction === goodDirection || trend.direction === 'flat');
   return (
-    <article className={styles.card}>
+    <article className={`${styles.card} ${tone === 'inverse' ? styles.inverse : ''}`} data-kpi-card>
       <div className={styles.headRow}>
         <span className={styles.label}>{label}</span>
         <span className={styles.definitionWrap} tabIndex={0} aria-label={definition}>
@@ -36,7 +39,9 @@ export default function KpiCard({
         <p className={styles.unavailable}>Donnée indisponible</p>
       ) : (
         <div className={styles.valueRow}>
-          <strong data-kpi-value>{value}</strong>
+          <strong data-kpi-value aria-label={unit ? `${value} ${unit}` : value}>
+            <AnimatedKpiValue value={value} />
+          </strong>
           {unit && <span className={styles.unit}>{unit}</span>}
         </div>
       )}

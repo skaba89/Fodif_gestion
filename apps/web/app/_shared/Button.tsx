@@ -13,12 +13,21 @@ type ButtonProps = {
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
   loading?: boolean;
+  success?: boolean;
   iconOnly?: boolean;
   className?: string;
   ariaLabel?: string;
   title?: string;
   onClick?: () => void;
 };
+
+function SuccessIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+      <path d="M3.5 8.25 6.5 11 12.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export default function Button({
   children,
@@ -27,6 +36,7 @@ export default function Button({
   type = 'button',
   disabled = false,
   loading = false,
+  success = false,
   iconOnly = false,
   className = '',
   ariaLabel,
@@ -34,12 +44,18 @@ export default function Button({
   onClick,
 }: ButtonProps) {
   const unavailable = disabled || loading;
-  const classes = [styles.button, styles[variant], loading ? styles.loading : '', iconOnly ? styles.iconOnly : '', className]
-    .filter(Boolean)
-    .join(' ');
+  const classes = [
+    styles.button,
+    styles[variant],
+    loading ? styles.loading : '',
+    success ? styles.success : '',
+    iconOnly ? styles.iconOnly : '',
+    className,
+  ].filter(Boolean).join(' ');
   const content = (
     <>
       {loading ? <span className={styles.loadingBar} aria-hidden="true" /> : null}
+      {success ? <span className={styles.successIcon}><SuccessIcon /></span> : null}
       <span>{children}</span>
     </>
   );

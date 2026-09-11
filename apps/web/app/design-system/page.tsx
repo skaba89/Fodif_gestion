@@ -28,7 +28,8 @@ const semanticTokens = [
 const componentNames = [
   'Button', 'StatusBadge', 'WorkflowStepper', 'ResponsiveTable', 'FilterBar', 'KpiCard',
   'Toast', 'Dialog', 'ConfirmDialog', 'Breadcrumbs', 'Skeleton', 'EmptyState', 'ErrorState',
-  'ExecutiveAlert', 'Drawer', 'ConnectivityBanner',
+  'ExecutiveAlert', 'Drawer', 'ConnectivityBanner', 'InstitutionalIllustration',
+  'DisbursementCurve', 'PortfolioDonut', 'GuineaRegionMap',
 ];
 
 export default function DesignSystemPage() {
@@ -45,14 +46,14 @@ export default function DesignSystemPage() {
           <p className={portal.eyebrow}>FODIP Digital 2030 — système produit unifié</p>
           <h1 className={portal.title}>Design system institutionnel</h1>
           <p className={portal.lead}>
-            Cette page utilise les mêmes tokens et composants que les sept espaces métiers. Elle étend l’autorité visuelle de la landing à toute la plateforme : vert profond, accent fonctionnel, or réservé aux actions clés, fond ivoire, typographie de titre institutionnelle et données financières en chiffres tabulaires.
+            La plateforme applique un langage visuel d’institution financière numérique : 60 % ivoire, 30 % surfaces blanches et 10 % vert profond/or, avec une typographie display expressive, des chiffres financiers tabulaires et des primitives SVG sans dépendance graphique lourde.
           </p>
         </div>
 
         <ul className={ds.toc}>
           <li><a href="#identite">Identité &amp; tokens</a></li>
           <li><a href="#typographie">Typographie &amp; données</a></li>
-          <li><a href="#catalogue">16 composants partagés</a></li>
+          <li><a href="#catalogue">Composants partagés</a></li>
           <li><a href="#accessibilite">Accessibilité &amp; mouvement</a></li>
         </ul>
 
@@ -87,16 +88,16 @@ export default function DesignSystemPage() {
         <section id="typographie" className={ds.section}>
           <h2>Typographie &amp; données</h2>
           <p className={ds.sectionLead}>
-            <strong>Public Sans</strong>, déjà cohérente avec la landing, reste la grotesque de titres et de chiffres clés. <strong>Inter</strong> sert le corps, les formulaires et les données denses. Les deux polices sont empaquetées par <code>next/font</code> : aucune requête vers un CDN n’est nécessaire à l’exécution.
+            <strong>Public Sans</strong> reste la fonte du corps, des formulaires et de la navigation. <strong>Bricolage Grotesque</strong> est réservée aux titres h1/h2, KPI et chiffres clés afin de créer un contraste institutionnel plus mémorable sans compromettre la lisibilité métier.
           </p>
-          <div className={ds.typeSpecimen}><p className={portal.eyebrow}>Surtitre institutionnel</p><span className={ds.typeMeta}>Inter · 700/800 · capitales espacées</span></div>
-          <div className={ds.typeSpecimen}><h1 className={portal.title} style={{ margin: 0 }}>Financer avec confiance.</h1><span className={ds.typeMeta}>Public Sans · titre · tracking serré</span></div>
-          <div className={ds.typeSpecimen}><p className={portal.lead} style={{ margin: 0 }}>Le corps privilégie la lisibilité des informations métier, y compris sur un écran Android modeste et sous connectivité instable.</p><span className={ds.typeMeta}>Inter · corps et données</span></div>
-          <div className={ds.typeSpecimen}><strong data-kpi-value style={{ fontSize: '2rem' }}>45 000 000 000 GNF</strong><span className={ds.typeMeta}>Chiffres tabulaires pour KPI, tableaux et champs numériques</span></div>
+          <div className={ds.typeSpecimen}><p className={portal.eyebrow}>Surtitre institutionnel</p><span className={ds.typeMeta}>Public Sans · caption 0,7 rem · capitales espacées</span></div>
+          <div className={ds.typeSpecimen}><h1 className={portal.title} style={{ margin: 0 }}>Financer avec confiance.</h1><span className={ds.typeMeta}>Bricolage Grotesque · display 800 · tracking serré</span></div>
+          <div className={ds.typeSpecimen}><p className={portal.lead} style={{ margin: 0 }}>Le corps privilégie la lisibilité des informations métier, y compris sur un écran Android modeste et sous connectivité instable.</p><span className={ds.typeMeta}>Public Sans · corps ≥ 0,8 rem</span></div>
+          <div className={ds.typeSpecimen}><strong data-kpi-value style={{ fontSize: 'var(--kpi-size)' }}>45 000 000 000 GNF</strong><span className={ds.typeMeta}>Bricolage Grotesque · chiffres tabulaires · KPI exécutif</span></div>
         </section>
 
         <section id="catalogue" className={ds.section}>
-          <h2>16 composants partagés</h2>
+          <h2>Composants et primitives visuelles</h2>
           <p className={ds.sectionLead}>
             {componentNames.join(' · ')}. Les exemples ci-dessous importent les composants réels de <code>apps/web/app/_shared</code> ; ce catalogue n’est pas une maquette séparée du produit.
           </p>
@@ -109,7 +110,8 @@ export default function DesignSystemPage() {
             <li><code>&lt;html lang=&quot;fr&quot;&gt;</code>, lien d’évitement, focus visible et navigation clavier.</li>
             <li>Cibles tactiles d’au moins 44 px dans les contrôles partagés et navigation mobile avec safe areas iOS.</li>
             <li>Contrastes sémantiques conçus pour AA en clair et en sombre ; les statuts gardent toujours un libellé textuel.</li>
-            <li>Transitions produit de 220 ms avec <code>prefers-reduced-motion</code> respecté.</li>
+            <li>Transitions produit de 220 ms et count-up KPI de 800 ms, tous deux neutralisés par <code>prefers-reduced-motion</code>.</li>
+            <li>Les dataviz SVG utilisent uniquement les tokens du thème et conservent un titre accessible.</li>
             <li>Skeletons et barres de progression remplacent les spinners de chargement.</li>
             <li>Le service worker cache le shell statique mais pas les réponses API financières/PII ; les actions sensibles ne sont jamais mises en file hors ligne silencieusement.</li>
             <li>Les tests Axe couvrent les garde-fous WCAG 2.0/2.1 et les règles WCAG 2.2 AA supportées, avec parcours Playwright desktop et mobile.</li>

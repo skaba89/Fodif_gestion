@@ -30,16 +30,18 @@ export default function WorkflowStepper({
   steps,
   currentIndex,
   label = 'Progression du dossier',
+  tone = 'default',
 }: {
   steps: WorkflowStep[];
   currentIndex: number;
   label?: string;
+  tone?: 'default' | 'inverse';
 }) {
   const boundedCurrent = Math.max(0, Math.min(currentIndex, Math.max(steps.length - 1, 0)));
 
   return (
     <ol
-      className={styles.stepper}
+      className={`${styles.stepper} ${tone === 'inverse' ? styles.stepperInverse : ''}`}
       aria-label={label}
       style={{ '--step-count': steps.length } as React.CSSProperties}
     >

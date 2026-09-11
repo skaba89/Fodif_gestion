@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Public_Sans } from 'next/font/google';
+import { Bricolage_Grotesque, Public_Sans } from 'next/font/google';
 import ServiceWorkerRegistration from './_shared/ServiceWorkerRegistration';
 import { ToastProvider } from './_shared/Toast';
 import './globals.css';
@@ -8,18 +8,17 @@ import './_shared/business-workspaces.css';
 import './institutional-typography.css';
 import './fodip-product-theme.css';
 
-// Public Sans remains the established grotesque/display face used by the landing. Inter is used
-// for body copy and dense financial data. Both families are variable fonts: letting next/font use
-// their variable files avoids emitting one static file per weight while keeping them self-hosted.
+// Public Sans stays the product body face. Bricolage Grotesque is reserved for display moments:
+// headings, KPI values and key financial figures. Both are self-hosted by next/font.
 const publicSans = Public_Sans({
   subsets: ['latin'],
   variable: '--font-public-sans',
   display: 'swap',
 });
 
-const inter = Inter({
+const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-bricolage',
   display: 'swap',
 });
 
@@ -47,7 +46,7 @@ const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem('fodip-theme');if(t===
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr" className={`${publicSans.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="fr" className={`${publicSans.variable} ${bricolage.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

@@ -1,0 +1,59 @@
+.frame {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 78% 18%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 28%),
+    linear-gradient(145deg, color-mix(in srgb, var(--green-soft) 68%, var(--surface)), var(--surface));
+}
+
+.frame svg {
+  width: min(100%, 420px);
+  height: auto;
+  display: block;
+}
+
+.primary {
+  fill: var(--primary-800);
+}
+
+.primarySoft {
+  fill: color-mix(in srgb, var(--primary-700) 72%, var(--surface));
+}
+
+.gold {
+  fill: var(--gold);
+}
+
+.ivory {
+  fill: var(--fodip-ivory);
+}
+
+.line {
+  fill: none;
+  stroke: color-mix(in srgb, var(--gold) 72%, var(--primary-800));
+  stroke-width: 2;
+}
+
+.lineSoft {
+  fill: none;
+  stroke: color-mix(in srgb, var(--primary-700) 42%, var(--surface));
+  stroke-width: 1.5;
+}
+
+.pattern {
+  opacity: 0.95;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pattern {
+    animation: pattern-float 6s var(--ease) infinite alternate;
+  }
+}
+
+@keyframes pattern-float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
