@@ -85,7 +85,7 @@ test.describe('Unified login flow', () => {
     await expect(page.getByText('pme@fodip.local')).toHaveCount(0);
 
     // Desktop: role navigation is persistent, reducing the extra menu click used by the old shell.
-    const desktopNavigation = page.getByRole('navigation', { name: 'Navigation Espace PME' });
+    const desktopNavigation = page.getByRole('navigation', { name: 'Navigation principale Espace PME' });
     await expect(desktopNavigation).toBeVisible();
     await expect(desktopNavigation.getByRole('link', { name: 'Accueil' })).toHaveAttribute('aria-current', 'page');
     await expect(desktopNavigation.getByRole('link', { name: 'Mon entreprise' })).toBeVisible();
