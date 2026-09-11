@@ -110,7 +110,7 @@
 .donutLabel {
   fill: var(--muted);
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: var(--text-caption);
   text-anchor: middle;
 }
 
@@ -170,7 +170,7 @@
 .mapLabel {
   fill: var(--ink);
   font-family: var(--font-sans);
-  font-size: 8px;
+  font-size: var(--text-caption);
   font-weight: 750;
   text-anchor: middle;
   pointer-events: none;
