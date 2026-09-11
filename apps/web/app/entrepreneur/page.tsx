@@ -1,22 +1,69 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
+import Button from '../_shared/Button';
 import KpiCard from '../_shared/KpiCard';
-import { dossierProgressPercent, dossierStatusLabel } from '../_shared/dossierStatus';
+import Skeleton from '../_shared/Skeleton';
+import { DossierStatusBadge } from '../_shared/StatusBadge';
+import WorkflowStepper from '../_shared/WorkflowStepper';
+import { dossierProgressPercent } from '../_shared/dossierStatus';
+import role from '../_shared/RoleDashboard.module.css';
 import styles from './portal.module.css';
-import designStyles from './entrepreneurDesign.module.css';
 
 type Company = { codeFodip: string; raisonSociale: string };
-type Application = { id: string; statut: string; montantDemande: string | number };
+type MissingDocument = { code: string; libelle: string; typeDocument: string };
+type Application = {
+  id: string;
+  numeroDossier?: string;
+  statut: string;
+  montantDemande: string | number;
+  createdAt?: string;
+  dateSoumission?: string;
+  documentsRequis?: number;
+  documentsPresents?: number;
+  documentsManquants?: MissingDocument[];
+  completudeDocumentsPct?: number;
+};
 type Program = { id: string; nom: string; description?: string };
+
+const WORKFLOW_STEPS = [
+  { label: 'Dossier', description: 'Préparation et pièces' },
+  { label: 'Instruction', description: 'Analyse FODIP' },
+  { label: 'Décision', description: 'Examen et validation' },
+  { label: 'Financement', description: 'Décaissement' },
+  { label: 'Suivi', description: 'Remboursement et impact' },
+];
+
+function workflowIndex(status: string) {
+  if (['BROUILLON'].includes(status)) return 0;
+  if (['SOUMIS', 'EN_INSTRUCTION', 'COMPLEMENT_REQUIS'].includes(status)) return 1;
+  if (['PRET_COMITE', 'APPROUVE', 'REJETE'].includes(status)) return 2;
+  if (['FINANCE', 'FINANCEE', 'DECAISSE', 'DECAISSEMENT'].includes(status)) return 3;
+  if (['REMBOURSE', 'CLOTURE'].includes(status)) return 4;
+  return 0;
+}
+
+function nextActionFor(dossier: Application | null) {
+  if (!dossier) return 'Créer votre première demande de financement.';
+  const missing = dossier.documentsManquants?.length ?? 0;
+  if (missing > 0 && ['BROUILLON', 'COMPLEMENT_REQUIS'].includes(dossier.statut)) return `Ajouter ${missing} pièce${missing > 1 ? 's' : ''} manquante${missing > 1 ? 's' : ''}.`;
+  if (dossier.statut === 'BROUILLON') return 'Vérifier le dossier puis le soumettre au FODIP.';
+  if (dossier.statut === 'COMPLEMENT_REQUIS') return 'Consulter la demande de complément et mettre à jour les pièces.';
+  if (dossier.statut === 'SOUMIS') return 'Aucune action requise : le dossier attend sa prise en charge.';
+  if (dossier.statut === 'EN_INSTRUCTION') return 'Aucune action requise : votre dossier est en cours d’analyse.';
+  if (dossier.statut === 'PRET_COMITE') return 'Aucune action requise : le dossier est prêt pour le comité.';
+  if (dossier.statut === 'APPROUVE') return 'Décision favorable : suivez maintenant les étapes de financement.';
+  if (dossier.statut === 'REJETE') return 'Consultez la décision avant toute nouvelle demande.';
+  return 'Consultez le suivi détaillé de votre dossier.';
+}
 
 export default function EntrepreneurDashboard() {
   const [company, setCompany] = useState<Company | null>(null);
   const [dossiers, setDossiers] = useState<Application[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -25,116 +72,114 @@ export default function EntrepreneurDashboard() {
       clientApi<Program[]>('/api/programmes'),
     ])
       .then(([c, d, p]) => { setCompany(c); setDossiers(d); setPrograms(p); })
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e instanceof Error ? e.message : 'Chargement impossible'))
+      .finally(() => setLoading(false));
   }, []);
 
   const drafts = dossiers.filter((d) => d.statut === 'BROUILLON').length;
   const active = dossiers.filter((d) => !['BROUILLON', 'CLOTURE', 'REJETE', 'ANNULE'].includes(d.statut)).length;
+  const totalRequested = useMemo(() => dossiers.reduce((sum, d) => sum + Number(d.montantDemande || 0), 0), [dossiers]);
 
-  const totalRequested = useMemo(
-    () => dossiers.reduce((sum, d) => sum + Number(d.montantDemande || 0), 0),
-    [dossiers],
-  );
-
-  // The lead dossier for the hero progress bar: the one furthest along an active workflow, so the
-  // bar reflects a real dossier instead of a hardcoded value.
   const leadDossier = useMemo(() => {
-    const inProgress = dossiers.filter((d) => !['ANNULE', 'BROUILLON', 'REJETE', 'CLOTURE'].includes(d.statut));
-    if (inProgress.length === 0) return null;
-    return inProgress.reduce((furthest, current) => (
+    if (dossiers.length === 0) return null;
+    const candidates = dossiers.filter((d) => !['ANNULE', 'CLOTURE'].includes(d.statut));
+    const source = candidates.length > 0 ? candidates : dossiers;
+    return source.reduce((furthest, current) => (
       dossierProgressPercent(current.statut) > dossierProgressPercent(furthest.statut) ? current : furthest
     ));
   }, [dossiers]);
 
-  const progressPercent = leadDossier ? dossierProgressPercent(leadDossier.statut) : 0;
+  const missingDocuments = leadDossier?.documentsManquants ?? [];
+  const leadNumber = leadDossier?.numeroDossier ?? 'Dossier en cours';
+  const leadDocumentsHref = leadDossier ? `/entrepreneur/suivi/${leadDossier.id}/documents` : '/entrepreneur/demande';
+  const primaryActionHref = missingDocuments.length > 0 ? leadDocumentsHref : leadDossier?.statut === 'BROUILLON' ? '/entrepreneur/suivi' : '/entrepreneur/suivi';
+  const primaryActionLabel = missingDocuments.length > 0 ? 'Compléter mes pièces' : leadDossier ? 'Voir le suivi' : 'Créer une demande';
 
   return (
     <main className={styles.main}>
-      <p className={styles.eyebrow}>Espace entrepreneur</p>
-      <h1 className={styles.title}>{company ? `Bienvenue, ${company.raisonSociale}` : 'Votre espace FODIP'}</h1>
-      <p className={styles.lead}>Votre tableau de bord utilise désormais les données de votre session et de PostgreSQL.</p>
-      {error && <div className={styles.notice}>{error}</div>}
+      <div className={role.pageHeader}>
+        <div>
+          <p className={styles.eyebrow}>Espace PME</p>
+          <h1 className={styles.title}>{company ? `Bonjour, ${company.raisonSociale}` : 'Tableau de bord PME'}</h1>
+          <p className={styles.lead}>Votre statut et votre prochaine action sont affichés en premier, sans parcourir plusieurs écrans.</p>
+        </div>
+        <Button href="/entrepreneur/demande">Nouvelle demande</Button>
+      </div>
 
-      <section className={styles.hero}>
-        <div className={`${styles.card} ${styles.heroCard}`}>
-          <h2>{dossiers.length} dossier(s)</h2>
-          <p>{drafts} brouillon(s) · {active} dossier(s) en traitement.</p>
-          {leadDossier && (
-            <>
-              <div
-                className={styles.progress}
-                role="progressbar"
-                aria-label={`Progression du dossier : ${dossierStatusLabel(leadDossier.statut)}`}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={progressPercent}
-              >
-                <span style={{ width: `${progressPercent}%` }} />
+      {loading ? <Skeleton lines={4} /> : null}
+      {error ? <div className={styles.notice} role="alert">{error}</div> : null}
+
+      {!loading ? (
+        <section className={role.priorityCard} aria-labelledby="pme-priority-title">
+          <div className={role.priorityMain}>
+            <p className={role.priorityLabel}>Votre demande maintenant</p>
+            <h2 className={role.priorityTitle} id="pme-priority-title">{leadDossier ? leadNumber : 'Aucune demande en cours'}</h2>
+            <p className={role.priorityDescription}>
+              {leadDossier
+                ? 'Le parcours ci-dessous reprend la chaîne de valeur FODIP. Le statut actuel est visible immédiatement après votre connexion.'
+                : 'Démarrez une demande guidée : vous pourrez préparer le brouillon avant de le soumettre.'}
+            </p>
+
+            {leadDossier ? (
+              <>
+                <div className={role.statusLine}>
+                  <strong>Statut actuel</strong>
+                  <DossierStatusBadge status={leadDossier.statut} />
+                  <span className={styles.pillMuted}>{Number(leadDossier.montantDemande).toLocaleString('fr-FR')} GNF</span>
+                </div>
+                <div className={role.stepperWrap}>
+                  <WorkflowStepper steps={WORKFLOW_STEPS} currentIndex={workflowIndex(leadDossier.statut)} />
+                </div>
+              </>
+            ) : null}
+          </div>
+
+          <aside className={role.priorityAside} aria-label="Prochaine action PME">
+            <div className={role.nextAction}>
+              <span>Prochaine action</span>
+              <strong>{nextActionFor(leadDossier)}</strong>
+            </div>
+            {leadDossier && missingDocuments.length > 0 ? (
+              <div className={role.missingAlert}>
+                <strong>{missingDocuments.length} pièce{missingDocuments.length > 1 ? 's' : ''} à compléter</strong>
+                <span>{missingDocuments.slice(0, 2).map((document) => document.libelle).join(' · ')}{missingDocuments.length > 2 ? ` · +${missingDocuments.length - 2}` : ''}</span>
               </div>
-              <div className={styles.progressLine}>
-                <span>{dossierStatusLabel(leadDossier.statut)}</span>
-                <span>{progressPercent}%</span>
-              </div>
-            </>
-          )}
-          <div className={styles.buttonRow}>
-            <Link className={styles.primary} href="/entrepreneur/demande">Nouvelle demande</Link>
-            <Link className={styles.secondary} href="/entrepreneur/suivi">Voir mes dossiers</Link>
-          </div>
-        </div>
-        <div className={`${styles.card} ${styles.quick}`}>
-          <p className={styles.eyebrow}>Référence PME</p>
-          <strong>{company?.codeFodip ?? '—'}</strong>
-          <small>Identité chargée depuis votre entreprise associée.</small>
-        </div>
-      </section>
+            ) : null}
+            <Button href={leadDossier ? primaryActionHref : '/entrepreneur/demande'}>{primaryActionLabel}</Button>
+            {leadDossier ? <Button variant="outline" href="/entrepreneur/suivi">Historique et tous les dossiers</Button> : null}
+            <dl className={role.compactMeta}>
+              <div><dt>Référence PME</dt><dd>{company?.codeFodip ?? '—'}</dd></div>
+              {leadDossier ? <div><dt>Complétude pièces</dt><dd>{leadDossier.completudeDocumentsPct ?? 0} %</dd></div> : null}
+            </dl>
+          </aside>
+        </section>
+      ) : null}
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2>Vue d’ensemble</h2>
-            <p>Chiffres clés de vos demandes de financement.</p>
+      {!loading ? (
+        <section className={styles.section} aria-labelledby="pme-overview-title">
+          <div className={styles.sectionHeader}><div><h2 id="pme-overview-title">Vue d’ensemble</h2><p>Contexte utile après l’action prioritaire.</p></div></div>
+          <div className={role.kpiGrid}>
+            <KpiCard label="Dossiers actifs" value={String(active)} definition="Dossiers soumis et toujours en cours de traitement." detailHref="/entrepreneur/suivi" />
+            <KpiCard label="Brouillons" value={String(drafts)} definition="Demandes encore modifiables avant transmission au FODIP." detailHref="/entrepreneur/suivi" />
+            <KpiCard label="Montant demandé" value={totalRequested.toLocaleString('fr-FR')} unit="GNF" definition="Somme des montants demandés sur vos dossiers." detailHref="/entrepreneur/suivi" />
+            <KpiCard label="Programmes ouverts" value={String(programs.length)} definition="Programmes de financement actuellement proposés par la plateforme." detailHref="/entrepreneur/programmes" />
           </div>
-        </div>
-        <div className={designStyles.stats}>
-          <KpiCard
-            label="Dossiers au total"
-            value={String(dossiers.length)}
-            definition="Nombre total de dossiers, tous statuts confondus, associés à votre entreprise."
-            detailHref="/entrepreneur/suivi"
-          />
-          <KpiCard
-            label="Dossiers actifs"
-            value={String(active)}
-            definition="Dossiers soumis et toujours en cours d’instruction ou d’examen, hors brouillons et dossiers clôturés."
-            detailHref="/entrepreneur/suivi"
-          />
-          <KpiCard
-            label="Montant total demandé"
-            value={totalRequested.toLocaleString('fr-FR')}
-            unit="GNF"
-            definition="Somme des montants demandés sur l’ensemble de vos dossiers, tous statuts confondus."
-            detailHref="/entrepreneur/suivi"
-          />
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2>Programmes actifs</h2>
-            <p>Référentiel chargé depuis l’API FODIP.</p>
+      {!loading && programs.length > 0 ? (
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}><div><h2>Programmes accessibles</h2><p>À consulter uniquement après votre situation en cours.</p></div></div>
+          <div className={styles.programs}>
+            {programs.slice(0, 3).map((program) => (
+              <article className={`${styles.card} ${styles.program}`} key={program.id}>
+                <h3>{program.nom}</h3>
+                <p>{program.description ?? 'Programme de financement FODIP.'}</p>
+              </article>
+            ))}
           </div>
-        </div>
-        <div className={styles.programs}>
-          {programs.map((p) => (
-            <article className={`${styles.card} ${styles.program}`} key={p.id}>
-              <h3>{p.nom}</h3>
-              <p>{p.description ?? 'Programme de financement FODIP.'}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+        </section>
+      ) : null}
     </main>
   );
 }
