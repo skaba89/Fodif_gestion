@@ -1,17 +1,8 @@
 -- Multi-region analytical demonstration data for the Docker cockpit.
-
-INSERT INTO regions (id, code, nom)
-VALUES
-    ('10000000-0000-4000-8000-000000000002', 'KINDIA', 'Kindia'),
-    ('10000000-0000-4000-8000-000000000003', 'KANKAN', 'Kankan'),
-    ('10000000-0000-4000-8000-000000000004', 'LABE', 'Labé')
-ON CONFLICT (code) DO NOTHING;
-
-INSERT INTO secteurs_activite (id, code, nom)
-VALUES
-    ('20000000-0000-4000-8000-000000000002', 'COMMERCE', 'Commerce'),
-    ('20000000-0000-4000-8000-000000000003', 'TECH', 'Technologies numériques')
-ON CONFLICT (code) DO NOTHING;
+--
+-- Region and sector foreign keys intentionally resolve the institutional reference rows created
+-- by migration 029. Demo entity UUIDs stay deterministic for the E2E scenarios, but reference
+-- UUIDs are never assumed because they are implementation details rather than business keys.
 
 INSERT INTO programmes_fodip (id, code, nom, description, montant_min, montant_max, statut)
 VALUES (
@@ -26,14 +17,17 @@ INSERT INTO entreprises (
 )
 VALUES
     ('30000000-0000-4000-8000-000000000002', 'FODIP-PME-KINDIA', 'Kindia Fruits SARL',
-     'GN.KD.2026.DEMO2', 'NIF-DEMO-2026-2', '20000000-0000-4000-8000-000000000001', 22, 1800000000,
-     '10000000-0000-4000-8000-000000000002', 'ACTIVE'),
+     'GN.KD.2026.DEMO2', 'NIF-DEMO-2026-2',
+     (SELECT id FROM secteurs_activite WHERE code = 'AGRO_INDUSTRIE'), 22, 1800000000,
+     (SELECT id FROM regions WHERE code = 'KINDIA'), 'ACTIVE'),
     ('30000000-0000-4000-8000-000000000003', 'FODIP-PME-KANKAN', 'Kankan Digital Services',
-     'GN.KA.2026.DEMO3', 'NIF-DEMO-2026-3', '20000000-0000-4000-8000-000000000003', 9, 720000000,
-     '10000000-0000-4000-8000-000000000003', 'ACTIVE'),
+     'GN.KA.2026.DEMO3', 'NIF-DEMO-2026-3',
+     (SELECT id FROM secteurs_activite WHERE code = 'TECHNOLOGIE'), 9, 720000000,
+     (SELECT id FROM regions WHERE code = 'KANKAN'), 'ACTIVE'),
     ('30000000-0000-4000-8000-000000000004', 'FODIP-PME-LABE', 'Labé Distribution',
-     'GN.LA.2026.DEMO4', 'NIF-DEMO-2026-4', '20000000-0000-4000-8000-000000000002', 14, 950000000,
-     '10000000-0000-4000-8000-000000000004', 'ACTIVE')
+     'GN.LA.2026.DEMO4', 'NIF-DEMO-2026-4',
+     (SELECT id FROM secteurs_activite WHERE code = 'COMMERCE'), 14, 950000000,
+     (SELECT id FROM regions WHERE code = 'LABE'), 'ACTIVE')
 ON CONFLICT (code_fodip) DO NOTHING;
 
 INSERT INTO entreprise_dirigeants (id, entreprise_id, nom, prenom, fonction, genre, dirigeant_principal)
