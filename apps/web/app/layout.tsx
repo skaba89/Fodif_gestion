@@ -1,28 +1,33 @@
 import type { Metadata } from 'next';
-import { Public_Sans } from 'next/font/google';
+import { Inter, Public_Sans } from 'next/font/google';
 import ServiceWorkerRegistration from './_shared/ServiceWorkerRegistration';
 import { ToastProvider } from './_shared/Toast';
 import './globals.css';
 import './fodip-official-theme.css';
 import './_shared/business-workspaces.css';
 import './institutional-typography.css';
+import './fodip-product-theme.css';
 
-// Public Sans is the typeface behind the U.S. Web Design System — a deliberate choice for a
-// state-grade platform: built for long-form reading and dense data tables, distinct from
-// generic SaaS defaults (Inter, system-ui), and self-hosted here (no third-party request at
-// runtime, no dependency on an external CDN being reachable from a government network).
+// Public Sans remains the established grotesque/display face used by the landing. Inter is used
+// for body copy and dense financial data. next/font bundles both locally at build time: there is
+// no runtime dependency on a third-party font CDN, including on constrained government networks.
 const publicSans = Public_Sans({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
+  weight: ['600', '700', '800', '900'],
   variable: '--font-public-sans',
+  display: 'swap',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-inter',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: 'FODIP Digital 2030',
   description: 'Plateforme nationale de financement, suivi et pilotage des PME guinéennes',
-  // Axe D2 (docs/14-ROADMAP-SAAS-PREMIUM.md) - installable PWA. manifest/icons here (rather
-  // than hand-written <link> tags) so Next emits the correct <head> entries itself.
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
@@ -35,26 +40,16 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#174b0b' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b1712' },
+    { media: '(prefers-color-scheme: light)', color: '#14532D' },
+    { media: '(prefers-color-scheme: dark)', color: '#0B1710' },
   ],
 };
 
-// Applies a persisted manual theme choice (axe A4) before first paint, so the page never flashes
-// the wrong theme then corrects itself. Deliberately a plain inline script rather than a
-// useEffect in _shared/ThemeToggle.tsx: that would only run after React hydrates, well after the
-// initial (unstyled-for-dark-mode) paint. Reads localStorage directly - no cookie round trip, no
-// server involvement - and does nothing (falls through to the prefers-color-scheme media query
-// in globals.css) when nothing was ever chosen.
 const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem('fodip-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  // suppressHydrationWarning: the inline script below sets data-theme on this element before
-  // React hydrates, which is an expected, intentional mismatch with the server-rendered markup
-  // (the server has no notion of the visitor's stored preference) - the canonical pattern for
-  // this kind of pre-hydration theme script.
   return (
-    <html lang="fr" className={publicSans.variable} suppressHydrationWarning>
+    <html lang="fr" className={`${publicSans.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
