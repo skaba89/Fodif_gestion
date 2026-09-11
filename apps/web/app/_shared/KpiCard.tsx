@@ -4,18 +4,7 @@ import styles from './KpiCard.module.css';
 
 export type KpiTrend = { deltaPct: number | null; direction: 'up' | 'down' | 'flat' | null };
 
-/**
- * One executive KPI - mission "présentation Directeur général" (section 2): "chaque KPI doit
- * comporter valeur, unité, définition, tendance si réellement calculable, comparaison avec la
- * période précédente, lien vers le détail, état indisponible si la donnée manque." Every one of
- * those is a real prop here, not decoration - `value === null` renders the explicit unavailable
- * state instead of a fabricated number, and `trend` only renders when the API actually computed
- * one (a period was selected) rather than always showing *something*.
- *
- * `goodDirection` says which trend direction reads as positive for *this* KPI - "up" is good for
- * montant décaissé, but "down" is good for impayés - so the same up/down icon doesn't always
- * imply the same color.
- */
+/** One executive KPI with explicit unavailable state and optional API-backed trend. */
 export default function KpiCard({
   label,
   value,
@@ -47,7 +36,7 @@ export default function KpiCard({
         <p className={styles.unavailable}>Donnée indisponible</p>
       ) : (
         <div className={styles.valueRow}>
-          <strong>{value}</strong>
+          <strong data-kpi-value>{value}</strong>
           {unit && <span className={styles.unit}>{unit}</span>}
         </div>
       )}
