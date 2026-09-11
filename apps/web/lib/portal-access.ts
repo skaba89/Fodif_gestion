@@ -8,6 +8,7 @@ export type PortalId =
   | 'partenaire';
 
 export const LOGIN_HREF = '/connexion';
+export const INTENTIONAL_LOGOUT_EVENT = 'fodip:intentional-logout';
 
 export interface PortalAccessRule {
   loginHref: string;

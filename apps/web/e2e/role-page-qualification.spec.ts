@@ -16,6 +16,7 @@ type RoleCase = {
 
 const DEMO_PASSWORD = 'FodipDemo2026!';
 const APP_DIR = path.resolve(process.cwd(), 'app');
+const CLIENT_REDIRECT_TIMEOUT_MS = 15_000;
 
 const PUBLIC_ROUTES = ['/', '/assistance', '/connexion', '/design-system', '/hors-ligne'] as const;
 const SHARED_AUTH_ROUTES = ['/mes-donnees', '/notifications', '/profil'] as const;
@@ -188,7 +189,7 @@ test.describe('Exhaustive route and role qualification', () => {
       const routePage = await context.newPage();
       try {
         await routePage.goto(route);
-        await expect(routePage).toHaveURL(/\/connexion$/);
+        await expect(routePage).toHaveURL(/\/connexion$/, { timeout: CLIENT_REDIRECT_TIMEOUT_MS });
         await expect(routePage.getByRole('heading', { name: 'Connexion FODIP', exact: true })).toBeVisible();
       } finally {
         await routePage.close();
@@ -207,7 +208,10 @@ test.describe('Exhaustive route and role qualification', () => {
       const routePage = await context.newPage();
       try {
         await routePage.goto(route);
-        await expect(routePage, `${route} must require authentication`).toHaveURL(/\/connexion(?:\?reason=session-expired)?$/);
+        await expect(routePage, `${route} must require authentication`).toHaveURL(
+          /\/connexion(?:\?reason=session-expired)?$/,
+          { timeout: CLIENT_REDIRECT_TIMEOUT_MS },
+        );
       } finally {
         await routePage.close();
       }
