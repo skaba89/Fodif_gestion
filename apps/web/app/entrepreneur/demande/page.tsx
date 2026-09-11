@@ -30,6 +30,8 @@ type Program = {
   documentsRequis?: RequiredDocument[];
 };
 
+const STEPS = ['Programme', 'Financement', 'Projet', 'Vérification'] as const;
+
 function money(value?: string | null) {
   if (!value) return null;
   return `${Number(value).toLocaleString('fr-FR')} GNF`;
@@ -44,6 +46,8 @@ export default function FundingApplicationPage() {
   const [objet, setObjet] = useState('');
   const [description, setDescription] = useState('');
   const [emplois, setEmplois] = useState('0');
+  const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -64,9 +68,48 @@ export default function FundingApplicationPage() {
     [selectedProgram],
   );
 
+  function nextStep() {
+    setMessage('');
+
+    if (step === 0 && !programmeId) {
+      setMessage('Sélectionnez un programme pour continuer.');
+      return;
+    }
+
+    if (step === 1) {
+      if (!montant || Number(montant) <= 0) {
+        setMessage('Renseignez un montant demandé supérieur à zéro.');
+        return;
+      }
+      if (Number(apport || 0) < 0) {
+        setMessage('L’apport personnel ne peut pas être négatif.');
+        return;
+      }
+      if (!objet.trim()) {
+        setMessage('Renseignez l’objet du financement.');
+        return;
+      }
+    }
+
+    if (step === 2 && Number(emplois || 0) < 0) {
+      setMessage('Le nombre d’emplois prévus ne peut pas être négatif.');
+      return;
+    }
+
+    setStep((current) => Math.min(current + 1, STEPS.length - 1));
+  }
+
+  function previousStep() {
+    setMessage('');
+    setStep((current) => Math.max(current - 1, 0));
+  }
+
   async function save(event: FormEvent) {
     event.preventDefault();
+    if (step !== STEPS.length - 1 || saving) return;
+
     setMessage('');
+    setSaving(true);
     try {
       await clientApi('/api/pme/dossiers', {
         method: 'POST',
@@ -83,6 +126,8 @@ export default function FundingApplicationPage() {
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Création impossible');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -94,72 +139,127 @@ export default function FundingApplicationPage() {
       ]} />
       <p className={styles.eyebrow}>Nouvelle demande</p>
       <h1 className={styles.title}>Demande de financement</h1>
-      <p className={styles.lead}>Sélectionnez un programme pour connaître ses règles et les pièces à préparer avant l’instruction.</p>
+      <p className={styles.lead}>Avancez étape par étape : le programme fixe les règles et les pièces à préparer, puis vous vérifiez le brouillon avant son enregistrement.</p>
 
-      <form className={`${styles.card} ${styles.formCard} ${styles.section}`} onSubmit={save}>
-        <div className={styles.formGrid}>
-          <div className={`${styles.field} ${styles.fieldFull}`}>
-            <label htmlFor="programmeId">Programme</label>
-            <select id="programmeId" required value={programmeId} onChange={(event) => setProgrammeId(event.target.value)}>
-              <option value="">Sélectionner</option>
-              {programs.map((program) => <option key={program.id} value={program.id}>{program.nom}</option>)}
-            </select>
-          </div>
+      <div className={styles.wizard}>
+        <aside className={`${styles.card} ${styles.wizardSteps}`} aria-label="Étapes de la demande">
+          {STEPS.map((label, index) => (
+            <div
+              key={label}
+              className={`${styles.wizardStep} ${index === step ? styles.wizardStepActive : ''}`}
+              aria-current={index === step ? 'step' : undefined}
+            >
+              {index + 1}. {label}
+            </div>
+          ))}
+        </aside>
 
-          {selectedProgram ? (
-            <div className={`${styles.notice} ${styles.fieldFull}`} role="status">
-              <strong>{selectedProgram.nom}</strong>
-              {selectedProgram.description ? <p>{selectedProgram.description}</p> : null}
-              <p>
-                Montant : {money(selectedProgram.montantMin) ?? 'minimum non défini'} → {money(selectedProgram.montantMax) ?? 'maximum non défini'}
-                {selectedProgram.apportMinPct ? ` · apport minimal ${Number(selectedProgram.apportMinPct).toLocaleString('fr-FR')} %` : ''}
-                {selectedProgram.ancienneteMinMois != null ? ` · ancienneté minimale ${selectedProgram.ancienneteMinMois} mois` : ''}
-              </p>
-              {(selectedProgram.rccmRequis || selectedProgram.nifRequis || mandatoryDocuments.length > 0) ? (
-                <>
-                  <strong>Pièces et justificatifs à préparer</strong>
-                  <ul>
-                    {mandatoryDocuments.map((document) => (
-                      <li key={document.code}>
-                        {document.libelle}{document.validiteJours ? ` — validité maximale ${document.validiteJours} jours` : ''}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <p>Aucune pièce obligatoire n’est configurée pour ce programme à ce stade.</p>
-              )}
+        <form className={`${styles.card} ${styles.formCard}`} onSubmit={save}>
+          {step === 0 ? (
+            <div className={styles.formGrid}>
+              <div className={`${styles.field} ${styles.fieldFull}`}>
+                <label htmlFor="programmeId">Programme</label>
+                <select id="programmeId" required value={programmeId} onChange={(event) => setProgrammeId(event.target.value)}>
+                  <option value="">Sélectionner</option>
+                  {programs.map((program) => <option key={program.id} value={program.id}>{program.nom}</option>)}
+                </select>
+              </div>
+
+              {selectedProgram ? (
+                <div className={`${styles.notice} ${styles.fieldFull}`} role="status">
+                  <strong>{selectedProgram.nom}</strong>
+                  {selectedProgram.description ? <p>{selectedProgram.description}</p> : null}
+                  <p>
+                    Montant : {money(selectedProgram.montantMin) ?? 'minimum non défini'} → {money(selectedProgram.montantMax) ?? 'maximum non défini'}
+                    {selectedProgram.apportMinPct ? ` · apport minimal ${Number(selectedProgram.apportMinPct).toLocaleString('fr-FR')} %` : ''}
+                    {selectedProgram.ancienneteMinMois != null ? ` · ancienneté minimale ${selectedProgram.ancienneteMinMois} mois` : ''}
+                  </p>
+                  {(selectedProgram.rccmRequis || selectedProgram.nifRequis || mandatoryDocuments.length > 0) ? (
+                    <>
+                      <strong>Pièces et justificatifs à préparer</strong>
+                      <ul>
+                        {mandatoryDocuments.map((document) => (
+                          <li key={document.code}>
+                            {document.libelle}{document.validiteJours ? ` — validité maximale ${document.validiteJours} jours` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <p>Aucune pièce obligatoire n’est configurée pour ce programme à ce stade.</p>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
-          <div className={styles.field}>
-            <label htmlFor="montant">Montant demandé (GNF)</label>
-            <input id="montant" required type="number" min="1" value={montant} onChange={(event) => setMontant(event.target.value)} />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="apport">Apport personnel (GNF)</label>
-            <input id="apport" type="number" min="0" value={apport} onChange={(event) => setApport(event.target.value)} />
-          </div>
-          <div className={`${styles.field} ${styles.fieldFull}`}>
-            <label htmlFor="objet">Objet du financement</label>
-            <input id="objet" required value={objet} onChange={(event) => setObjet(event.target.value)} />
-          </div>
-          <div className={`${styles.field} ${styles.fieldFull}`}>
-            <label htmlFor="description">Description du projet</label>
-            <textarea id="description" value={description} onChange={(event) => setDescription(event.target.value)} />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="emplois">Emplois directs prévus</label>
-            <input id="emplois" type="number" min="0" value={emplois} onChange={(event) => setEmplois(event.target.value)} />
-          </div>
-        </div>
+          {step === 1 ? (
+            <div className={styles.formGrid}>
+              <div className={styles.field}>
+                <label htmlFor="montant">Montant demandé (GNF)</label>
+                <input id="montant" required type="number" min="1" value={montant} onChange={(event) => setMontant(event.target.value)} />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="apport">Apport personnel (GNF)</label>
+                <input id="apport" type="number" min="0" value={apport} onChange={(event) => setApport(event.target.value)} />
+              </div>
+              <div className={`${styles.field} ${styles.fieldFull}`}>
+                <label htmlFor="objet">Objet du financement</label>
+                <input id="objet" required value={objet} onChange={(event) => setObjet(event.target.value)} />
+              </div>
+              {selectedProgram ? (
+                <div className={`${styles.notice} ${styles.fieldFull}`} role="status">
+                  Programme choisi : <strong>{selectedProgram.nom}</strong>. Les règles affichées à l’étape précédente restent la référence et seront contrôlées par la plateforme lors du traitement.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
-        <div className={styles.notice}>Le brouillon peut être enregistré immédiatement. Les pièces sont déposées ensuite depuis « Documents » dans le suivi.</div>
-        {message ? <div className={styles.notice}>{message}</div> : null}
-        <div className={styles.buttonRow}>
-          <Button type="submit">Enregistrer le brouillon</Button>
-        </div>
-      </form>
+          {step === 2 ? (
+            <div className={styles.formGrid}>
+              <div className={`${styles.field} ${styles.fieldFull}`}>
+                <label htmlFor="description">Description du projet</label>
+                <textarea id="description" value={description} onChange={(event) => setDescription(event.target.value)} />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="emplois">Emplois directs prévus</label>
+                <input id="emplois" type="number" min="0" value={emplois} onChange={(event) => setEmplois(event.target.value)} />
+              </div>
+              <div className={`${styles.notice} ${styles.fieldFull}`} role="note">
+                Le brouillon peut être enregistré sans déposer les pièces maintenant. Les documents obligatoires ({mandatoryDocuments.length}) seront ajoutés ensuite depuis « Documents » dans le suivi.
+              </div>
+            </div>
+          ) : null}
+
+          {step === 3 ? (
+            <div className={styles.formGrid}>
+              <div className={`${styles.notice} ${styles.fieldFull}`} role="status">
+                <strong>Vérifiez votre brouillon avant enregistrement</strong>
+                <p><strong>Programme :</strong> {selectedProgram?.nom ?? '—'}</p>
+                <p><strong>Montant demandé :</strong> {money(montant) ?? '—'}</p>
+                <p><strong>Apport personnel :</strong> {money(apport) ?? '0 GNF'}</p>
+                <p><strong>Objet :</strong> {objet || '—'}</p>
+                <p><strong>Description :</strong> {description || 'Non renseignée'}</p>
+                <p><strong>Emplois directs prévus :</strong> {Number(emplois || 0).toLocaleString('fr-FR')}</p>
+                <p><strong>Pièces obligatoires à préparer :</strong> {mandatoryDocuments.length}</p>
+              </div>
+              <div className={`${styles.notice} ${styles.fieldFull}`} role="note">
+                L’enregistrement crée uniquement un brouillon. Vous pourrez encore déposer les documents puis soumettre le dossier depuis le suivi.
+              </div>
+            </div>
+          ) : null}
+
+          {message ? <div className={`${styles.notice} ${styles.section}`} role="alert">{message}</div> : null}
+          <div className={styles.buttonRow}>
+            {step > 0 ? <Button type="button" variant="secondary" onClick={previousStep}>Précédent</Button> : null}
+            {step < STEPS.length - 1 ? (
+              <Button type="button" onClick={nextStep}>Continuer</Button>
+            ) : (
+              <Button type="submit" loading={saving}>Enregistrer le brouillon</Button>
+            )}
+          </div>
+        </form>
+      </div>
     </main>
   );
 }

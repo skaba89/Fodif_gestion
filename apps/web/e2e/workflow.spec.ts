@@ -31,6 +31,7 @@ test.describe('Cycle complet d\'un dossier', () => {
     await expect(page).toHaveURL(/\/entrepreneur$/);
 
     await page.goto('/entrepreneur/demande');
+    await expect(page.getByLabel('Étapes de la demande')).toContainText('1. Programme');
     await page.getByLabel('Programme').selectOption({ label: 'Programme Croissance PME' });
     // The programme is now the source of truth for its documentary requirements. The seed used by
     // the presentation stack configures three mandatory items for CROISSANCE-PME; asserting them
@@ -40,8 +41,21 @@ test.describe('Cycle complet d\'un dossier', () => {
     await expect(page.getByText(/Numéro d’Identification Fiscale/)).toBeVisible();
     await expect(page.getByText(/Plan d’affaires/)).toBeVisible();
 
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await expect(page.getByLabel('Étapes de la demande')).toContainText('2. Financement');
     await page.getByLabel('Montant demandé (GNF)').fill('500000000');
     await page.getByLabel('Objet du financement').fill('Extension de la ligne de transformation');
+
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await expect(page.getByLabel('Étapes de la demande')).toContainText('3. Projet');
+    await page.getByLabel('Description du projet').fill('Augmenter la capacité de transformation et soutenir la création d’emplois locaux.');
+    await page.getByLabel('Emplois directs prévus').fill('12');
+
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await expect(page.getByLabel('Étapes de la demande')).toContainText('4. Vérification');
+    await expect(page.getByText('Vérifiez votre brouillon avant enregistrement')).toBeVisible();
+    await expect(page.getByText('500 000 000 GNF')).toBeVisible();
+    await expect(page.getByText(/Extension de la ligne de transformation/)).toBeVisible();
     await page.getByRole('button', { name: 'Enregistrer le brouillon' }).click();
     await expect(page).toHaveURL(/\/entrepreneur\/suivi$/);
 
