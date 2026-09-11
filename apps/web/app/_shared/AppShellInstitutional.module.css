@@ -45,6 +45,7 @@
 
 .sidebarBrand {
   display: block;
+  min-width: 0;
   padding: 2px 6px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
@@ -52,6 +53,7 @@
 }
 
 .portalContext {
+  min-width: 0;
   display: grid;
   gap: 3px;
   padding: 0 10px;
@@ -70,9 +72,11 @@
   font-family: var(--font-display);
   font-size: 1.02rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .nav {
+  min-width: 0;
   display: grid;
   gap: 5px;
 }
@@ -80,6 +84,7 @@
 .navItem,
 .navItemActive {
   position: relative;
+  min-width: 0;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -91,6 +96,7 @@
   font-size: 0.82rem;
   font-weight: 650;
   text-decoration: none;
+  overflow-wrap: anywhere;
   transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
 
@@ -126,12 +132,14 @@
 }
 
 .sidebarMeta {
+  min-width: 0;
   display: grid;
   gap: 10px;
   margin-top: auto;
 }
 
 .secureStatus {
+  min-width: 0;
   min-height: 40px;
   display: flex;
   align-items: center;
@@ -143,6 +151,7 @@
   background: rgba(255, 255, 255, 0.045);
   font-size: 0.7rem;
   font-weight: 650;
+  overflow-wrap: anywhere;
 }
 
 .secureDot,
@@ -156,6 +165,7 @@
 }
 
 .sidebarAccount {
+  min-width: 0;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
@@ -173,6 +183,7 @@
   position: sticky;
   top: 0;
   z-index: 25;
+  min-width: 0;
   min-height: 72px;
   display: flex;
   align-items: center;
@@ -190,7 +201,10 @@
 
 .quickSearch {
   position: relative;
+  min-width: 0;
+  flex: 1 1 360px;
   width: min(100%, 520px);
+  max-width: 520px;
   margin-right: auto;
 }
 
@@ -208,6 +222,7 @@
 }
 
 .quickSearch input {
+  min-width: 0;
   width: 100%;
   min-height: 42px;
   padding: 0 14px 0 40px;
@@ -229,6 +244,7 @@
   top: calc(100% + 7px);
   left: 0;
   right: 0;
+  min-width: 0;
   display: grid;
   gap: 3px;
   padding: 7px;
@@ -239,6 +255,7 @@
 }
 
 .searchResult {
+  min-width: 0;
   min-height: 40px;
   display: flex;
   align-items: center;
@@ -259,11 +276,15 @@
 }
 
 .searchResult small {
+  min-width: 0;
   color: var(--muted);
   font-size: 0.65rem;
+  overflow-wrap: anywhere;
 }
 
 .topbarActions {
+  min-width: 0;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -319,6 +340,7 @@
 }
 
 .notice {
+  min-width: 0;
   margin: 16px clamp(18px, 3vw, 38px) 0;
   padding: 11px 14px;
   border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--line));
@@ -327,6 +349,7 @@
   color: var(--warning);
   font-size: 0.78rem;
   font-weight: 650;
+  overflow-wrap: anywhere;
 }
 
 .contentFrame {
@@ -336,10 +359,12 @@
 }
 
 .contentFrame :global(main) {
+  min-width: 0;
   animation: contentIn var(--duration-fast) var(--ease);
 }
 
 .footer {
+  min-width: 0;
   margin: 0 clamp(18px, 3vw, 38px);
   padding: 22px 0 calc(24px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
@@ -353,18 +378,21 @@
 }
 
 .drawerBrand {
+  min-width: 0;
   margin-bottom: 20px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--line);
 }
 
 .drawerNav {
+  min-width: 0;
   display: grid;
   gap: 5px;
 }
 
 .drawerNavItem,
 .drawerNavItemActive {
+  min-width: 0;
   min-height: 48px;
   display: flex;
   align-items: center;
@@ -376,6 +404,7 @@
   font-size: 0.86rem;
   font-weight: 680;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 .drawerNavItemActive {
@@ -387,9 +416,11 @@
 .drawerNavChevron {
   width: 17px;
   height: 17px;
+  flex: 0 0 17px;
 }
 
 .drawerAccount {
+  min-width: 0;
   margin-top: 22px;
   padding-top: 18px;
   border-top: 1px solid var(--line);
@@ -414,7 +445,9 @@
   }
 }
 
-@media (max-width: 800px) {
+/* Move to the compact application shell before the persistent sidebar leaves too little room for
+   métier pages. This also behaves correctly when browser zoom reduces the CSS viewport. */
+@media (max-width: 960px) {
   .shell {
     display: block;
     padding-bottom: calc(70px + env(safe-area-inset-bottom));
@@ -491,6 +524,7 @@
     line-height: 1.1;
     text-align: center;
     text-decoration: none;
+    overflow-wrap: anywhere;
   }
 
   .bottomItemActive {

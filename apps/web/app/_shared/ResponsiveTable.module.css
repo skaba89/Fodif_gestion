@@ -71,6 +71,7 @@
 
 .card {
   position: relative;
+  min-width: 0;
   overflow: hidden;
   padding: 1rem;
   border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
@@ -106,11 +107,13 @@
 }
 
 .definitionList dt {
+  min-width: 0;
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.025em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .definitionList dd {
@@ -130,7 +133,9 @@
   text-align: center;
 }
 
-@media (max-width: 720px) {
+/* A persistent portal sidebar removes 220–260px from the usable width. Switch to the card
+   representation before a 720px table has to create an internal horizontal scrollbar. */
+@media (max-width: 1020px) {
   .desktop {
     display: none;
   }
