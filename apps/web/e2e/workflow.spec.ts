@@ -104,7 +104,7 @@ test.describe('Cycle complet d\'un dossier', () => {
 
     // B2G trust requirement: the sensitive transition must be explicitly confirmed and the dialog
     // states that it will be timestamped in the audit history.
-    const reviewDialog = page.getByRole('dialog', { name: 'Confirmer la décision d’instruction' });
+    const reviewDialog = page.getByRole('alertdialog', { name: 'Confirmer la décision d’instruction' });
     await expect(reviewDialog).toBeVisible();
     await expect(reviewDialog).toContainText('horodatée');
     await reviewDialog.getByRole('button', { name: 'Confirmer la décision' }).click();
