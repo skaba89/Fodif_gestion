@@ -1,4 +1,6 @@
 .button {
+  position: relative;
+  overflow: hidden;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -22,21 +24,18 @@
   transform: translateY(1px);
 }
 
-/* Keep the filled action on the dark-enough primary scale in both themes. The semantic --green
-   token intentionally becomes lighter in dark mode for links and text, but white text on that
-   lighter value does not meet WCAG AA. */
 .primary {
-  background: var(--primary-500);
-  color: var(--neutral-0);
+  background: var(--fodip-primary, var(--primary-700));
+  color: #fff;
 }
 
 .primary:not([aria-disabled="true"]):not(:disabled):hover {
-  background: var(--primary-700);
+  background: var(--fodip-primary-hover, var(--primary-800));
 }
 
 .secondary {
   background: var(--gold);
-  color: var(--primary-900);
+  color: #1a2e22;
 }
 
 .secondary:not([aria-disabled="true"]):not(:disabled):hover {
@@ -63,7 +62,7 @@
 
 .destructive {
   background: var(--danger);
-  color: var(--neutral-0);
+  color: #fff;
 }
 
 .destructive:not([aria-disabled="true"]):not(:disabled):hover {
@@ -73,7 +72,7 @@
 .button:disabled,
 .button[aria-disabled="true"] {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.68;
   transform: none;
 }
 
@@ -82,16 +81,31 @@
   padding-inline: 0;
 }
 
-.spinner {
-  width: 1rem;
-  height: 1rem;
-  flex: 0 0 auto;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+.loadingBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, currentColor 48%, transparent 100%);
+  opacity: 0.7;
+  transform: translateX(-65%);
+  animation: loading-bar 1.1s var(--ease) infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.loading > span:last-child {
+  opacity: 0.88;
+}
+
+@keyframes loading-bar {
+  to { transform: translateX(65%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingBar {
+    animation: none;
+    transform: none;
+    background: currentColor;
+    opacity: 0.45;
+  }
 }
