@@ -253,9 +253,9 @@ export default function FundingApplicationPage() {
           <div className={styles.buttonRow}>
             {step > 0 ? <Button type="button" variant="secondary" onClick={previousStep}>Précédent</Button> : null}
             {step < STEPS.length - 1 ? (
-              <Button type="button" onClick={nextStep}>Continuer</Button>
+              <Button key="continue" type="button" onClick={nextStep}>Continuer</Button>
             ) : (
-              <Button type="submit" loading={saving}>Enregistrer le brouillon</Button>
+              <Button key="save" type="submit" loading={saving}>Enregistrer le brouillon</Button>
             )}
           </div>
         </form>
