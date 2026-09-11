@@ -136,6 +136,19 @@ body {
   transition-timing-function: var(--ease);
 }
 
+/* Shared visually-hidden utility for accessible labels in both public and authenticated shells. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 /* Gold is reserved for high-salience key actions and state accents. Always pair it with dark ink. */
 [data-action='key'] {
   background: var(--gold);
