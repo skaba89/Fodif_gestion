@@ -8,7 +8,6 @@ import {
   LOGIN_HREF,
   resolvePortalFromPath,
   resolveRoleHome,
-  rolesCanAccessPortal,
 } from '../../lib/portal-access';
 import styles from './AccountMenu.module.css';
 
@@ -20,7 +19,12 @@ interface SessionContext {
 }
 
 /**
- * Shared authenticated account controls and session guard for every portal.
+ * Shared authenticated account controls for every portal.
+ *
+ * AppShell is the single access guard for portal routes. AccountMenu deliberately does not
+ * redirect on portal 401/role mismatches: rendering the menu twice (desktop + drawer) must never
+ * race AppShell with competing navigations. On shared authenticated pages, where no portal shell
+ * exists, this component can still route an expired session to the canonical login page.
  *
  * Privacy rule: account identifiers and roles are deliberately absent from the global shell.
  * Identity remains on the dedicated profile page; this control stores only the canonical home
@@ -67,14 +71,6 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
         const roles = session.roles ?? [];
         const roleHome = resolveRoleHome(roles) ?? null;
 
-        if (portal && !rolesCanAccessPortal(roles, portal)) {
-          setAuthenticated(false);
-          setAccountHome(roleHome);
-          router.replace(roleHome ?? '/');
-          router.refresh();
-          return;
-        }
-
         intentionalLogout.current = false;
         setAccountHome(roleHome);
         setAuthenticated(true);
@@ -83,14 +79,16 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
 
       setAuthenticated(false);
       setAccountHome(null);
-      if (response.status === 401) redirectExpiredSession();
+      // Portal authentication and authorization are owned by AppShell. Only shared authenticated
+      // pages without a portal shell need AccountMenu to perform the expired-session redirect.
+      if (response.status === 401 && !portal) redirectExpiredSession();
     } catch {
       // A network outage is not the same thing as an expired session. Keep the portal mounted and
       // let page-level error handling report connectivity problems instead of forcing logout.
       setAuthenticated(false);
       setAccountHome(null);
     }
-  }, [pathname, loginHref, portal, redirectExpiredSession, router]);
+  }, [pathname, loginHref, portal, redirectExpiredSession]);
 
   useEffect(() => {
     if (portal) window.sessionStorage.setItem(LAST_PORTAL_STORAGE_KEY, portal);
