@@ -73,18 +73,19 @@ test.describe('Cycle complet d\'un dossier', () => {
     await logout(page);
     await expect(page).toHaveURL(/\/connexion$/);
 
-    // --- Agent: priority queue -> focused instruction workspace -> committee handoff ---
+    // --- Agent: priority queue -> one-click claim/open -> focused instruction workspace ---
     await login(page, 'agent@fodip.local');
     await expect(page).toHaveURL(/\/agent\/dossiers$/);
 
     await page.getByLabel('Recherche').fill(numeroDossier);
     await page.getByRole('button', { name: 'Filtrer' }).click();
-    await page.getByRole('link', { name: 'Instruire' }).first().click();
+    await page.getByRole('button', { name: 'Prendre et instruire' }).first().click();
     await expect(page).toHaveURL(/\/agent\/dossiers\/[0-9a-f-]+$/);
     const dossierUrl = page.url();
 
-    await page.getByRole('button', { name: 'Prendre en charge' }).click();
-    await expect(page.getByText('Dossier pris en charge.')).toBeVisible();
+    // Taking ownership and opening the workspace are one interaction. The detail therefore lands
+    // already claimed and must not require the historical second "Prendre en charge" click.
+    await expect(page.getByRole('button', { name: 'Prendre en charge' })).toHaveCount(0);
 
     // 4 criteria are seeded (database/seeds/001_docker_demo.sql, modèle SCORING-PME): fill every
     // one rather than hardcoding their labels, so this test does not drift if a criterion's
