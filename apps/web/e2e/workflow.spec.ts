@@ -26,6 +26,12 @@ async function logout(page: Page) {
 
 test.describe('Cycle complet d\'un dossier', () => {
   test('dépôt PME, instruction et scoring agent, décision du comité', async ({ page }) => {
+    // This is a real cross-role business transaction with three authenticated portals, scoring,
+    // audit confirmation and a final PME read-back. The suite-wide 30s timeout is intentionally
+    // too short for this end-to-end proof on shared CI runners, so this scenario gets its own
+    // bounded budget without relaxing any individual assertion timeout.
+    test.setTimeout(90_000);
+
     // --- PME: draft and submit a new funding application ---
     await login(page, 'pme@fodip.local');
     await expect(page).toHaveURL(/\/entrepreneur$/);
@@ -53,9 +59,8 @@ test.describe('Cycle complet d\'un dossier', () => {
 
     await page.getByRole('button', { name: 'Continuer' }).click();
     await expect(page.getByLabel('Étapes de la demande')).toContainText('4. Vérification');
-    const verificationHeading = page.getByText('Vérifiez votre brouillon avant enregistrement', { exact: true });
-    await expect(verificationHeading).toBeVisible();
-    const verification = verificationHeading.locator('..');
+    const verification = page.getByRole('status').filter({ hasText: 'Vérifiez votre brouillon avant enregistrement' });
+    await expect(verification).toBeVisible();
     await expect(verification).toContainText(/500\s*000\s*000 GNF/);
     await expect(verification).toContainText('Extension de la ligne de transformation');
     await page.getByRole('button', { name: 'Enregistrer le brouillon' }).click();

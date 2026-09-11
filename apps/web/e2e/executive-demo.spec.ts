@@ -91,12 +91,11 @@ async function logout(page: Page) {
 
 test.describe('Scénario de démonstration Direction générale', () => {
   test('accueil, connexion Direction + MFA, cockpit filtré, cycle complet PME -> financement -> impact', async ({ page, baseURL }) => {
-    // Axe E5 (maker-checker, docs/14-ROADMAP-SAAS-PREMIUM.md) added a second Direction officer and
-    // an extra MFA verification mid-scenario (see waitForFreshTotpStep above) - each
-    // loginWithMfa call now genuinely waits out up to one real 30s TOTP step, on top of this
-    // scenario's own already-substantial real workload (11 steps, 5 accounts). The default 30s
-    // suite-wide timeout (playwright.config.ts) was already tight for this one test before that.
-    test.setTimeout(150_000);
+    // This one scenario intentionally exercises 11 business steps, five temporary accounts,
+    // privileged-role MFA enrollment and two later MFA verifications. Those verifications can each
+    // wait for a fresh 30-second TOTP window by design. Give the complete lifecycle a bounded
+    // five-minute budget while keeping all individual locator/assertion timeouts unchanged.
+    test.setTimeout(300_000);
     const admin = await playwrightRequest.newContext({ baseURL });
     const adminLogin = await admin.post('/api/session/login', { data: { email: SETUP_ADMIN_EMAIL, password: DEMO_PASSWORD } });
     expect(adminLogin.ok(), 'admin login for test setup').toBeTruthy();
