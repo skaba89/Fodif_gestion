@@ -31,6 +31,7 @@ test.describe('Cycle complet d\'un dossier', () => {
     await expect(page).toHaveURL(/\/entrepreneur$/);
 
     await page.goto('/entrepreneur/demande');
+    await page.getByLabel('Programme').selectOption({ label: 'Programme Croissance PME' });
     // The programme is now the source of truth for its documentary requirements. The seed used by
     // the presentation stack configures three mandatory items for CROISSANCE-PME; asserting them
     // here locks the entire DB -> API -> BFF -> PME UI chain, not just a hard-coded frontend list.

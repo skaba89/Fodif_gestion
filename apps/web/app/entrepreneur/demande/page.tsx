@@ -50,7 +50,6 @@ export default function FundingApplicationPage() {
     clientApi<Program[]>('/api/programmes')
       .then((items) => {
         setPrograms(items);
-        if (items[0]) setProgrammeId(items[0].id);
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : 'Chargement impossible'));
   }, []);

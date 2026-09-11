@@ -7,17 +7,19 @@ import { expect, request as playwrightRequest, test } from '@playwright/test';
 // to pme@fodip.local's own enterprise (database/seeds/001_docker_demo.sql) - the same "second user,
 // same enterprise" pattern executive-demo.spec.ts already uses, so this adds no load on
 // pme@fodip.local's own login-throttle budget. The test is nevertheless in HEAVY_LOGIN_SPECS
-// (playwright.config.ts): it must authenticate the same seeded administrator once per project to
-// create those users, so five sequential projects would exhaust admin@'s real 5-per-60s budget
-// once retries are included. Chromium exercises the full concurrency scenario; the mobile and
-// secondary-engine projects retain their dedicated navigation/accessibility coverage elsewhere.
+// (playwright.config.ts): it must authenticate the same seeded qualification administrator once
+// per project to create those users, so five sequential projects plus role qualification and
+// retries would exhaust that account's real 5-per-60s budget. Chromium exercises the full
+// concurrency scenario; the mobile and secondary-engine projects retain their dedicated
+// navigation/accessibility coverage elsewhere.
 const DEMO_PASSWORD = 'FodipDemo2026!';
 const DEMO_ENTREPRISE_ID = '30000000-0000-4000-8000-000000000001';
+const SETUP_ADMIN_EMAIL = 'qualification-admin@fodip.local';
 
 test.describe('Fiche entreprise', () => {
   test('a second save after someone else already saved is refused, not silently overwritten', async ({ browser, baseURL }) => {
     const admin = await playwrightRequest.newContext({ baseURL });
-    const adminLogin = await admin.post('/api/session/login', { data: { email: 'admin@fodip.local', password: DEMO_PASSWORD } });
+    const adminLogin = await admin.post('/api/session/login', { data: { email: SETUP_ADMIN_EMAIL, password: DEMO_PASSWORD } });
     expect(adminLogin.ok()).toBeTruthy();
 
     const stamp = Date.now();

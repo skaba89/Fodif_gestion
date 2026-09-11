@@ -8,11 +8,12 @@ import { expect, request as playwrightRequest, test } from '@playwright/test';
 // it against a real Postgres column (widened from VARCHAR(50); a wrong length calculation would
 // truncate the ciphertext and fail here, not in a mock) and the real pg driver's encoding.
 const DEMO_PASSWORD = 'FodipDemo2026!';
+const SETUP_ADMIN_EMAIL = 'qualification-admin@fodip.local';
 
 test('a user telephone round-trips through encryption at rest unchanged (axe B5)', async ({ baseURL }) => {
   const admin = await playwrightRequest.newContext({ baseURL });
   try {
-    const login = await admin.post('/api/session/login', { data: { email: 'admin@fodip.local', password: DEMO_PASSWORD } });
+    const login = await admin.post('/api/session/login', { data: { email: SETUP_ADMIN_EMAIL, password: DEMO_PASSWORD } });
     expect(login.ok(), 'admin login for test setup').toBeTruthy();
 
     const email = `pii.e2e.${Date.now()}@fodip.local`;

@@ -24,7 +24,7 @@ import { defineConfig, devices } from '@playwright/test';
  * single project (choosing `auditeur@fodip.local` specifically so its one login doesn't share
  * `pme@fodip.local`'s budget with login.spec.ts/workflow.spec.ts). Replaying `login.spec.ts`,
  * `workflow.spec.ts`, `mfa.spec.ts` and `pii-encryption.spec.ts` on three sequential projects
- * within the same ~2.5 minute run reuses `agent@fodip.local`/`pme@fodip.local`/`admin@fodip.local`
+ * within the same ~2.5 minute run reuses seeded login or setup identities
  * often enough (3 real POSTs per project x 3 projects, all within one sliding 60s window) to trip
  * that same limit for real - not a bug to work around, the rate limiter doing its job against
  * traffic that happens to be Playwright rather than a credential-stuffing attempt. Weakening it
@@ -46,13 +46,13 @@ import { defineConfig, devices } from '@playwright/test';
  * (`playwright install --with-deps chromium firefox webkit`); running this project locally
  * requires that same install.
  */
-// Specs that log in as agent@/pme@/admin@fodip.local enough times per run to matter for the
-// shared 5-per-60s throttle once replayed across projects - see the file-level comment above.
+// Specs that reuse seeded login/setup identities enough times per run to matter for the shared
+// 5-per-60s throttle once replayed across projects - see the file-level comment above.
 const HEAVY_LOGIN_SPECS = [
   /login\.spec\.ts$/, /workflow\.spec\.ts$/, /mfa\.spec\.ts$/, /pii-encryption\.spec\.ts$/,
-  // Creates fresh PME users, but must first authenticate the same seeded administrator once per
-  // project. Replaying it across all five projects therefore exhausts admin@'s real 5-per-60s
-  // budget even though the throwaway PME accounts themselves never reuse a login identity.
+  // Creates fresh PME users, but must first authenticate the same seeded qualification
+  // administrator once per project. Replaying it across all five projects therefore exhausts
+  // that identity's real budget even though the throwaway PME accounts never reuse one.
   /company-profile\.spec\.ts$/,
   // Mission "présentation Directeur général" (section 10): logs in as pme@/agent@/comite@ - the
   // same three accounts workflow.spec.ts already uses - so it carries the same profile.
