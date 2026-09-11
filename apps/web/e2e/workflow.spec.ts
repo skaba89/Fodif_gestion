@@ -73,13 +73,13 @@ test.describe('Cycle complet d\'un dossier', () => {
     await logout(page);
     await expect(page).toHaveURL(/\/connexion$/);
 
-    // --- Agent: claim, score against the active model, transmit to committee ---
+    // --- Agent: priority queue -> focused instruction workspace -> committee handoff ---
     await login(page, 'agent@fodip.local');
     await expect(page).toHaveURL(/\/agent\/dossiers$/);
 
     await page.getByLabel('Recherche').fill(numeroDossier);
     await page.getByRole('button', { name: 'Filtrer' }).click();
-    await page.getByRole('link', { name: 'Vue 360°' }).first().click();
+    await page.getByRole('link', { name: 'Instruire' }).first().click();
     await expect(page).toHaveURL(/\/agent\/dossiers\/[0-9a-f-]+$/);
     const dossierUrl = page.url();
 
@@ -100,10 +100,17 @@ test.describe('Cycle complet d\'un dossier', () => {
     await page.getByLabel('Décision d\'instruction').selectOption('PRET_COMITE');
     await page.getByLabel('Motivation de la décision').fill('Dossier complet, scoring favorable, transmis au comité.');
     await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+
+    // B2G trust requirement: the sensitive transition must be explicitly confirmed and the dialog
+    // states that it will be timestamped in the audit history.
+    const reviewDialog = page.getByRole('dialog', { name: 'Confirmer la décision d’instruction' });
+    await expect(reviewDialog).toBeVisible();
+    await expect(reviewDialog).toContainText('horodatée');
+    await reviewDialog.getByRole('button', { name: 'Confirmer la décision' }).click();
+
     await expect(page.getByText('Décision d’instruction enregistrée.')).toBeVisible();
-    // exact: true - the status pill reads exactly "PRET_COMITE", but the Historique section
-    // below also renders "EN_INSTRUCTION → PRET_COMITE" as a transition line, which a substring
-    // match would ambiguously match too.
+    // The technical enum remains visible next to the human-readable badge for traceability and
+    // compatibility with downstream committee/audit workflows.
     await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
 
     await logout(page);
@@ -138,9 +145,6 @@ test.describe('Cycle complet d\'un dossier', () => {
     await login(page, 'pme@fodip.local');
     await expect(page).toHaveURL(/\/entrepreneur$/);
     await page.goto('/entrepreneur/suivi');
-    // The shared PME status vocabulary introduced human-readable labels ("Approuvé" instead of
-    // the raw API enum "APPROUVE"). Scope to this test's dossier so the assertion is independent
-    // from other seeded or previously-created applications.
     const approvedRow = page.getByRole('row', { name: new RegExp(numeroDossier) });
     await expect(approvedRow.getByText('Approuvé', { exact: true })).toBeVisible();
   });
