@@ -53,9 +53,10 @@ test.describe('Cycle complet d\'un dossier', () => {
 
     await page.getByRole('button', { name: 'Continuer' }).click();
     await expect(page.getByLabel('Étapes de la demande')).toContainText('4. Vérification');
-    const verification = page.getByRole('status').filter({ hasText: 'Vérifiez votre brouillon avant enregistrement' });
-    await expect(verification).toBeVisible();
-    await expect(verification).toContainText('500 000 000 GNF');
+    const verificationHeading = page.getByText('Vérifiez votre brouillon avant enregistrement', { exact: true });
+    await expect(verificationHeading).toBeVisible();
+    const verification = verificationHeading.locator('..');
+    await expect(verification).toContainText(/500\s*000\s*000 GNF/);
     await expect(verification).toContainText('Extension de la ligne de transformation');
     await page.getByRole('button', { name: 'Enregistrer le brouillon' }).click();
     await expect(page).toHaveURL(/\/entrepreneur\/suivi$/);

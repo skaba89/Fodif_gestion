@@ -151,18 +151,18 @@ export default function AppShell({
     let cancelled = false;
     setValidatedPath(null);
 
+    const redirectToLogin = () => {
+      const destination = intentionalLogout.current
+        ? PORTAL_ACCESS[portal].loginHref
+        : `${PORTAL_ACCESS[portal].loginHref}?reason=session-expired`;
+      window.location.replace(destination);
+    };
+
     fetch('/api/session/me', { cache: 'no-store' })
       .then(async (response) => {
         if (cancelled) return;
-        if (response.status === 401) {
-          const destination = intentionalLogout.current
-            ? PORTAL_ACCESS[portal].loginHref
-            : `${PORTAL_ACCESS[portal].loginHref}?reason=session-expired`;
-          window.location.replace(destination);
-          return;
-        }
         if (!response.ok) {
-          setValidatedPath(pathname);
+          redirectToLogin();
           return;
         }
 
@@ -176,7 +176,7 @@ export default function AppShell({
         setValidatedPath(pathname);
       })
       .catch(() => {
-        if (!cancelled) setValidatedPath(pathname);
+        if (!cancelled) redirectToLogin();
       });
 
     return () => {

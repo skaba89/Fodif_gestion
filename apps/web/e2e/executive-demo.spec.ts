@@ -154,8 +154,14 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await expect(page).toHaveURL(/\/entrepreneur$/);
       await page.goto('/entrepreneur/demande');
       await page.getByLabel('Programme').selectOption({ label: 'Programme Croissance PME' });
+      await page.getByRole('button', { name: 'Continuer' }).click();
+      await expect(page.getByLabel('Étapes de la demande')).toContainText('2. Financement');
       await page.getByLabel('Montant demandé (GNF)').fill('300000000');
       await page.getByLabel('Objet du financement').fill('Démonstration Direction générale - ligne de production');
+      await page.getByRole('button', { name: 'Continuer' }).click();
+      await expect(page.getByLabel('Étapes de la demande')).toContainText('3. Projet');
+      await page.getByRole('button', { name: 'Continuer' }).click();
+      await expect(page.getByLabel('Étapes de la demande')).toContainText('4. Vérification');
       await page.getByRole('button', { name: 'Enregistrer le brouillon' }).click();
       await expect(page).toHaveURL(/\/entrepreneur\/suivi$/);
       const ownRow = page.locator('table tbody tr').first();
@@ -170,12 +176,11 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await expect(page).toHaveURL(/\/agent\/dossiers$/);
       await page.getByLabel('Recherche').fill(numeroDossier);
       await page.getByRole('button', { name: 'Filtrer' }).click();
-      await page.getByRole('link', { name: 'Vue 360°' }).first().click();
+      await page.getByRole('button', { name: 'Prendre et instruire' }).first().click();
       await expect(page).toHaveURL(/\/agent\/dossiers\/[0-9a-f-]+$/);
       const dossierUrl = page.url();
+      await expect(page.getByRole('button', { name: 'Prendre en charge' })).toHaveCount(0);
 
-      await page.getByRole('button', { name: 'Prendre en charge' }).click();
-      await expect(page.getByText('Dossier pris en charge.')).toBeVisible();
       const scoringForm = page.locator('form').filter({ has: page.getByRole('button', { name: 'Calculer et enregistrer' }) });
       const noteInputs = scoringForm.getByRole('spinbutton');
       for (const input of await noteInputs.all()) await input.fill('80');
@@ -185,6 +190,9 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await page.getByLabel('Décision d\'instruction').selectOption('PRET_COMITE');
       await page.getByLabel('Motivation de la décision').fill('Dossier complet, transmis pour la démonstration Direction.');
       await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+      const reviewDialog = page.getByRole('alertdialog', { name: 'Confirmer la décision d’instruction' });
+      await expect(reviewDialog).toBeVisible();
+      await reviewDialog.getByRole('button', { name: 'Confirmer la décision' }).click();
       await expect(page.getByText('Décision d’instruction enregistrée.')).toBeVisible();
       await logout(page);
 
