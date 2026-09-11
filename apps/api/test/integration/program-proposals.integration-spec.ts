@@ -12,17 +12,41 @@ type ProposalView = {
   versions: Array<{ version: number; statut: string; submittedAt?: string | null; approvedAt?: string | null }>;
 };
 
+type SeedEvidence = {
+  regionCodes: string[];
+  secteurCodes: string[];
+  defaultPrograms: Array<{ code: string; isDefault: boolean; sourceReference: string | null }>;
+};
+
 const proposal = (value: unknown) => value as ProposalView;
 
 describe('Programme references and hierarchical proposals (real PostgreSQL)', () => {
   let integrationDb: IntegrationDatabase;
   let proposals: ProgramProposalsRepository;
   let programs: ProgramsRepository;
+  let seedEvidence: SeedEvidence;
 
   beforeAll(async () => {
     integrationDb = await startIntegrationDatabase();
     proposals = new ProgramProposalsRepository(integrationDb.db);
     programs = new ProgramsRepository(integrationDb.db);
+
+    // Capture the migration result before reset() clears business/reference rows between tests.
+    const [regions, secteurs, defaults] = await Promise.all([
+      integrationDb.pool.query<{ code: string }>('SELECT code FROM regions ORDER BY code'),
+      integrationDb.pool.query<{ code: string }>('SELECT code FROM secteurs_activite WHERE actif = TRUE ORDER BY code'),
+      integrationDb.pool.query<{ code: string; isDefault: boolean; sourceReference: string | null }>(`
+        SELECT code, is_default AS "isDefault", source_reference AS "sourceReference"
+        FROM programmes_fodip
+        WHERE code IN ('FIER-BOOST', 'EXPORT-TRANSFORMATION', 'ELLEVER')
+        ORDER BY code
+      `),
+    ]);
+    seedEvidence = {
+      regionCodes: regions.rows.map((row) => row.code),
+      secteurCodes: secteurs.rows.map((row) => row.code),
+      defaultPrograms: defaults.rows,
+    };
   }, 120_000);
 
   afterAll(async () => {
@@ -31,6 +55,28 @@ describe('Programme references and hierarchical proposals (real PostgreSQL)', ()
 
   beforeEach(async () => {
     await integrationDb.reset();
+    // reset() intentionally clears these business reference rows; restore deterministic fixtures
+    // for workflow tests without masking the migration evidence captured above.
+    await integrationDb.pool.query(`
+      INSERT INTO regions(code, nom) VALUES
+        ('CONAKRY', 'Conakry'), ('BOKE', 'Boké'), ('KINDIA', 'Kindia'), ('MAMOU', 'Mamou'),
+        ('LABE', 'Labé'), ('FARANAH', 'Faranah'), ('KANKAN', 'Kankan'), ('NZEREKORE', 'N''Zérékoré')
+      ON CONFLICT (code) DO UPDATE SET nom = EXCLUDED.nom
+    `);
+    await integrationDb.pool.query(`
+      INSERT INTO secteurs_activite(code, nom, actif) VALUES
+        ('AGRICULTURE', 'Agriculture', TRUE),
+        ('AGRO_INDUSTRIE', 'Agro-industrie', TRUE),
+        ('TRANSFORMATION', 'Transformation', TRUE),
+        ('COMMERCE', 'Commerce', TRUE),
+        ('SERVICES', 'Services', TRUE),
+        ('INDUSTRIE', 'Industrie', TRUE),
+        ('TECHNOLOGIE', 'Technologie', TRUE),
+        ('ARTISANAT', 'Artisanat', TRUE),
+        ('TOURISME', 'Tourisme', TRUE),
+        ('LOGISTIQUE_TRANSPORT', 'Logistique & Transport', TRUE)
+      ON CONFLICT (code) DO UPDATE SET nom = EXCLUDED.nom, actif = TRUE
+    `);
   });
 
   async function actor(label: string) {
@@ -41,24 +87,19 @@ describe('Programme references and hierarchical proposals (real PostgreSQL)', ()
     return result.rows[0].id;
   }
 
-  it('seeds the default Guinea regions, FODIP sectors and verified default programmes', async () => {
-    const refs = await proposals.references();
-    expect(refs.regions.map((row) => row.code).sort()).toEqual([
+  it('migration installs the default Guinea regions, FODIP sectors and verified default programmes', () => {
+    expect(seedEvidence.regionCodes).toEqual([
       'BOKE', 'CONAKRY', 'FARANAH', 'KANKAN', 'KINDIA', 'LABE', 'MAMOU', 'NZEREKORE',
     ]);
-    expect(refs.secteurs.map((row) => row.code)).toEqual(expect.arrayContaining([
+    expect(seedEvidence.secteurCodes).toEqual(expect.arrayContaining([
       'AGRICULTURE', 'AGRO_INDUSTRIE', 'TRANSFORMATION', 'COMMERCE', 'SERVICES',
       'INDUSTRIE', 'TECHNOLOGIE', 'ARTISANAT', 'TOURISME', 'LOGISTIQUE_TRANSPORT',
     ]));
-
-    const defaults = await integrationDb.pool.query<{ code: string; is_default: boolean; source_reference: string }>(`
-      SELECT code, is_default, source_reference
-      FROM programmes_fodip
-      WHERE code IN ('FIER-BOOST', 'EXPORT-TRANSFORMATION', 'ELLEVER')
-      ORDER BY code
-    `);
-    expect(defaults.rows).toHaveLength(3);
-    expect(defaults.rows.every((row) => row.is_default && row.source_reference === 'https://fodip.gov.gn/')).toBe(true);
+    expect(seedEvidence.defaultPrograms).toEqual([
+      { code: 'ELLEVER', isDefault: true, sourceReference: 'https://fodip.gov.gn/' },
+      { code: 'EXPORT-TRANSFORMATION', isDefault: true, sourceReference: 'https://fodip.gov.gn/' },
+      { code: 'FIER-BOOST', isDefault: true, sourceReference: 'https://fodip.gov.gn/' },
+    ]);
   });
 
   it('lets an internal user scope, submit and track a proposal without publishing it before Direction approval', async () => {
