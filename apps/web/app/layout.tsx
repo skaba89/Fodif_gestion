@@ -9,18 +9,16 @@ import './institutional-typography.css';
 import './fodip-product-theme.css';
 
 // Public Sans remains the established grotesque/display face used by the landing. Inter is used
-// for body copy and dense financial data. next/font bundles both locally at build time: there is
-// no runtime dependency on a third-party font CDN, including on constrained government networks.
+// for body copy and dense financial data. Both families are variable fonts: letting next/font use
+// their variable files avoids emitting one static file per weight while keeping them self-hosted.
 const publicSans = Public_Sans({
   subsets: ['latin'],
-  weight: ['600', '700', '800', '900'],
   variable: '--font-public-sans',
   display: 'swap',
 });
 
 const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-inter',
   display: 'swap',
 });
