@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ProgramCatalog from '../../_shared/ProgramCatalog';
+import ProgramProposalPanel from '../../_shared/ProgramProposalPanel';
 import ProgramManagement from './ProgramManagement';
 
 type Session = { roles?: string[] };
@@ -24,5 +25,8 @@ export default function DirectionProgramsPage() {
     return <ProgramManagement />;
   }
 
-  return <ProgramCatalog eyebrow="Référentiel programmes" title="Programmes FODIP actifs" homeHref="/direction/tableau-de-bord" homeLabel="Direction" />;
+  return <>
+    <ProgramCatalog eyebrow="Référentiel programmes" title="Programmes FODIP actifs" homeHref="/direction/tableau-de-bord" homeLabel="Direction" />
+    {roles.includes('ANALYSTE') ? <ProgramProposalPanel /> : null}
+  </>;
 }
