@@ -3,7 +3,6 @@
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { resolveRoleHome } from '../../lib/portal-access';
-import styles from '../entrepreneur/portal.module.css';
 import FodipOfficialBrand from './FodipOfficialBrand';
 import premium from './LoginForm.module.css';
 
@@ -27,31 +26,32 @@ export interface LoginFormProps {
   eyebrow: string;
   title: string;
   lead: string;
-  /** Explicit destination kept for legacy callers. Omit to route from the authenticated roles. */
   redirectTo?: string;
-  /** Roles allowed to use this portal. Omit to accept any authenticated account. */
   allowedRoles?: string[];
   deniedMessage?: string;
-  /** A recognized account that used the wrong portal is sent to its canonical role home. */
   redirectWrongRoleToHome?: boolean;
-  /** 'narrow' renders a single centered card; 'wide' is the default authentication layout. */
   variant?: 'wide' | 'narrow';
   replaceHistory?: boolean;
-  /** Offers SSO for institutional accounts when OIDC is configured on the API. */
   oidcPortal?: OidcPortal;
 }
 
-/**
- * Shared login flow for every account type.
- *
- * The backend remains authoritative for authentication, MFA and RBAC. The canonical /connexion
- * page does not ask the user to choose a role: after authentication, the roles returned by the
- * API determine the authorized home. Existing portal-specific props remain supported only for
- * backward-compatible callers while legacy URLs redirect to /connexion.
- */
+function ClockIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
+}
+
+function ShieldIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.7 2.8 8.1 7 10 4.2-1.9 7-5.3 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></svg>;
+}
+
+function EyeIcon({ hidden }: { hidden: boolean }) {
+  return hidden
+    ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18" /><path d="M10.6 10.7a2 2 0 0 0 2.7 2.7" /><path d="M9.9 5.1A10.7 10.7 0 0 1 12 5c5.5 0 9 7 9 7a16 16 0 0 1-2.2 3.1M6.2 6.2C4.1 7.6 3 12 3 12s3.5 7 9 7c1.2 0 2.3-.3 3.3-.7" /></svg>
+    : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7Z" /><circle cx="12" cy="12" r="2.5" /></svg>;
+}
+
 export default function LoginForm(props: LoginFormProps) {
   return (
-    <Suspense fallback={<main className={premium.main} />}>
+    <Suspense fallback={<main className={premium.page}><div className={premium.authPane}><div className={premium.formShell}><div className={premium.skeleton} /></div></div></main>}>
       <LoginFormInner {...props} />
     </Suspense>
   );
@@ -65,7 +65,6 @@ function LoginFormInner({
   allowedRoles,
   deniedMessage,
   redirectWrongRoleToHome = true,
-  variant = 'wide',
   replaceHistory = false,
   oidcPortal,
 }: LoginFormProps) {
@@ -76,6 +75,8 @@ function LoginFormInner({
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [recoveryHelp, setRecoveryHelp] = useState(false);
   const [code, setCode] = useState('');
   const [challenge, setChallenge] = useState('');
   const [secret, setSecret] = useState('');
@@ -200,7 +201,7 @@ function LoginFormInner({
     if (oidcError === 'account_not_found') {
       setError('Aucun compte institutionnel actif ne correspond à cette identité. Utilisez votre mot de passe ou contactez un administrateur.');
     } else if (oidcError) {
-      setError('La connexion via le fournisseur d’identité a échoué. Réessayez, ou utilisez votre mot de passe.');
+      setError('La connexion institutionnelle a échoué. Réessayez ou utilisez votre mot de passe.');
     }
 
     fetch('/api/session/me', { cache: 'no-store' })
@@ -214,116 +215,165 @@ function LoginFormInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const cardClassName = `${premium.card} ${variant === 'narrow' ? '' : styles.section}`;
+  const credentialError = step === 'credentials' ? error : '';
 
   return (
-    <main className={premium.main}>
-      <div className={premium.header}>
-        <FodipOfficialBrand subtitle="Connexion sécurisée" />
-        <p className={premium.eyebrow}>{eyebrow}</p>
-        <h1 className={premium.title}>{title}</h1>
-        <p className={premium.lead}>{lead}</p>
-      </div>
+    <main className={premium.page}>
+      <section className={premium.authPane} aria-labelledby="login-title">
+        <div className={premium.formShell}>
+          <div className={premium.mobileBrand}><FodipOfficialBrand subtitle="FODIP Digital 2030" /></div>
+          <header className={premium.formHeader}>
+            <p className={premium.eyebrow}>{eyebrow}</p>
+            <h1 className={premium.title} id="login-title">{title}</h1>
+            <p className={premium.lead}>{lead}</p>
+          </header>
 
-      {sessionExpired && (
-        <div className={cardClassName} role="status" data-testid="session-expired-notice">
-          <p className={premium.sessionTitle}>Votre session a expiré.</p>
-          <p className={premium.lead}>Reconnectez-vous pour continuer dans l’espace autorisé pour votre compte.</p>
-        </div>
-      )}
-
-      {checkingSession && (
-        <div className={cardClassName} role="status" aria-live="polite">
-          <p className={premium.sessionTitle}>Vérification de la session sécurisée…</p>
-        </div>
-      )}
-
-      {!checkingSession && existingSessionHome && step === 'credentials' && (
-        <div className={cardClassName} data-testid="existing-session-card">
-          <p className={premium.sessionTitle}>Une session FODIP est déjà active.</p>
-          <p className={premium.lead}>
-            Continuez vers l’espace autorisé pour ce compte, ou fermez volontairement la session avant de changer d’utilisateur.
-          </p>
-          {error && <div className={`${styles.notice} ${premium.notice}`} role="alert">{error}</div>}
-          <div className={premium.actions}>
-            <button className={styles.primary} type="button" onClick={() => router.replace(existingSessionHome)}>
-              Continuer vers mon espace
-            </button>
-            <button className={styles.secondary} type="button" disabled={loading} onClick={switchAccount}>
-              {loading ? 'Fermeture…' : 'Changer d’utilisateur'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!checkingSession && !existingSessionHome && step === 'credentials' && (
-        <form className={cardClassName} onSubmit={submitCredentials}>
-          <div className={premium.formGrid}>
-            <div className={premium.field}>
-              <label htmlFor="email">Email</label>
-              <input id="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+          {checkingSession ? (
+            <div className={premium.loadingState} role="status" aria-live="polite">
+              <span className={premium.skeletonLine} /><span className={premium.skeletonLineShort} />
+              <span className="sr-only">Vérification de la session sécurisée…</span>
             </div>
-            <div className={premium.field}>
-              <label htmlFor="password">Mot de passe</label>
-              <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
-            </div>
-          </div>
-          {error && <div className={`${styles.notice} ${premium.notice}`} role="alert" data-testid="login-error">{error}</div>}
-          <div className={premium.actions}>
-            <button className={styles.primary} disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</button>
-            {oidcPortal && (
-              <a className={styles.secondary} href={`/api/session/oidc/start?portal=${oidcPortal}`}>
-                Se connecter avec un compte institutionnel (SSO)
-              </a>
-            )}
-          </div>
-        </form>
-      )}
+          ) : null}
 
-      {step === 'setup' && (
-        <div className={cardClassName}>
-          <p className={`${premium.lead} ${premium.mfaLead}`}>
-            Ce compte exige une double authentification. Ouvrez une application d’authentification (Google Authenticator, Authy…),
-            ajoutez un compte manuellement avec la clé secrète ci-dessous, puis saisissez le code à 6 chiffres qu’elle affiche.
-          </p>
-          <div className={premium.secretCard}>
-            <strong style={{ display: 'block', marginBottom: 6 }}>Clé secrète</strong>
-            <code style={{ fontSize: '1rem', letterSpacing: '0.05em', wordBreak: 'break-all' }}>{secret}</code>
-          </div>
-          <form onSubmit={(event) => submitCode(event, 'confirm')}>
-            <div className={premium.formGrid}>
-              <div className={premium.field}>
-                <label htmlFor="code">Code à 6 chiffres</label>
-                <input id="code" inputMode="numeric" autoComplete="one-time-code" required maxLength={6}
-                  value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
+          {!checkingSession && existingSessionHome && step === 'credentials' ? (
+            <section className={premium.existingSession} data-testid="existing-session-card">
+              <span className={premium.securityMark}><ShieldIcon /></span>
+              <div>
+                <h2>Une session FODIP est déjà active</h2>
+                <p>Continuez vers votre espace autorisé, ou fermez volontairement la session avant de changer de compte.</p>
               </div>
-            </div>
-            {error && <div className={`${styles.notice} ${premium.notice}`} role="alert" data-testid="login-error">{error}</div>}
-            <div className={premium.actions}>
-              <button className={styles.primary} disabled={loading}>{loading ? 'Vérification…' : 'Activer et se connecter'}</button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {step === 'verify' && (
-        <div className={cardClassName}>
-          <p className={`${premium.lead} ${premium.mfaLead}`}>Saisissez le code à 6 chiffres généré par votre application d’authentification.</p>
-          <form onSubmit={(event) => submitCode(event, 'verify')}>
-            <div className={premium.formGrid}>
-              <div className={premium.field}>
-                <label htmlFor="code">Code à 6 chiffres</label>
-                <input id="code" inputMode="numeric" autoComplete="one-time-code" required maxLength={6}
-                  value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
+              {error ? <p className={premium.fieldError} role="alert">{error}</p> : null}
+              <div className={premium.actions}>
+                <button className={premium.primaryButton} type="button" onClick={() => router.replace(existingSessionHome)}>Continuer vers mon espace</button>
+                <button className={premium.secondaryButton} type="button" disabled={loading} onClick={switchAccount}>{loading ? 'Fermeture…' : 'Changer d’utilisateur'}</button>
               </div>
-            </div>
-            {error && <div className={`${styles.notice} ${premium.notice}`} role="alert" data-testid="login-error">{error}</div>}
-            <div className={premium.actions}>
-              <button className={styles.primary} disabled={loading}>{loading ? 'Vérification…' : 'Se connecter'}</button>
-            </div>
-          </form>
+            </section>
+          ) : null}
+
+          {!checkingSession && !existingSessionHome && step === 'credentials' ? (
+            <form className={premium.form} onSubmit={submitCredentials} noValidate>
+              {sessionExpired ? (
+                <div className={premium.sessionBanner} role="status" data-testid="session-expired-notice">
+                  <ClockIcon />
+                  <span><strong>Session expirée.</strong> Reconnectez-vous pour reprendre votre activité.</span>
+                </div>
+              ) : null}
+
+              <div className={premium.field}>
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  required
+                  aria-invalid={Boolean(credentialError) || undefined}
+                  value={email}
+                  onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }}
+                  placeholder="nom@organisation.gn"
+                />
+              </div>
+
+              <div className={premium.field}>
+                <div className={premium.labelRow}>
+                  <label htmlFor="password">Mot de passe</label>
+                  <button className={premium.textButton} type="button" onClick={() => setRecoveryHelp((value) => !value)}>Mot de passe oublié ?</button>
+                </div>
+                <div className={premium.passwordField}>
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    aria-invalid={Boolean(credentialError) || undefined}
+                    aria-describedby={credentialError ? 'login-field-error' : recoveryHelp ? 'password-help' : undefined}
+                    value={password}
+                    onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }}
+                  />
+                  <button
+                    className={premium.passwordToggle}
+                    type="button"
+                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((value) => !value)}
+                  >
+                    <EyeIcon hidden={showPassword} />
+                  </button>
+                </div>
+                {credentialError ? <p id="login-field-error" className={premium.fieldError} role="alert" data-testid="login-error">{credentialError}</p> : null}
+                {recoveryHelp ? <p id="password-help" className={premium.helpText}>Pour réinitialiser un accès institutionnel, contactez votre administrateur FODIP. Aucun mot de passe ne vous sera demandé par téléphone.</p> : null}
+              </div>
+
+              <button className={premium.primaryButton} disabled={loading} aria-busy={loading}>
+                {loading ? 'Connexion sécurisée…' : 'Se connecter'}
+              </button>
+
+              {oidcPortal ? (
+                <>
+                  <div className={premium.separator}><span>ou</span></div>
+                  <a className={premium.ssoButton} href={`/api/session/oidc/start?portal=${oidcPortal}`}>
+                    <ShieldIcon />
+                    <span>Se connecter avec un compte institutionnel</span>
+                  </a>
+                </>
+              ) : null}
+            </form>
+          ) : null}
+
+          {step === 'setup' ? (
+            <section className={premium.mfaCard}>
+              <span className={premium.securityMark}><ShieldIcon /></span>
+              <h2>Activer la double authentification</h2>
+              <p>Ajoutez la clé ci-dessous dans votre application d’authentification puis saisissez le code à 6 chiffres.</p>
+              <div className={premium.secretCard}><span>Clé secrète</span><code>{secret}</code></div>
+              <form onSubmit={(event) => submitCode(event, 'confirm')}>
+                <div className={premium.field}>
+                  <label htmlFor="code">Code à 6 chiffres</label>
+                  <input id="code" inputMode="numeric" autoComplete="one-time-code" required maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
+                  {error ? <p className={premium.fieldError} role="alert" data-testid="login-error">{error}</p> : null}
+                </div>
+                <button className={premium.primaryButton} disabled={loading}>{loading ? 'Vérification…' : 'Activer et se connecter'}</button>
+              </form>
+            </section>
+          ) : null}
+
+          {step === 'verify' ? (
+            <section className={premium.mfaCard}>
+              <span className={premium.securityMark}><ShieldIcon /></span>
+              <h2>Double authentification</h2>
+              <p>Saisissez le code à 6 chiffres généré par votre application d’authentification.</p>
+              <form onSubmit={(event) => submitCode(event, 'verify')}>
+                <div className={premium.field}>
+                  <label htmlFor="code">Code à 6 chiffres</label>
+                  <input id="code" inputMode="numeric" autoComplete="one-time-code" required maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} />
+                  {error ? <p className={premium.fieldError} role="alert" data-testid="login-error">{error}</p> : null}
+                </div>
+                <button className={premium.primaryButton} disabled={loading}>{loading ? 'Vérification…' : 'Se connecter'}</button>
+              </form>
+            </section>
+          ) : null}
+
+          <footer className={premium.legalFooter}>
+            <nav aria-label="Liens légaux"><a href="/mentions-legales">Mentions légales</a><a href="/accessibilite">Accessibilité</a><a href="/confidentialite">Confidentialité</a></nav>
+            <span>République de Guinée — FODIP</span>
+          </footer>
         </div>
-      )}
+      </section>
+
+      <aside className={premium.missionPanel} aria-label="Mission FODIP Digital 2030">
+        <div className={premium.missionBrand}><FodipOfficialBrand subtitle="FODIP Digital 2030" /></div>
+        <div className={premium.missionContent}>
+          <p className={premium.missionKicker}>Institution financière numérique</p>
+          <h2>Financer la croissance des PME guinéennes avec rigueur, transparence et impact.</h2>
+          <p>Une même chaîne de confiance, de la demande au décaissement puis au suivi du remboursement et des emplois créés.</p>
+        </div>
+        <dl className={premium.trustStats}>
+          <div><dt>PME financées</dt><dd>200+</dd></div>
+          <div><dt>GNF décaissés</dt><dd>45 Mds</dd></div>
+          <div><dt>Couverture</dt><dd>8 régions</dd></div>
+        </dl>
+        <p className={premium.panelFoot}>Dossier → Instruction → Décision → Financement → Suivi</p>
+      </aside>
     </main>
   );
 }

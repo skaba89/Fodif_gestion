@@ -1,0 +1,394 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.headerMain {
+  min-width: 0;
+}
+
+.headerStatus {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.technicalStatus {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 750;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.summaryStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--line);
+}
+
+.summaryStrip > div {
+  min-width: 0;
+  padding: 15px 16px;
+  background: var(--surface);
+}
+
+.summaryStrip span,
+.summaryStrip strong {
+  display: block;
+}
+
+.summaryStrip span {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.summaryStrip strong {
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.65fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.mainColumn,
+.rail {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.rail {
+  position: sticky;
+  top: 90px;
+}
+
+.panel {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.panelHeader h2,
+.panelHeader h3 {
+  margin: 0;
+}
+
+.panelHeader p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.projectText {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.factGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fact {
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.fact span,
+.fact strong {
+  display: block;
+}
+
+.fact span {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 730;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.fact strong {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.documentList {
+  display: grid;
+  gap: 9px;
+}
+
+.documentRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--bg);
+}
+
+.documentInfo {
+  min-width: 0;
+}
+
+.documentInfo strong,
+.documentInfo span {
+  display: block;
+}
+
+.documentInfo strong {
+  font-size: 0.8rem;
+}
+
+.documentInfo span {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.reviewForm,
+.scoreForm {
+  display: grid;
+  gap: 12px;
+}
+
+.reviewForm label,
+.scoreForm label {
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.reviewForm select,
+.reviewForm textarea,
+.scoreCriterion input,
+.scoreCriterion textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.reviewForm select,
+.scoreCriterion input {
+  min-height: 44px;
+  padding: 0 11px;
+}
+
+.reviewForm textarea,
+.scoreCriterion textarea {
+  min-height: 84px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.scoreSummary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.scoreSummary strong {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreSummary span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.scoreCriterion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 86px;
+  gap: 8px 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.scoreCriterion:last-of-type {
+  border-bottom: 0;
+}
+
+.scoreCriterionMeta strong,
+.scoreCriterionMeta span {
+  display: block;
+}
+
+.scoreCriterionMeta strong {
+  font-size: 0.78rem;
+}
+
+.scoreCriterionMeta span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.67rem;
+}
+
+.scoreCriterion textarea {
+  grid-column: 1 / -1;
+  min-height: 62px;
+}
+
+.history {
+  display: grid;
+  gap: 0;
+}
+
+.historyItem {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  padding: 12px 0 12px 19px;
+  border-left: 1px solid var(--line);
+}
+
+.historyItem::before {
+  content: '';
+  position: absolute;
+  top: 17px;
+  left: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.historyItem strong {
+  font-size: 0.76rem;
+}
+
+.historyItem span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.message {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rail > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .summaryStrip,
+  .factGrid,
+  .rail {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .documentRow {
+    grid-template-columns: 1fr;
+  }
+
+  .documentActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .summaryStrip,
+  .factGrid,
+  .rail {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .scoreCriterion {
+    grid-template-columns: minmax(0, 1fr) 74px;
+  }
+}

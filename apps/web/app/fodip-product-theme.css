@@ -1,0 +1,167 @@
+/* FODIP Digital 2030 — product design layer.
+ * Loaded last so every authenticated workspace and the public landing share the same
+ * institutional palette, typography rhythm and interaction timing without a big-bang rewrite.
+ */
+:root {
+  /* Brand contract */
+  --fodip-primary: #14532d;
+  --fodip-primary-hover: #0f4425;
+  --fodip-accent: #16a34a;
+  --fodip-accent-hover: #15803d;
+  --fodip-gold: #f5b700;
+  --fodip-ivory: #faf9f6;
+  --fodip-text: #1a2e22;
+
+  /* Existing aliases deliberately remapped so legacy screens inherit the same identity. */
+  --primary-50: #f0f7f2;
+  --primary-100: #dcf1e2;
+  --primary-200: #b8dfc3;
+  --primary-300: #84c998;
+  --primary-400: #4bb36c;
+  --primary-500: var(--fodip-accent);
+  --primary-600: #15803d;
+  --primary-700: var(--fodip-primary);
+  --primary-800: #103f24;
+  --primary-900: #0b311b;
+
+  --accent-100: #fff6d6;
+  --accent-300: #fbd65c;
+  --accent-500: var(--fodip-gold);
+  --accent-600: #dca500;
+  --accent-700: #765900;
+
+  --neutral-0: #fffefa;
+  --neutral-50: var(--fodip-ivory);
+  --neutral-100: #f2f1ec;
+  --neutral-200: #e3e2dc;
+  --neutral-300: #cccec8;
+  --neutral-500: #66736b;
+  --neutral-700: #3b4a40;
+  --neutral-900: var(--fodip-text);
+
+  --bg: var(--fodip-ivory);
+  --surface: #fffefa;
+  --surface-soft: #f0f7f2;
+  --ink: var(--fodip-text);
+  --muted: #59685e;
+  --line: #dedfd9;
+  --green: var(--fodip-accent);
+  --green-strong: var(--fodip-primary);
+  --green-soft: #e7f5eb;
+  --gold: var(--fodip-gold);
+
+  --success: #137a3b;
+  --success-soft: #e8f6ec;
+  --info: #1d5f8f;
+  --info-soft: #e9f3fa;
+  --warning: #765900;
+  --warning-soft: #fff5cf;
+  --danger: #a62f2f;
+  --danger-strong: #7f2424;
+  --danger-soft: #fbecec;
+
+  --font-display: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --type-display: var(--font-display);
+
+  --duration-fast: 220ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --focus-ring: 0 0 0 3px rgba(22, 163, 74, 0.28);
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b1710;
+  --surface: #112219;
+  --surface-soft: #173020;
+  --ink: #f4f5f1;
+  --muted: #aab7ae;
+  --line: #2c4435;
+  --green: #4ade80;
+  --green-strong: #86efac;
+  --green-soft: #163421;
+  --gold: #f7c936;
+  --success: #7ee2a0;
+  --success-soft: #143320;
+  --info: #8fc8ee;
+  --info-soft: #132b3b;
+  --warning: #f7d96c;
+  --warning-soft: #352e13;
+  --danger: #f0a09a;
+  --danger-strong: #ffc0bb;
+  --danger-soft: #3a1d1c;
+  --focus-ring: 0 0 0 3px rgba(134, 239, 172, 0.38);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b1710;
+    --surface: #112219;
+    --surface-soft: #173020;
+    --ink: #f4f5f1;
+    --muted: #aab7ae;
+    --line: #2c4435;
+    --green: #4ade80;
+    --green-strong: #86efac;
+    --green-soft: #163421;
+    --gold: #f7c936;
+    --success: #7ee2a0;
+    --success-soft: #143320;
+    --info: #8fc8ee;
+    --info-soft: #132b3b;
+    --warning: #f7d96c;
+    --warning-soft: #352e13;
+    --danger: #f0a09a;
+    --danger-strong: #ffc0bb;
+    --danger-soft: #3a1d1c;
+    --focus-ring: 0 0 0 3px rgba(134, 239, 172, 0.38);
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:where(h1, h2, h3, h4, [data-kpi-value], .metric-value, .stat-value) {
+  font-family: var(--font-display);
+}
+
+:where(table, [role='table'], [role='grid'], [data-kpi-value], .metric-value, .stat-value) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+:where(button, a, input, select, textarea) {
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--ease);
+}
+
+/* Shared visually-hidden utility for accessible labels in both public and authenticated shells. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Gold is reserved for high-salience key actions and state accents. Always pair it with dark ink. */
+[data-action='key'] {
+  background: var(--gold);
+  color: #1a2e22;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

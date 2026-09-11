@@ -75,7 +75,7 @@ test.describe('Unified login flow', () => {
     await expect(page).toHaveURL(/\/administration\/utilisateurs$/);
   });
 
-  test('a PME account keeps identity details in profile only, navigates through the hamburger menu and logs out to the shared login', async ({ page }) => {
+  test('a PME account uses the desktop role sidebar and the 375px PWA navigation without exposing identity details', async ({ page }) => {
     await page.goto('/connexion');
     await page.getByLabel('Email').fill('pme@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
@@ -83,6 +83,20 @@ test.describe('Unified login flow', () => {
 
     await expect(page).toHaveURL(/\/entrepreneur$/);
     await expect(page.getByText('pme@fodip.local')).toHaveCount(0);
+
+    // Desktop: role navigation is persistent, reducing the extra menu click used by the old shell.
+    const desktopNavigation = page.getByRole('navigation', { name: 'Navigation principale Espace PME' });
+    await expect(desktopNavigation).toBeVisible();
+    await expect(desktopNavigation.getByRole('link', { name: 'Accueil' })).toHaveAttribute('aria-current', 'page');
+    await expect(desktopNavigation.getByRole('link', { name: 'Mon entreprise' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ouvrir le menu principal' })).toBeHidden();
+
+    // Mobile/PWA: the same information architecture becomes a bottom navigation plus a complete
+    // drawer, with a real 375px viewport rather than a CSS-only assumption.
+    await page.setViewportSize({ width: 375, height: 812 });
+    const mobileNavigation = page.getByRole('navigation', { name: 'Navigation mobile Espace PME' });
+    await expect(mobileNavigation).toBeVisible();
+    await expect(mobileNavigation.getByRole('link', { name: 'Accueil' })).toHaveAttribute('aria-current', 'page');
 
     const menuButton = page.getByRole('button', { name: 'Ouvrir le menu principal' });
     await expect(menuButton).toBeVisible();
@@ -109,12 +123,14 @@ test.describe('Unified login flow', () => {
     await expect(page).toHaveURL(/\/entrepreneur\/entreprise$/);
     await expect(drawer).toBeHidden();
 
-    await page.getByRole('button', { name: 'Déconnexion' }).click();
+    await menuButton.click();
+    await expect(drawer).toBeVisible();
+    await drawer.getByRole('button', { name: 'Déconnexion' }).click();
     await expect(page).toHaveURL(/\/connexion$/);
     await expect(page.getByTestId('session-expired-notice')).toHaveCount(0);
   });
 
-  test('an expired institutional session redirects to the shared login with an explicit message', async ({ page, context }) => {
+  test('an expired institutional session redirects to the shared login with an explicit inline message', async ({ page, context }) => {
     await page.goto('/connexion');
     await page.getByLabel('Email').fill('auditeur@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
@@ -125,16 +141,20 @@ test.describe('Unified login flow', () => {
     await page.reload();
 
     await expect(page).toHaveURL(/\/connexion\?reason=session-expired$/);
-    await expect(page.getByTestId('session-expired-notice')).toContainText('Votre session a expiré');
+    const expired = page.getByTestId('session-expired-notice');
+    await expect(expired).toContainText('Session expirée');
+    await expect(expired).toBeVisible();
+    await expect(page.getByLabel('Email')).toBeVisible();
   });
 
-  test('wrong credentials show an error and never set a session', async ({ page }) => {
+  test('wrong credentials show an inline field error and never set a session', async ({ page }) => {
     await page.goto('/connexion');
     await page.getByLabel('Email').fill('partenaire@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD + '-wrong');
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
     await expect(page.getByTestId('login-error')).toBeVisible();
+    await expect(page.getByLabel('Mot de passe')).toHaveAttribute('aria-invalid', 'true');
     await expect(page).toHaveURL(/\/connexion$/);
   });
 });

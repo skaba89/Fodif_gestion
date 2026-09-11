@@ -1,0 +1,150 @@
+.connectivity {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 8px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--warning) 28%, var(--line));
+  background: color-mix(in srgb, var(--warning-soft) 94%, var(--surface));
+  color: var(--warning);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.connectivityOnline {
+  border-bottom-color: color-mix(in srgb, var(--success) 28%, var(--line));
+  background: color-mix(in srgb, var(--success-soft) 94%, var(--surface));
+  color: var(--success);
+}
+
+.connectivityDot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(var(--step-count), minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  color: var(--muted);
+}
+
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 30px;
+  right: 0;
+  height: 2px;
+  background: var(--line);
+}
+
+.stepDone:not(:last-child)::after {
+  background: var(--success);
+}
+
+.stepMarker {
+  position: relative;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepDone .stepMarker {
+  border-color: var(--success);
+  background: var(--success);
+  color: #fff;
+}
+
+.stepCurrent .stepMarker {
+  border-color: var(--green-strong);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green-soft) 88%, transparent);
+  color: var(--green-strong);
+}
+
+.stepText {
+  min-width: 0;
+  padding: 2px 14px 0 0;
+}
+
+.stepText strong,
+.stepText small {
+  display: block;
+}
+
+.stepText strong {
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.stepCurrent .stepText strong {
+  color: var(--green-strong);
+}
+
+.stepText small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 680px) {
+  .stepper {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .step {
+    min-height: 46px;
+  }
+
+  .step:not(:last-child)::after {
+    top: 30px;
+    bottom: -10px;
+    left: 14px;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+
+  .stepText {
+    padding-right: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connectivity {
+    transition: none;
+  }
+}

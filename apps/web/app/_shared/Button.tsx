@@ -34,12 +34,12 @@ export default function Button({
   onClick,
 }: ButtonProps) {
   const unavailable = disabled || loading;
-  const classes = [styles.button, styles[variant], iconOnly ? styles.iconOnly : '', className]
+  const classes = [styles.button, styles[variant], loading ? styles.loading : '', iconOnly ? styles.iconOnly : '', className]
     .filter(Boolean)
     .join(' ');
   const content = (
     <>
-      {loading ? <span className={styles.spinner} aria-hidden="true" /> : null}
+      {loading ? <span className={styles.loadingBar} aria-hidden="true" /> : null}
       <span>{children}</span>
     </>
   );
