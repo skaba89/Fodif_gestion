@@ -26,9 +26,11 @@ test.describe('Shared institutional UI', () => {
     expect(colors).toEqual({ dark: '#174b0b', light: '#62a449' });
 
     await page.goto('/connexion');
-    const loginLogo = page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`);
-    await expect(loginLogo).toHaveCount(1);
-    await expect.poll(async () => loginLogo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+    const loginLogos = page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]`);
+    await expect(loginLogos).toHaveCount(2);
+    const visibleLoginLogo = page.locator(`img[src="${OFFICIAL_FODIP_LOGO}"]:visible`);
+    await expect(visibleLoginLogo).toHaveCount(1);
+    await expect.poll(async () => visibleLoginLogo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     await expect(page.getByRole('heading', { name: 'Connexion FODIP', exact: true })).toBeVisible();
   });
 
@@ -80,9 +82,9 @@ test.describe('Shared institutional UI', () => {
 
     const firstCard = mobileList.getByRole('listitem').first();
     await expect(firstCard).toContainText('Dossier');
-    await expect(firstCard).toContainText('Exemple A');
+    await expect(firstCard).toContainText('FODIP-2030-001');
     await expect(firstCard).toContainText('Programme');
-    await expect(firstCard).toContainText('Programme de démonstration');
+    await expect(firstCard).toContainText('Croissance PME');
     await expect(firstCard).toContainText('Statut');
     await expect(firstCard).toContainText('En instruction');
     await expect(firstCard.getByRole('link', { name: 'Ouvrir' })).toBeVisible();

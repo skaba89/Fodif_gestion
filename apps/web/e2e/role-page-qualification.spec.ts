@@ -18,7 +18,9 @@ const DEMO_PASSWORD = 'FodipDemo2026!';
 const APP_DIR = path.resolve(process.cwd(), 'app');
 const CLIENT_REDIRECT_TIMEOUT_MS = 15_000;
 
-const PUBLIC_ROUTES = ['/', '/assistance', '/connexion', '/design-system', '/hors-ligne'] as const;
+const PUBLIC_ROUTES = [
+  '/', '/accessibilite', '/assistance', '/confidentialite', '/connexion', '/design-system', '/hors-ligne', '/mentions-legales',
+] as const;
 const SHARED_AUTH_ROUTES = ['/mes-donnees', '/notifications', '/profil'] as const;
 const LEGACY_LOGIN_ROUTES = [
   '/administration/connexion',
