@@ -39,7 +39,8 @@ export default function KpiCard({
         <p className={styles.unavailable}>Donnée indisponible</p>
       ) : (
         <div className={styles.valueRow}>
-          <strong data-kpi-value aria-label={unit ? `${value} ${unit}` : value}>
+          <strong data-kpi-value>
+            <span className={styles.srOnly}>{value}</span>
             <AnimatedKpiValue value={value} />
           </strong>
           {unit && <span className={styles.unit}>{unit}</span>}
