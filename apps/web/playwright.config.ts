@@ -59,6 +59,13 @@ const HEAVY_LOGIN_SPECS = [
   /executive-demo\.spec\.ts$/,
 ];
 
+// Exhaustive page/RBAC qualification uses eight dedicated synthetic identities from seed 005.
+// Each identity logs in exactly once per project. Run it on desktop Chromium plus Android/iPhone
+// to prove all role homes and shared account pages cross-device, but skip the two extra desktop
+// engines so retries still stay comfortably below the real 5-attempts/60s throttle.
+const ROLE_PAGE_QUALIFICATION_SPEC = /role-page-qualification\.spec\.ts$/;
+const DESKTOP_SECONDARY_IGNORES = [...HEAVY_LOGIN_SPECS, ROLE_PAGE_QUALIFICATION_SPEC];
+
 // PR #91 added an authenticated Banque accessibility journey that already opens the portfolio and
 // financing detail on every project. Replaying the separate functional Banque journey as well on
 // both mobile projects makes the final iPhone login the sixth request in the real 5-per-60s window
@@ -81,8 +88,8 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: HEAVY_LOGIN_SPECS },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: HEAVY_LOGIN_SPECS },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: DESKTOP_SECONDARY_IGNORES },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: DESKTOP_SECONDARY_IGNORES },
     // Mobile matrix (mission "présentation Directeur général", section 6 and 10) - same
     // HEAVY_LOGIN_SPECS exclusion as firefox/webkit above, for the same reason: five projects all
     // replaying login.spec.ts/workflow.spec.ts/mfa.spec.ts/pii-encryption.spec.ts within one run
