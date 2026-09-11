@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -106,6 +107,20 @@ export class ProgramRuleDto {
   documents?: ProgramDocumentDto[];
 }
 
+export class ProgramScopeDto {
+  @ApiPropertyOptional({ type: [String], description: 'Empty or omitted means all regions.' })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  regionIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], description: 'Empty or omitted means all activity sectors.' })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  secteurIds?: string[];
+}
+
 export class CreateProgramDto extends ProgramRuleDto {
   @ApiProperty({ example: 'PROGRAMME-2026' })
   @IsString()
@@ -141,6 +156,18 @@ export class CreateProgramDto extends ProgramRuleDto {
   @IsOptional()
   @IsDateString()
   dateFin?: string | null;
+
+  @ApiPropertyOptional({ type: [String], description: 'Empty or omitted means all regions.' })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  regionIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], description: 'Empty or omitted means all activity sectors.' })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  secteurIds?: string[];
 }
 
 export class UpdateProgramDto {
@@ -177,6 +204,18 @@ export class UpdateProgramDto {
   @IsOptional()
   @IsIn(PROGRAM_LIFECYCLE_STATUSES)
   statut?: (typeof PROGRAM_LIFECYCLE_STATUSES)[number];
+
+  @ApiPropertyOptional({ type: [String], description: 'Empty means all regions.' })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  regionIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], description: 'Empty means all activity sectors.' })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  secteurIds?: string[];
 }
 
 export class UpdateProgramRuleDto extends ProgramRuleDto {}

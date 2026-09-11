@@ -22,13 +22,18 @@ test.describe('Programmes FODIP — catalogue et administration institutionnelle
     await expect(page.getByRole('button', { name: 'Ouvrir le programme' }).first()).toBeVisible();
   });
 
-  test('Agent can consult the same active catalogue but cannot call management endpoints', async ({ page }) => {
+  test('Agent can consult the catalogue and prepare a governed proposal but cannot call management endpoints', async ({ page }) => {
     await login(page, 'agent@fodip.local', /\/agent\/dossiers$/);
     await page.goto('/agent/programmes');
 
     await expect(page.getByRole('heading', { name: 'Programmes FODIP actifs' })).toBeVisible();
     await expect(page.getByTestId('program-card').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Créer un programme' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Proposer un nouveau programme' })).toBeVisible();
+    await expect(page.getByTestId('program-proposal-panel')).toBeVisible();
+    await expect(page.getByText('Conakry', { exact: true })).toBeVisible();
+    await expect(page.getByText('Agriculture', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enregistrer le brouillon' })).toBeVisible();
 
     const status = await page.evaluate(async () => {
       const response = await fetch('/api/direction/programmes', {
