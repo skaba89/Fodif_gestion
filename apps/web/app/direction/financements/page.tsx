@@ -15,6 +15,7 @@ type Financing = {
 };
 type Eligible = { id: string; numeroDossier: string; raisonSociale: string; programme: string; montantApprouve: number; dureeMois: number };
 type FinancingsResult = { items: Financing[]; total: number; page: number; limite: number };
+type SessionContext = { permissions?: string[] };
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
@@ -25,18 +26,30 @@ export default function FinancingsPage() {
   const [dateSignature, setDateSignature] = useState(today());
   const [dateDebut, setDateDebut] = useState(today());
   const [message, setMessage] = useState('');
+  const [canManage, setCanManage] = useState(false);
   const { pushToast } = useToast();
 
   const load = useCallback(async (page = 1) => {
-    const [financingResponse, eligibleResponse] = await Promise.all([
+    const [financingResponse, sessionResponse] = await Promise.all([
       fetch(`/api/direction/financements?page=${page}`, { cache: 'no-store' }),
-      fetch('/api/direction/financements/eligibles', { cache: 'no-store' }),
+      fetch('/api/session/me', { cache: 'no-store' }),
     ]);
     const financingBody = await financingResponse.json();
-    const eligibleBody = await eligibleResponse.json();
     if (!financingResponse.ok) throw new Error(financingBody.message ?? 'Chargement des financements impossible');
-    if (!eligibleResponse.ok) throw new Error(eligibleBody.message ?? 'Chargement des décisions impossible');
+    const sessionBody = await sessionResponse.json() as SessionContext;
+    if (!sessionResponse.ok) throw new Error('Chargement de la session impossible');
+    const mayManage = (sessionBody.permissions ?? []).includes('financing.manage');
+    setCanManage(mayManage);
     setResult(financingBody);
+    if (!mayManage) {
+      setEligible([]);
+      setSelected('');
+      return;
+    }
+
+    const eligibleResponse = await fetch('/api/direction/financements/eligibles', { cache: 'no-store' });
+    const eligibleBody = await eligibleResponse.json();
+    if (!eligibleResponse.ok) throw new Error(eligibleBody.message ?? 'Chargement des décisions impossible');
     setEligible(eligibleBody.items ?? []);
     setSelected((current) => current || eligibleBody.items?.[0]?.id || '');
   }, []);
@@ -100,7 +113,7 @@ export default function FinancingsPage() {
     </section>
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
 
-    <section className={`${portal.card} ${portal.formCard} ${portal.section}`}>
+    {canManage ? <section className={`${portal.card} ${portal.formCard} ${portal.section}`}>
       <div className={portal.sectionHeader}><div><h2>Créer depuis une décision approuvée</h2><p>Le montant, le taux et la durée viennent exclusivement de la dernière décision du Comité.</p></div></div>
       {eligible.length ? <form onSubmit={create}>
         <div className={portal.formGrid}>
@@ -109,7 +122,7 @@ export default function FinancingsPage() {
           <div className={portal.field}><label htmlFor="debut">Début du financement</label><input id="debut" type="date" required value={dateDebut} onChange={(event) => setDateDebut(event.target.value)} /></div>
         </div><div className={portal.buttonRow}><Button type="submit" disabled={!selected}>Créer le financement et l’échéancier</Button></div>
       </form> : <p className={portal.lead}>Aucune décision approuvée n’attend la création d’un financement.</p>}
-    </section>
+    </section> : null}
 
     <section className={portal.section}>
       <ResponsiveTable

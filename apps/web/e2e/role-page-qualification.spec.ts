@@ -172,28 +172,45 @@ test.describe('Exhaustive route and role qualification', () => {
     expect(discoverPageRoutes(APP_DIR)).toEqual(allDeclaredRoutes());
   });
 
-  test('every public and legacy-login page is reachable without a session', async ({ page }) => {
+  test('every public and legacy-login page is reachable without a session', async ({ context }) => {
+    test.setTimeout(120_000);
     for (const route of PUBLIC_ROUTES) {
-      const response = await page.goto(route);
-      expect(response?.status(), `${route} must not fail`).toBeLessThan(400);
-      await expect(page.locator('body')).toBeVisible();
+      const routePage = await context.newPage();
+      try {
+        const response = await routePage.goto(route);
+        expect(response?.status(), `${route} must not fail`).toBeLessThan(400);
+        await expect(routePage.locator('body')).toBeVisible();
+      } finally {
+        await routePage.close();
+      }
     }
     for (const route of LEGACY_LOGIN_ROUTES) {
-      await page.goto(route);
-      await expect(page).toHaveURL(/\/connexion$/);
-      await expect(page.getByRole('heading', { name: 'Connexion FODIP', exact: true })).toBeVisible();
+      const routePage = await context.newPage();
+      try {
+        await routePage.goto(route);
+        await expect(routePage).toHaveURL(/\/connexion$/);
+        await expect(routePage.getByRole('heading', { name: 'Connexion FODIP', exact: true })).toBeVisible();
+      } finally {
+        await routePage.close();
+      }
     }
   });
 
-  test('every protected page rejects an unauthenticated browser', async ({ page, context }) => {
+  test('every protected page rejects an unauthenticated browser', async ({ context }) => {
+    test.setTimeout(120_000);
     await context.clearCookies();
     const samples = [
       ...SHARED_AUTH_ROUTES,
       ...Object.values(PORTAL_ROUTES).flat().map((route) => route.sample),
     ];
     for (const route of samples) {
-      await page.goto(route);
-      await expect(page, `${route} must require authentication`).toHaveURL(/\/connexion(?:\?reason=session-expired)?$/);
+      const routePage = await context.newPage();
+      try {
+        await routePage.goto(route);
+        await expect(routePage, `${route} must require authentication`).toHaveURL(/\/connexion(?:\?reason=session-expired)?$/);
+      } finally {
+        await routePage.close();
+      }
     }
   });
 

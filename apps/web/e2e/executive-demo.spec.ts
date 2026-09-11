@@ -32,6 +32,7 @@ import * as OTPAuth from 'otpauth';
 // auto-MFA-enrolled exactly like the Direction one, and the login() helper below has to complete
 // that same one-time enrollment challenge for all three, not just Direction.
 const DEMO_PASSWORD = 'FodipDemo2026!';
+const SETUP_ADMIN_EMAIL = 'qualification-admin@fodip.local';
 // pme@fodip.local's own enterprise (database/seeds/001_docker_demo.sql) - a second user attached
 // to the same enterprise is a realistic multi-user PME account, not a workaround.
 const DEMO_ENTREPRISE_ID = '30000000-0000-4000-8000-000000000001';
@@ -97,7 +98,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
     // suite-wide timeout (playwright.config.ts) was already tight for this one test before that.
     test.setTimeout(150_000);
     const admin = await playwrightRequest.newContext({ baseURL });
-    const adminLogin = await admin.post('/api/session/login', { data: { email: 'admin@fodip.local', password: DEMO_PASSWORD } });
+    const adminLogin = await admin.post('/api/session/login', { data: { email: SETUP_ADMIN_EMAIL, password: DEMO_PASSWORD } });
     expect(adminLogin.ok(), 'admin login for test setup').toBeTruthy();
 
     const stamp = Date.now();
@@ -152,6 +153,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await login(page, '/connexion', pme.email, password);
       await expect(page).toHaveURL(/\/entrepreneur$/);
       await page.goto('/entrepreneur/demande');
+      await page.getByLabel('Programme').selectOption({ label: 'Programme Croissance PME' });
       await page.getByLabel('Montant demandé (GNF)').fill('300000000');
       await page.getByLabel('Objet du financement').fill('Démonstration Direction générale - ligne de production');
       await page.getByRole('button', { name: 'Enregistrer le brouillon' }).click();
