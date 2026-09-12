@@ -140,9 +140,10 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await expect(page.getByRole('region', { name: 'Portefeuille par région' })).toBeVisible();
 
       // --- 5. Filtre région ---
-      await page.getByLabel('Région').selectOption({ index: 1 });
+      const regionFilter = page.locator('#region');
+      await regionFilter.selectOption({ index: 1 });
       await expect(page.locator('#main-content [role="alert"]')).toHaveCount(0);
-      await expect(page.getByLabel('Région')).toHaveValue(/.+/);
+      await expect(regionFilter).toHaveValue(/.+/);
       await page.getByText('Réinitialiser').click();
 
       await logout(page);

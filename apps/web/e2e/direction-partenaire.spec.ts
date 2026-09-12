@@ -33,13 +33,14 @@ test.describe('Direction cockpit', () => {
     // `.stat-card` tiles - one distinct label per card, "Montant décaissé" among them.
     await expect(page.locator('[data-kpi-card]').getByText('Montant décaissé', { exact: true })).toBeVisible();
 
-    await page.getByLabel('Région').selectOption({ label: 'Kindia' });
+    const regionFilter = page.locator('#region');
+    await regionFilter.selectOption({ label: 'Kindia' });
     // Scoped to #main-content: an unscoped [role="alert"] also matches Next.js's own built-in
     // route announcer (a permanent, hidden accessibility element outside <main> that announces
     // page-title changes to screen readers after client-side navigation) - a real false positive
     // reproduced locally against a live stack, not the dashboard's own error banner.
     await expect(page.locator('#main-content [role="alert"]')).toHaveCount(0);
-    await expect(page.getByLabel('Région')).toHaveValue(/.+/);
+    await expect(regionFilter).toHaveValue(/.+/);
     await expect(page.getByText('Réinitialiser')).toBeVisible();
 
     // The sidebar this used to click through no longer exists - AppShell (section 6-7) replaced

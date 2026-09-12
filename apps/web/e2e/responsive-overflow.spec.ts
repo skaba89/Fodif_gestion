@@ -60,7 +60,7 @@ test.describe('Authenticated portal responsive bounds', () => {
       await expectNoPageOverflow(page);
 
       await page.goto(AGENT_DETAIL);
-      await expect(page.getByRole('heading', { name: 'Instruction du dossier' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'FODIP-2026-DEMO02' })).toBeVisible();
       await expectNoPageOverflow(page);
     }
 
