@@ -26,12 +26,12 @@ test.describe('Direction cockpit', () => {
 
     // Multi-region seed data (database/seeds/002_analytics_demo.sql): Kindia Fruits SARL has an
     // approved, disbursed and partly repaid financing - a nonzero read on every KPI in the header.
-    // Scoped to .region-list: "Kindia" also appears in the filter dropdown and the recent-activity
-    // table, so an unscoped text match would hit Playwright's strict-mode ambiguity.
-    await expect(page.locator('.region-list').getByText('Kindia')).toBeVisible();
+    // Scope to the accessible regional ranking: "Kindia" also appears in the filter dropdown and
+    // the recent-activity table, so an unscoped text match would hit strict-mode ambiguity.
+    await expect(page.getByRole('article', { name: 'Classement régional du portefeuille' }).getByText('Kindia')).toBeVisible();
     // KpiCard (mission "présentation Directeur général", section 2) replaced the old plain
     // `.stat-card` tiles - one distinct label per card, "Montant décaissé" among them.
-    await expect(page.getByText('Montant décaissé', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-kpi-card]').getByText('Montant décaissé', { exact: true })).toBeVisible();
 
     await page.getByLabel('Région').selectOption({ label: 'Kindia' });
     // Scoped to #main-content: an unscoped [role="alert"] also matches Next.js's own built-in

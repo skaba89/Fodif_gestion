@@ -21,7 +21,7 @@ test.describe('Unified login flow', () => {
       ['SUPER_ADMIN', '/administration/utilisateurs'],
       ['DIRECTION_FODIP', '/direction/tableau-de-bord'],
       ['ANALYSTE', '/direction/tableau-de-bord'],
-      ['AGENT_FODIP', '/agent/dossiers'],
+      ['AGENT_FODIP', '/agent/tableau-de-bord'],
       ['COMITE_FINANCEMENT', '/comite/dossiers'],
       ['AUDITEUR', '/auditeur/tableau-de-bord'],
       ['PARTENAIRE_BANCAIRE', '/partenaire/financements'],
@@ -50,14 +50,14 @@ test.describe('Unified login flow', () => {
     await page.getByLabel('Email').fill('agent@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
-    await expect(page).toHaveURL(/\/agent\/dossiers$/);
+    await expect(page).toHaveURL(/\/agent\/tableau-de-bord$/);
 
     await page.goto('/connexion');
     const sessionCard = page.getByTestId('existing-session-card');
     await expect(sessionCard).toBeVisible();
     await expect(sessionCard).toContainText('Une session FODIP est déjà active');
     await sessionCard.getByRole('button', { name: 'Continuer vers mon espace' }).click();
-    await expect(page).toHaveURL(/\/agent\/dossiers$/);
+    await expect(page).toHaveURL(/\/agent\/tableau-de-bord$/);
 
     await page.goto('/connexion');
     await expect(page.getByTestId('existing-session-card')).toBeVisible();
