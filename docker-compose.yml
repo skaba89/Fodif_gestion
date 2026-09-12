@@ -59,7 +59,10 @@ services:
     restart: "no"
 
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # MinIO publishes the same community release images on Quay. Docker Hub stopped resolving
+    # minio/minio reliably in CI in Sep 2026; keep the release pin unchanged and move only the
+    # registry host so local Compose and Testcontainers exercise the same server version.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -89,9 +92,6 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-fodip}:${POSTGRES_PASSWORD:-fodip_local_dev}@postgres:5432/${POSTGRES_DB:-fodip}
       DATABASE_SSL: "false"
       JWT_SECRET: ${JWT_SECRET:-fodip-local-docker-jwt-secret-change-before-hosting}
-      # Optional, axis E4 (key rotation) - set to JWT_SECRET's previous value while rotating so
-      # tokens already handed out keep verifying; unset once the rotation window is over. See
-      # .env.example.
       JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
       JWT_ISSUER: fodip-digital-2030
       JWT_AUDIENCE: fodip-web
@@ -101,25 +101,14 @@ services:
       STORAGE_BUCKET: fodip-documents
       STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-fodip_local}
       STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-fodip_local_secret}
-      # Institutional SSO (OpenID Connect, e.g. Keycloak) - optional, axis B4. Unset by default
-      # (empty values keep OidcService.isEnabled() false) so the local demo stays on
-      # email/password + TOTP only. Set all four on the host to try SSO against a local IdP.
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
-      # Antivirus document scanning (axe E6, docs/14-ROADMAP-SAAS-PREMIUM.md) - optional, like OIDC
-      # above. Unset by default (empty CLAMAV_HOST keeps ClamAvService.isEnabled() false), so the
-      # plain local demo and CI's document integration tests never require a running ClamAV daemon.
-      # Set CLAMAV_HOST=clamav (with the `antivirus` profile enabled below) to scan real uploads.
       CLAMAV_HOST: ${CLAMAV_HOST:-}
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
     ports:
       - "${API_PORT:-4000}:4000"
-    # Axe E7 (docs/14-ROADMAP-SAAS-PREMIUM.md) - no `healthcheck:` override here on purpose: the
-    # image itself now carries this exact check (apps/api/Dockerfile's own HEALTHCHECK), which
-    # Compose applies automatically when a service doesn't redefine one. `depends_on: condition:
-    # service_healthy` below still works against it the same way an override would.
 
   web:
     build:
@@ -133,26 +122,12 @@ services:
     environment:
       NODE_ENV: production
       API_BASE_URL: http://api:4000
-      # Browser-reachable API URL, distinct from the Docker-internal API_BASE_URL above: needed
-      # so the OIDC "sign in with SSO" link can redirect the browser straight to the API (which
-      # the browser cannot reach via the `api` service name). Only used when OIDC is enabled.
       API_PUBLIC_URL: http://localhost:${API_PORT:-4000}
       COOKIE_SECURE: "false"
-      # Mission "présentation Directeur général", axe 9 (mode présentation) - a runtime env var,
-      # not a NEXT_PUBLIC_ build-time one: this same `web` image serves both the plain local demo
-      # and the presentation profile unmodified, read via GET /api/config
-      # (apps/web/app/api/config/route.ts) rather than baked into the client bundle at build time.
-      # Defaults to false - a plain `docker compose up` never shows the demo banner; only
-      # docker-compose.presentation.yml's override (scripts/demo-presentation.sh) sets it.
       DEMO_MODE: ${DEMO_MODE:-false}
     ports:
       - "${WEB_PORT:-3000}:3000"
 
-  # Axe C4 (docs/14-ROADMAP-SAAS-PREMIUM.md) - an operations dashboard reading the metrics axe C3b
-  # already exposes (apps/api/src/metrics/, GET /api/v1/metrics). Both behind the "observability"
-  # profile: excluded from a plain `docker compose up` (so CI, which never passes --profile, is
-  # completely unaffected - no extra images to pull, no extra containers to wait on) and started
-  # on request with `docker compose --profile observability up`.
   prometheus:
     image: prom/prometheus:v2.55.1
     restart: unless-stopped
@@ -182,18 +157,6 @@ services:
     depends_on:
       - prometheus
 
-  # Axe E6 (docs/14-ROADMAP-SAAS-PREMIUM.md) - antivirus scanning for document uploads
-  # (apps/api/src/documents/clamav.service.ts). Behind the "antivirus" profile, same reasoning as
-  # "observability" above: excluded from a plain `docker compose up` and from CI (which never
-  # passes --profile, and whose document integration tests run their own hand-built fake clamd
-  # instead - see apps/api/test/integration/documents.integration-spec.ts), started on request with
-  # `docker compose --profile antivirus up`. Not wired as a `depends_on` of `api`: Compose starts a
-  # dependency's profile automatically, which would defeat the point of gating this service - set
-  # CLAMAV_HOST=clamav on the `api` service (see above) once this profile is enabled.
-  #
-  # Not verified with a real `docker compose up` in this sandbox (outbound Docker Hub pulls are
-  # blocked here - the same limitation already documented for docker-compose.presentation.yml);
-  # verified with `docker compose --profile antivirus config` only. Real verification is CI's.
   clamav:
     image: clamav/clamav:1.4
     restart: unless-stopped
