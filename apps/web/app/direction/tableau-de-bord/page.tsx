@@ -6,6 +6,7 @@ import Link from 'next/link';
 import KpiCard, { KpiTrend } from '../../_shared/KpiCard';
 import ExecutiveAlert, { ExecutiveAlertData } from '../../_shared/ExecutiveAlert';
 import { DownloadIcon, RefreshIcon } from '../../_shared/Icons';
+import DirectionTerritoryPanel from '../DirectionTerritoryPanel';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from '../direction.module.css';
 
@@ -119,7 +120,6 @@ export default function DirectionDashboardPage() {
     setRegionId(''); setProgrammeId(''); setSecteurId(''); setBanqueId(''); setStatut(''); setFrom(''); setTo('');
   }
 
-  const maxRegionAmount = useMemo(() => Math.max(1, ...(dashboard?.regions.map((r) => r.montantDemande) ?? [1])), [dashboard]);
   const maxSectorCases = useMemo(() => Math.max(1, ...(dashboard?.sectors.map((s) => s.dossiers) ?? [1])), [dashboard]);
   const maxProgramAmount = useMemo(() => Math.max(1, ...(dashboard?.programs.map((p) => p.montantDemande) ?? [1])), [dashboard]);
   const maxBankAmount = useMemo(() => Math.max(1, ...(dashboard?.banks.map((b) => b.montantDecaisse) ?? [1])), [dashboard]);
@@ -268,21 +268,15 @@ export default function DirectionDashboardPage() {
             <KpiCard label="Dirigeants jeunes" value={dashboard.kpis.tauxDirigeantsJeunes === null ? null : dashboard.kpis.tauxDirigeantsJeunes.toLocaleString('fr-FR')} unit="%" definition="Part des PME du périmètre dont le dirigeant principal avait moins de 35 ans au dépôt du dossier. Non disponible si aucune date de naissance n'est renseignée." detailHref="#impact" />
           </section>
 
+          <DirectionTerritoryPanel
+            regions={dashboard.regions}
+            choices={dashboard.filters.regions}
+            selectedRegionId={regionId}
+            onSelectRegion={setRegionId}
+            formatAmount={formatAmount}
+          />
+
           <section className="dashboard-grid">
-            <article className="panel region-panel" id="regions">
-              <div className="panel-heading"><div><p className="eyebrow">Répartition territoriale</p><h3>Demandes par région</h3></div></div>
-              <div className="region-list">
-                {dashboard.regions.length === 0
-                  ? <p className={styles.filterSummary}>Aucune région pour ce périmètre.</p>
-                  : dashboard.regions.map((region) => (
-                    <div className="region-row" key={region.id ?? region.nom}>
-                      <span>{region.nom}</span>
-                      <div className="bar-track" aria-hidden="true"><div className="bar-value" style={{ width: `${Math.round((region.montantDemande / maxRegionAmount) * 100)}%` }} /></div>
-                      <strong>{formatAmount(region.montantDemande)}</strong>
-                    </div>
-                  ))}
-              </div>
-            </article>
             <article id="pipeline" className="panel pipeline-panel">
               <div className="panel-heading"><div><p className="eyebrow">Instruction</p><h3>Pipeline des dossiers</h3></div></div>
               <div className="pipeline-total"><strong>{formatNumber(dashboard.kpis.dossiersActifs)}</strong><span>dossiers actifs</span></div>
@@ -291,6 +285,13 @@ export default function DirectionDashboardPage() {
                   <div className="pipeline-row" key={item.statut}><span>{statusLabels[item.statut] ?? item.statut}</span><strong>{item.total}</strong></div>
                 ))}
               </div>
+            </article>
+            <article className="panel impact-panel">
+              <div className="panel-heading"><div><p className="eyebrow">Synthèse financière</p><h3>Position du portefeuille</h3></div></div>
+              <div className={styles.secondaryMetric}><span>Montant accordé</span><strong>{formatAmount(dashboard.kpis.montantApprouve)} GNF</strong></div>
+              <div className={styles.secondaryMetric}><span>Montant décaissé</span><strong>{formatAmount(dashboard.kpis.montantDecaisse)} GNF</strong></div>
+              <div className={styles.secondaryMetric}><span>Encours</span><strong>{formatAmount(dashboard.kpis.encours)} GNF</strong></div>
+              <div className={styles.secondaryMetric}><span>Impayés</span><strong>{formatAmount(dashboard.kpis.impayes)} GNF</strong></div>
             </article>
           </section>
 

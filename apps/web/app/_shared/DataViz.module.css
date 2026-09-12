@@ -147,19 +147,38 @@
   width: 100%;
   height: auto;
   display: block;
+  max-height: 470px;
+  overflow: visible;
 }
 
 .mapRegion {
   stroke: var(--surface);
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
-  transition: transform var(--duration-fast) var(--ease), filter var(--duration-fast) var(--ease);
+  transition: transform var(--duration-fast) var(--ease), filter var(--duration-fast) var(--ease), stroke var(--duration-fast) var(--ease), stroke-width var(--duration-fast) var(--ease);
   transform-origin: center;
 }
 
 .mapRegion:hover {
   filter: brightness(1.06);
   transform: translateY(-1px);
+}
+
+.mapInteractive {
+  cursor: pointer;
+}
+
+.mapInteractive:focus-visible {
+  outline: none;
+  stroke: var(--gold);
+  stroke-width: 4;
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--primary-900) 18%, transparent));
+}
+
+.mapSelected {
+  stroke: var(--gold);
+  stroke-width: 4;
+  filter: drop-shadow(0 5px 12px color-mix(in srgb, var(--primary-900) 22%, transparent));
 }
 
 .level0 { fill: var(--primary-100); }
@@ -181,6 +200,57 @@
   fill: var(--fodip-ivory);
 }
 
+.mapSelection {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--gold) 42%, var(--line));
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: var(--ink);
+  font-size: var(--text-caption);
+  font-weight: 850;
+}
+
+.mapLoading,
+.mapUnavailable {
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--green) 8%, transparent), transparent 42%),
+    var(--surface-soft);
+  color: var(--muted);
+  font-size: var(--text-body-sm);
+  text-align: center;
+}
+
+.mapLoading {
+  animation: map-pulse 1.2s var(--ease) infinite alternate;
+}
+
+.mapUnavailable {
+  align-content: center;
+  gap: 6px;
+}
+
+.mapUnavailable strong,
+.mapUnavailable span {
+  display: block;
+}
+
+.mapUnavailable strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
 .mapLegend {
   display: flex;
   align-items: center;
@@ -195,6 +265,13 @@
   height: 8px;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--primary-100), var(--primary-300), var(--primary-500), var(--primary-800));
+}
+
+.mapSource {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  line-height: 1.45;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -217,9 +294,23 @@
   to { opacity: 1; transform: scale(1); transform-origin: center; }
 }
 
+@keyframes map-pulse {
+  from { opacity: 0.72; }
+  to { opacity: 1; }
+}
+
 @media (max-width: 620px) {
   .donutWrap {
     grid-template-columns: 1fr;
+  }
+
+  .chartHeader {
+    flex-direction: column;
+  }
+
+  .mapLoading,
+  .mapUnavailable {
+    min-height: 230px;
   }
 }
 
@@ -227,5 +318,9 @@
   .donutSegment,
   .mapRegion {
     transition: none;
+  }
+
+  .mapLoading {
+    animation: none;
   }
 }
