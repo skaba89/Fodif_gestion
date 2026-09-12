@@ -115,7 +115,7 @@ test.describe('Cycle complet d\'un dossier', () => {
     await expect(page.getByText('Prêt pour le comité', { exact: true })).toBeVisible();
     await expect(page.getByText('80.00/100', { exact: true })).toBeVisible();
 
-    await page.getByLabel('Décision').selectOption('APPROUVE');
+    await page.getByLabel('Décision', { exact: true }).selectOption('APPROUVE');
     await expect(page.getByLabel('Montant approuvé (GNF)')).not.toHaveValue('');
     await page.getByLabel('Durée (mois)').fill('24');
     await page.getByLabel('Je confirme avoir relu le dossier').check();

@@ -39,7 +39,7 @@ test.describe('Operational committee workspace', () => {
 
     await page.goto('/comite/dossiers?vue=HISTORIQUE');
     await expect(page.getByRole('heading', { name: 'Historique des décisions' })).toBeVisible();
-    await page.getByLabel('Décision').selectOption('APPROUVE');
+    await page.getByLabel('Décision', { exact: true }).selectOption('APPROUVE');
     await page.getByRole('button', { name: 'Filtrer' }).click();
     await expect(page.getByRole('row', { name: /FODIP-2026-DEMO04/ })).toBeVisible();
 

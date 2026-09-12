@@ -55,7 +55,7 @@ const PORTAL_ROUTES: Record<PortalId, RouteCase[]> = {
   comite: [
     { source: '/comite', sample: '/comite', expected: '/comite/tableau-de-bord' },
     { source: '/comite/tableau-de-bord', sample: '/comite/tableau-de-bord' },
-    { source: '/comite/dossiers', sample: '/comite/dossiers' },
+    { source: '/comite/dossiers', sample: '/comite/dossiers', expected: '/comite/dossiers?vue=ORDRE_DU_JOUR' },
     {
       source: '/comite/dossiers/[id]',
       sample: '/comite/dossiers/60000000-0000-4000-8000-000000000005',
