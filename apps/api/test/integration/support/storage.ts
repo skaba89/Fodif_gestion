@@ -6,8 +6,8 @@
  * actually round-trip unmodified, whether the integrity check in
  * DocumentsService#downloadVerified genuinely detects corrupted storage (not just a mismatched
  * mock return value), or whether the upload-then-DB-insert compensating delete on failure actually
- * removes the object. Starts a disposable `minio/minio` container via Testcontainers (the same
- * image docker-compose.yml pins for the `minio` service) and hands back the real
+ * removes the object. Starts a disposable MinIO container via Testcontainers (the same image and
+ * release docker-compose.yml pins for the `minio` service) and hands back the real
  * `DocumentStorageService` wired to it.
  */
 import {
@@ -21,8 +21,10 @@ import { MinioContainer, StartedMinioContainer } from '@testcontainers/minio';
 import { DocumentStorageService } from '../../../src/documents/document-storage.service';
 
 // docker-compose.yml's `minio` service image - kept in sync manually (see support/database.ts's
-// identical note for POSTGRES_IMAGE): if that pin changes, update this one too.
-const MINIO_IMAGE = 'minio/minio:RELEASE.2025-09-07T16-13-09Z';
+// identical note for POSTGRES_IMAGE): if that pin changes, update this one too. Quay is MinIO's
+// maintained public registry for the community image; keeping the exact release tag unchanged
+// avoids changing test semantics while Docker Hub no longer resolves minio/minio reliably.
+const MINIO_IMAGE = 'quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z';
 const TEST_BUCKET = 'fodip-test-documents';
 
 export interface IntegrationStorage {
@@ -72,7 +74,7 @@ export async function startIntegrationStorage(): Promise<IntegrationStorage> {
         throw error;
       });
       const keys = listed.Contents?.map((object) => object.Key).filter((key): key is string => Boolean(key)) ?? [];
-      await Promise.all(keys.map((key) => client.send(new DeleteObjectCommand({ Bucket: TEST_BUCKET, Key: key }))));
+      await Promise.all(keys.map((key) => client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))));
     },
     async stop() {
       client.destroy();
