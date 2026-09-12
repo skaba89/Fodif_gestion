@@ -38,7 +38,8 @@ const PORTAL_ROUTES: Record<PortalId, RouteCase[]> = {
     { source: '/administration/utilisateurs', sample: '/administration/utilisateurs' },
   ],
   agent: [
-    { source: '/agent', sample: '/agent', expected: '/agent/dossiers' },
+    { source: '/agent', sample: '/agent', expected: '/agent/tableau-de-bord' },
+    { source: '/agent/tableau-de-bord', sample: '/agent/tableau-de-bord' },
     { source: '/agent/dossiers', sample: '/agent/dossiers' },
     {
       source: '/agent/dossiers/[id]',
@@ -98,7 +99,7 @@ const ROLE_CASES: RoleCase[] = [
   },
   {
     role: 'AGENT_FODIP', roleLabel: 'Agent FODIP', email: 'qualification-agent@fodip.local', portal: 'agent',
-    home: '/agent/dossiers', forbidden: '/partenaire/financements',
+    home: '/agent/tableau-de-bord', forbidden: '/partenaire/financements',
   },
   {
     role: 'COMITE_FINANCEMENT', roleLabel: 'Comité de financement', email: 'qualification-comite@fodip.local', portal: 'comite',
@@ -224,10 +225,6 @@ test.describe('Exhaustive route and role qualification', () => {
     test(`${roleCase.role} reaches its authorized pages, shared account pages and is rejected by a forbidden portal`, async ({ page }, testInfo) => {
       test.setTimeout(120_000);
 
-      // The unified login intentionally probes /api/session/me before rendering the credentials
-      // form. A 401 from that unauthenticated probe is expected and must not be confused with an
-      // authorization failure after login, so start collecting API failures only once the role's
-      // authenticated home has been reached.
       await login(page, roleCase);
 
       const apiErrors: string[] = [];
@@ -251,9 +248,6 @@ test.describe('Exhaustive route and role qualification', () => {
       await expect(page.getByTestId('profile-email')).toHaveText(roleCase.email);
       await expect(page.getByTestId('profile-roles')).toContainText(roleCase.roleLabel);
 
-      // notification.read is deliberately withheld from PARTENAIRE_BANCAIRE by migration 008;
-      // its portal does not expose this route. Keep that RBAC boundary instead of granting a
-      // permission merely to make an exhaustive UI test pass.
       if (roleCase.canReadNotifications !== false) {
         await page.goto('/notifications');
         await expect(page).toHaveURL(/\/notifications$/);
