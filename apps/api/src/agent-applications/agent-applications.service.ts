@@ -9,8 +9,12 @@ import { ReviewApplicationDto } from './dto/review-application.dto';
 export class AgentApplicationsService {
   constructor(private readonly applications: AgentApplicationsRepository) {}
 
-  list(query: ListAgentApplicationsDto) {
-    return this.applications.list(query);
+  list(user: AuthenticatedUser, query: ListAgentApplicationsDto) {
+    return this.applications.list(query, user.sub);
+  }
+
+  summary(user: AuthenticatedUser) {
+    return this.applications.summary(user.sub);
   }
 
   async get(id: string) {
