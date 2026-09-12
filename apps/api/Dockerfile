@@ -28,6 +28,12 @@ RUN pnpm --filter @fodip/api deploy --prod /app/deploy
 
 FROM node:24-bookworm-slim AS runtime
 ENV NODE_ENV=production
+# The immutable Node base digest can lag a Debian point-security rebuild. Upgrade the runtime
+# PCRE2 library explicitly: Trivy blocks known HIGH findings and Debian already publishes the
+# corrected bookworm package (CVE-2026-86145 and CVE-2026-89161).
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends --only-upgrade libpcre2-8-0 \
+  && rm -rf /var/lib/apt/lists/*
 # npm (and, on this 24.x line, Corepack too - see the `dependencies` stage above) ships inside the
 # base Node.js image for building/installing - this runtime stage never invokes any of them (CMD
 # only ever runs `node`), yet npm's own bundled dependencies (it vendors its own tar,
