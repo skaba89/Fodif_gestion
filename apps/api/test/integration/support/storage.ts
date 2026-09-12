@@ -74,7 +74,7 @@ export async function startIntegrationStorage(): Promise<IntegrationStorage> {
         throw error;
       });
       const keys = listed.Contents?.map((object) => object.Key).filter((key): key is string => Boolean(key)) ?? [];
-      await Promise.all(keys.map((key) => client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))));
+      await Promise.all(keys.map((key) => client.send(new DeleteObjectCommand({ Bucket: TEST_BUCKET, Key: key }))));
     },
     async stop() {
       client.destroy();
