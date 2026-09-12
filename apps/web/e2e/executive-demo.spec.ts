@@ -136,13 +136,14 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await expect(page).toHaveURL(/\/direction\/tableau-de-bord$/);
 
       // --- 4. Cockpit national ---
-      await expect(page.getByText('Montant décaissé', { exact: true })).toBeVisible();
-      await expect(page.locator('.region-list')).toBeVisible();
+      await expect(page.locator('[data-kpi-card]').getByText('Montant décaissé', { exact: true })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Portefeuille par région' })).toBeVisible();
 
       // --- 5. Filtre région ---
-      await page.getByLabel('Région').selectOption({ index: 1 });
+      const regionFilter = page.locator('#region');
+      await regionFilter.selectOption({ index: 1 });
       await expect(page.locator('#main-content [role="alert"]')).toHaveCount(0);
-      await expect(page.getByLabel('Région')).toHaveValue(/.+/);
+      await expect(regionFilter).toHaveValue(/.+/);
       await page.getByText('Réinitialiser').click();
 
       await logout(page);
@@ -172,8 +173,9 @@ test.describe('Scénario de démonstration Direction générale', () => {
 
       // --- 6. Dossier PME (agent's 360° view, instruction and transmission to committee) ---
       await login(page, '/connexion', agent.email, password);
-      await expect(page).toHaveURL(/\/agent\/dossiers$/);
-      await page.getByLabel('Recherche').fill(numeroDossier);
+      await expect(page).toHaveURL(/\/agent\/tableau-de-bord$/);
+      await page.goto('/agent/dossiers?vue=A_PRENDRE');
+      await page.getByRole('searchbox', { name: 'Recherche', exact: true }).fill(numeroDossier);
       await page.getByRole('button', { name: 'Filtrer' }).click();
       await page.getByRole('button', { name: 'Prendre et instruire' }).first().click();
       await expect(page).toHaveURL(/\/agent\/dossiers\/[0-9a-f-]+$/);

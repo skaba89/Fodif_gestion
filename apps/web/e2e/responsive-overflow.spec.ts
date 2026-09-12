@@ -29,16 +29,21 @@ async function expectNoSidebarOverflow(page: Page) {
 }
 
 test.describe('Authenticated portal responsive bounds', () => {
-  for (const viewport of [
+  test('Agent workspace stays within every supported viewport', async ({ page }) => {
+    const viewports = [
     { width: 1366, height: 900 },
     { width: 1024, height: 800 },
     { width: 768, height: 900 },
     { width: 430, height: 900 },
     { width: 375, height: 812 },
-  ]) {
-    test(`Agent workspace has no horizontal overflow at ${viewport.width}px`, async ({ page }) => {
+    ];
+
+    await page.setViewportSize(viewports[0]);
+    await loginAgent(page);
+
+    for (const viewport of viewports) {
       await page.setViewportSize(viewport);
-      await loginAgent(page);
+      await page.goto(AGENT_HOME);
 
       await expect(page.getByRole('heading', { name: 'Tableau de bord Agent' })).toBeVisible();
       await expectNoPageOverflow(page);
@@ -55,14 +60,12 @@ test.describe('Authenticated portal responsive bounds', () => {
       await expectNoPageOverflow(page);
 
       await page.goto(AGENT_DETAIL);
-      await expect(page.getByRole('heading', { name: 'Instruction du dossier' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'FODIP-2026-DEMO02' })).toBeVisible();
       await expectNoPageOverflow(page);
-    });
-  }
+    }
 
-  test('account actions stay inside the desktop sidebar', async ({ page }) => {
-    await page.setViewportSize({ width: 1366, height: 900 });
-    await loginAgent(page);
+    await page.setViewportSize(viewports[0]);
+    await page.goto(AGENT_HOME);
 
     const sidebar = page.getByRole('complementary', { name: 'Navigation Espace Agent' });
     const accountActions = sidebar.getByLabel('Actions du compte');

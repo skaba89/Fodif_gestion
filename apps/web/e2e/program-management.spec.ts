@@ -23,7 +23,7 @@ test.describe('Programmes FODIP — catalogue et administration institutionnelle
   });
 
   test('Agent can consult the catalogue and prepare a governed proposal but cannot call management endpoints', async ({ page }) => {
-    await login(page, 'agent@fodip.local', /\/agent\/dossiers$/);
+    await login(page, 'agent@fodip.local', /\/agent\/tableau-de-bord$/);
     await page.goto('/agent/programmes');
 
     await expect(page.getByRole('heading', { name: 'Programmes FODIP actifs' })).toBeVisible();

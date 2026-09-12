@@ -66,6 +66,13 @@ const HEAVY_LOGIN_SPECS = [
 const ROLE_PAGE_QUALIFICATION_SPEC = /role-page-qualification\.spec\.ts$/;
 const DESKTOP_SECONDARY_IGNORES = [...HEAVY_LOGIN_SPECS, ROLE_PAGE_QUALIFICATION_SPEC];
 
+// responsive-overflow.spec.ts already iterates the complete 1366/1024/768/430/375px viewport
+// matrix inside one authenticated test on Chromium, Firefox and WebKit. Replaying that same width
+// matrix in both emulated-device projects adds no distinct layout coverage and needlessly spends
+// two more requests from the shared qualification Agent's 5-per-60s login budget.
+const RESPONSIVE_OVERFLOW_SPEC = /responsive-overflow\.spec\.ts$/;
+const MOBILE_IGNORES = [...HEAVY_LOGIN_SPECS, RESPONSIVE_OVERFLOW_SPEC];
+
 // PR #91 added an authenticated Banque accessibility journey that already opens the portfolio and
 // financing detail on every project. Replaying the separate functional Banque journey as well on
 // both mobile projects makes the final iPhone login the sixth request in the real 5-per-60s window
@@ -97,13 +104,13 @@ export default defineConfig({
     {
       name: 'Pixel 7',
       use: { ...devices['Pixel 7'] },
-      testIgnore: HEAVY_LOGIN_SPECS,
+      testIgnore: MOBILE_IGNORES,
       grepInvert: PARTNER_FUNCTIONAL_TEST,
     },
     {
       name: 'iPhone 14',
       use: { ...devices['iPhone 14'] },
-      testIgnore: HEAVY_LOGIN_SPECS,
+      testIgnore: MOBILE_IGNORES,
       grepInvert: PARTNER_FUNCTIONAL_TEST,
     },
   ],

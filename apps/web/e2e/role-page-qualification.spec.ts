@@ -200,7 +200,8 @@ test.describe('Exhaustive route and role qualification', () => {
     }
   });
 
-  test('every protected page rejects an unauthenticated browser', async ({ context }) => {
+  test('every protected page rejects an unauthenticated browser', async ({ context }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'The shared session guard is engine- and viewport-independent.');
     test.setTimeout(120_000);
     await context.clearCookies();
     const samples = [
