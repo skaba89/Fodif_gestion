@@ -88,8 +88,9 @@ export default function AgentDossiersPage() {
   useEffect(() => {
     if (!initialized) return;
     setStatut('');
+    setRecherche('');
     setMessage('');
-    load(1, '', recherche, vue).catch((error) => setMessage(error.message));
+    load(1, '', '', vue).catch((error) => setMessage(error.message));
   }, [initialized, load, vue]);
 
   const sortedRows = useMemo(() => [...result.items].sort((left, right) => {
