@@ -10,11 +10,19 @@ interface AgentApplicationDetailRow extends QueryResultRow {
   agentResponsableId: string | null;
 }
 
+interface AgentWorkspaceSummaryRow extends QueryResultRow {
+  aPrendre: number | string;
+  mesDossiers: number | string;
+  complements: number | string;
+  pretComite: number | string;
+  historique: number | string;
+}
+
 @Injectable()
 export class AgentApplicationsRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  async list(query: ListAgentApplicationsDto) {
+  async list(query: ListAgentApplicationsDto, agentId: string) {
     const offset = (query.page - 1) * query.limite;
     const result = await this.db.query(
       `SELECT
@@ -32,7 +40,18 @@ export class AgentApplicationsRepository {
       FROM dossiers_financement d
       JOIN entreprises e ON e.id = d.entreprise_id
       LEFT JOIN programmes_fodip p ON p.id = d.programme_id
-      WHERE d.statut IN ('SOUMIS', 'EN_INSTRUCTION', 'COMPLEMENT_REQUIS', 'PRET_COMITE')
+      WHERE (
+        ($3::VARCHAR IS NULL AND d.statut IN ('SOUMIS', 'EN_INSTRUCTION', 'COMPLEMENT_REQUIS', 'PRET_COMITE'))
+        OR ($3 = 'A_PRENDRE' AND d.statut = 'SOUMIS' AND d.agent_responsable_id IS NULL)
+        OR ($3 = 'MES_DOSSIERS' AND d.agent_responsable_id = $4::UUID AND d.statut IN ('EN_INSTRUCTION', 'COMPLEMENT_REQUIS'))
+        OR ($3 = 'COMPLEMENTS' AND d.agent_responsable_id = $4::UUID AND d.statut = 'COMPLEMENT_REQUIS')
+        OR ($3 = 'PRET_COMITE' AND d.agent_responsable_id = $4::UUID AND d.statut = 'PRET_COMITE')
+        OR ($3 = 'HISTORIQUE' AND EXISTS (
+          SELECT 1
+          FROM dossier_statuts_historique h
+          WHERE h.dossier_id = d.id AND h.utilisateur_id = $4::UUID
+        ) AND d.statut NOT IN ('EN_INSTRUCTION', 'COMPLEMENT_REQUIS'))
+      )
         AND ($1::VARCHAR IS NULL OR d.statut = $1)
         AND ($2::VARCHAR IS NULL OR
           d.numero_dossier ILIKE '%' || $2 || '%' OR
@@ -40,13 +59,41 @@ export class AgentApplicationsRepository {
           e.code_fodip ILIKE '%' || $2 || '%')
       ORDER BY
         CASE d.statut WHEN 'SOUMIS' THEN 1 WHEN 'COMPLEMENT_REQUIS' THEN 2 WHEN 'EN_INSTRUCTION' THEN 3 ELSE 4 END,
-        d.date_soumission ASC NULLS LAST
-      LIMIT $3 OFFSET $4`,
-      [query.statut ?? null, query.recherche?.trim() || null, query.limite, offset],
+        d.date_soumission ASC NULLS LAST,
+        d.updated_at DESC
+      LIMIT $5 OFFSET $6`,
+      [query.statut ?? null, query.recherche?.trim() || null, query.vue ?? null, agentId, query.limite, offset],
     );
     const total = Number(result.rows[0]?.total ?? 0);
     const items = result.rows.map(({ total: _total, ...item }) => item);
     return { items, total, page: query.page, limite: query.limite };
+  }
+
+  async summary(agentId: string) {
+    const result = await this.db.query<AgentWorkspaceSummaryRow>(
+      `SELECT
+        COUNT(*) FILTER (WHERE d.statut = 'SOUMIS' AND d.agent_responsable_id IS NULL)::INT AS "aPrendre",
+        COUNT(*) FILTER (WHERE d.agent_responsable_id = $1::UUID AND d.statut IN ('EN_INSTRUCTION', 'COMPLEMENT_REQUIS'))::INT AS "mesDossiers",
+        COUNT(*) FILTER (WHERE d.agent_responsable_id = $1::UUID AND d.statut = 'COMPLEMENT_REQUIS')::INT AS "complements",
+        COUNT(*) FILTER (WHERE d.agent_responsable_id = $1::UUID AND d.statut = 'PRET_COMITE')::INT AS "pretComite",
+        (
+          SELECT COUNT(DISTINCT h.dossier_id)::INT
+          FROM dossier_statuts_historique h
+          JOIN dossiers_financement hd ON hd.id = h.dossier_id
+          WHERE h.utilisateur_id = $1::UUID
+            AND hd.statut NOT IN ('EN_INSTRUCTION', 'COMPLEMENT_REQUIS')
+        ) AS "historique"
+      FROM dossiers_financement d`,
+      [agentId],
+    );
+    const row = result.rows[0];
+    return {
+      aPrendre: Number(row?.aPrendre ?? 0),
+      mesDossiers: Number(row?.mesDossiers ?? 0),
+      complements: Number(row?.complements ?? 0),
+      pretComite: Number(row?.pretComite ?? 0),
+      historique: Number(row?.historique ?? 0),
+    };
   }
 
   async findById(id: string) {
@@ -96,10 +143,6 @@ export class AgentApplicationsRepository {
         [dossier.entrepriseId],
       ),
       this.db.query(
-        // Axe E6 (versioning, docs/14-ROADMAP-SAAS-PREMIUM.md) - only the current version of each
-        // document type: this list drives the Valider/Complément buttons on every row, so a
-        // document the PME has since replaced must never appear here as if it still needed (or
-        // could receive) a decision.
         `SELECT id, type_document AS "typeDocument", nom_fichier AS "nomFichier",
           mime_type AS "mimeType", taille_octets AS "tailleOctets",
           statut_verification AS "statutVerification",
