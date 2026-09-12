@@ -49,7 +49,7 @@ test.describe('TOTP multi-factor authentication', () => {
       await page.getByLabel('Code à 6 chiffres').fill(codeFor(secret));
       await page.getByRole('button', { name: 'Activer et se connecter' }).click();
 
-      await expect(page).toHaveURL(/\/comite\/dossiers$/);
+      await expect(page).toHaveURL(/\/comite\/tableau-de-bord$/);
       await expect(page.getByText(email)).toHaveCount(0);
       await page.goto('/profil');
       await expect(page.getByText(email)).toBeVisible();
@@ -72,7 +72,7 @@ test.describe('TOTP multi-factor authentication', () => {
       await page.getByLabel('Code à 6 chiffres').fill(codeFor(secret, Date.now() + 30_000));
       await page.getByRole('button', { name: 'Se connecter' }).click();
 
-      await expect(page).toHaveURL(/\/comite\/dossiers$/);
+      await expect(page).toHaveURL(/\/comite\/tableau-de-bord$/);
     } finally {
       await admin.patch(`/api/administration/users/${id}`, { data: { actif: false } }).catch(() => undefined);
       await admin.dispose();

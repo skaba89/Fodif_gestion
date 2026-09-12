@@ -47,6 +47,9 @@ describe('Committee decisions (real PostgreSQL)', () => {
       expect(result.statut).toBe('APPROUVE');
       expect(result.decisions).toHaveLength(1);
       expect(result.decisions[0]).toMatchObject({ decision: 'APPROUVE', montantApprouve: '900000.00' });
+      expect(result.historique).toEqual(expect.arrayContaining([
+        expect.objectContaining({ ancienStatut: 'PRET_COMITE', nouveauStatut: 'APPROUVE' }),
+      ]));
 
       const history = await integrationDb.pool.query(
         `SELECT ancien_statut AS "ancienStatut", nouveau_statut AS "nouveauStatut" FROM dossier_statuts_historique WHERE dossier_id = $1`,
@@ -126,6 +129,37 @@ describe('Committee decisions (real PostgreSQL)', () => {
       const ids = page.items.map((item) => item.id as string);
       expect(ids).toEqual(expect.arrayContaining([first.dossierId, second.dossierId]));
       expect(ids).not.toContain(notReady.dossierId);
+    });
+
+    it('filters the agenda by server-side search and returns past decisions in history view', async () => {
+      const matching = await seedDossierReadyForCommittee(integrationDb.pool, { scoreTotal: 91 });
+      const other = await seedDossierReadyForCommittee(integrationDb.pool, { scoreTotal: 62 });
+      const matchingNumber = await integrationDb.pool.query(`SELECT numero_dossier FROM dossiers_financement WHERE id = $1`, [matching.dossierId]);
+
+      const agenda = await service.list({
+        page: 1, limite: 25, vue: 'ORDRE_DU_JOUR', recherche: matchingNumber.rows[0].numero_dossier, tri: 'score',
+      });
+      expect(agenda.items.map((item) => item.id)).toEqual([matching.dossierId]);
+
+      await service.decide(user, other.dossierId, { decision: 'REJETE', commentaire: 'Capacité insuffisante' });
+      const history = await service.list({ page: 1, limite: 25, vue: 'HISTORIQUE', decision: 'REJETE' });
+      expect(history.items.map((item) => item.id)).toContain(other.dossierId);
+      expect(history.items).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: other.dossierId, decision: 'REJETE' }),
+      ]));
+    });
+
+    it('summarizes the live agenda and recorded decisions without demo aggregates', async () => {
+      const ready = await seedDossierReadyForCommittee(integrationDb.pool, { montantDemande: 750_000 });
+      const decided = await seedDossierReadyForCommittee(integrationDb.pool, { montantDemande: 250_000 });
+      await integrationDb.pool.query(
+        `UPDATE scores_dossier SET niveau_risque = 'ELEVE' WHERE dossier_id = $1`, [ready.dossierId],
+      );
+      await service.decide(user, decided.dossierId, { decision: 'REJETE', commentaire: 'Risque non maîtrisé' });
+
+      const summary = await service.summary();
+      expect(summary).toMatchObject({ aStatuer: 1, risqueEleve: 1, decisionsTotal: 1, rejetes: 1 });
+      expect(Number(summary.montantDemande)).toBe(750_000);
     });
   });
 });

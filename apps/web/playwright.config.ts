@@ -64,14 +64,18 @@ const HEAVY_LOGIN_SPECS = [
 // to prove all role homes and shared account pages cross-device, but skip the two extra desktop
 // engines so retries still stay comfortably below the real 5-attempts/60s throttle.
 const ROLE_PAGE_QUALIFICATION_SPEC = /role-page-qualification\.spec\.ts$/;
-const DESKTOP_SECONDARY_IGNORES = [...HEAVY_LOGIN_SPECS, ROLE_PAGE_QUALIFICATION_SPEC];
+// The Committee workspace journey also traverses its own 375px layout in one Chromium session.
+// Replaying it on every project would reuse comite@ alongside workflow/executive-demo and spend
+// the same protected login budget without adding a distinct business path.
+const COMMITTEE_WORKSPACE_SPEC = /committee-workspace\.spec\.ts$/;
+const DESKTOP_SECONDARY_IGNORES = [...HEAVY_LOGIN_SPECS, ROLE_PAGE_QUALIFICATION_SPEC, COMMITTEE_WORKSPACE_SPEC];
 
 // responsive-overflow.spec.ts already iterates the complete 1366/1024/768/430/375px viewport
 // matrix inside one authenticated test on Chromium, Firefox and WebKit. Replaying that same width
 // matrix in both emulated-device projects adds no distinct layout coverage and needlessly spends
 // two more requests from the shared qualification Agent's 5-per-60s login budget.
 const RESPONSIVE_OVERFLOW_SPEC = /responsive-overflow\.spec\.ts$/;
-const MOBILE_IGNORES = [...HEAVY_LOGIN_SPECS, RESPONSIVE_OVERFLOW_SPEC];
+const MOBILE_IGNORES = [...HEAVY_LOGIN_SPECS, RESPONSIVE_OVERFLOW_SPEC, COMMITTEE_WORKSPACE_SPEC];
 
 // PR #91 added an authenticated Banque accessibility journey that already opens the portfolio and
 // financing detail on every project. Replaying the separate functional Banque journey as well on

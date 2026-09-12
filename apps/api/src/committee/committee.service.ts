@@ -13,6 +13,10 @@ export class CommitteeService {
     return this.committee.list(query);
   }
 
+  summary() {
+    return this.committee.summary();
+  }
+
   async get(id: string) {
     const application = await this.committee.findById(id);
     if (!application) throw new NotFoundException('Application not found');

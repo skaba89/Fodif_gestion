@@ -16,11 +16,21 @@ export class CommitteeRepository {
 
   async list(query: ListCommitteeApplicationsDto) {
     const offset = (query.page - 1) * query.limite;
+    const view = query.vue ?? 'ORDRE_DU_JOUR';
+    const search = query.recherche?.trim() || null;
+    const orderBy = view === 'HISTORIQUE'
+      ? 'decision."dateDecision" DESC'
+      : query.tri === 'montant'
+        ? 'd.montant_demande DESC, d.updated_at ASC'
+        : query.tri === 'score'
+          ? 's.score_total DESC NULLS LAST, d.updated_at ASC'
+          : 'd.updated_at ASC';
     const result = await this.db.query(
       `SELECT d.id, d.numero_dossier AS "numeroDossier", d.montant_demande AS "montantDemande",
         d.statut, d.date_soumission AS "dateSoumission", e.raison_sociale AS "raisonSociale",
         e.code_fodip AS "codeFodip", p.nom AS "programmeNom",
         s.score_total AS "scoreTotal", s.niveau_risque AS "niveauRisque", s.recommandation,
+        decision.decision, decision."montantApprouve", decision."dateDecision",
         COUNT(*) OVER()::INT AS "total"
        FROM dossiers_financement d
        JOIN entreprises e ON e.id = d.entreprise_id
@@ -29,14 +39,49 @@ export class CommitteeRepository {
          SELECT score_total, niveau_risque, recommandation
          FROM scores_dossier WHERE dossier_id = d.id ORDER BY updated_at DESC, calcule_at DESC LIMIT 1
        ) s ON TRUE
-       WHERE d.statut = 'PRET_COMITE'
-       ORDER BY d.updated_at ASC
+       LEFT JOIN LATERAL (
+         SELECT id, decision, montant_approuve AS "montantApprouve", date_decision AS "dateDecision"
+         FROM decisions_comite WHERE dossier_id = d.id ORDER BY date_decision DESC LIMIT 1
+       ) decision ON TRUE
+       WHERE (($3 = 'ORDRE_DU_JOUR' AND d.statut = 'PRET_COMITE')
+          OR ($3 = 'HISTORIQUE' AND decision.id IS NOT NULL))
+         AND ($4::TEXT IS NULL OR d.numero_dossier ILIKE '%' || $4 || '%'
+           OR e.raison_sociale ILIKE '%' || $4 || '%' OR e.code_fodip ILIKE '%' || $4 || '%')
+         AND ($5::TEXT IS NULL OR UPPER(COALESCE(s.niveau_risque, '')) = $5)
+         AND ($6::TEXT IS NULL OR decision.decision = $6)
+       ORDER BY ${orderBy}
        LIMIT $1 OFFSET $2`,
-      [query.limite, offset],
+      [query.limite, offset, view, search, query.risque ?? null, query.decision ?? null],
     );
     const total = Number(result.rows[0]?.total ?? 0);
     const items = result.rows.map(({ total: _total, ...item }) => item);
     return { items, total, page: query.page, limite: query.limite };
+  }
+
+  async summary() {
+    const [queue, decisions] = await Promise.all([
+      this.db.query(
+        `SELECT COUNT(*)::INT AS "aStatuer",
+          COALESCE(SUM(d.montant_demande), 0) AS "montantDemande",
+          COUNT(*) FILTER (WHERE UPPER(COALESCE(s.niveau_risque, '')) = 'ELEVE')::INT AS "risqueEleve",
+          COALESCE(MAX(GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - d.updated_at)) / 86400))), 0)::INT AS "ancienneteMaxJours"
+         FROM dossiers_financement d
+         LEFT JOIN LATERAL (
+           SELECT niveau_risque FROM scores_dossier
+           WHERE dossier_id = d.id ORDER BY updated_at DESC, calcule_at DESC LIMIT 1
+         ) s ON TRUE
+         WHERE d.statut = 'PRET_COMITE'`,
+      ),
+      this.db.query(
+        `SELECT COUNT(*)::INT AS "decisionsTotal",
+          COUNT(*) FILTER (WHERE date_decision::DATE = CURRENT_DATE)::INT AS "decisionsAujourdhui",
+          COUNT(*) FILTER (WHERE decision = 'APPROUVE')::INT AS "approuves",
+          COUNT(*) FILTER (WHERE decision = 'REJETE')::INT AS "rejetes",
+          COUNT(*) FILTER (WHERE decision = 'COMPLEMENT_REQUIS')::INT AS "complements"
+         FROM decisions_comite`,
+      ),
+    ]);
+    return { ...queue.rows[0], ...decisions.rows[0] };
   }
 
   async findById(id: string) {
@@ -56,7 +101,7 @@ export class CommitteeRepository {
     const application = applicationResult.rows[0];
     if (!application) return null;
 
-    const [scoreResult, documents, decisions] = await Promise.all([
+    const [scoreResult, documents, decisions, history] = await Promise.all([
       this.db.query(
         `SELECT s.id, s.score_total AS "scoreTotal", s.niveau_risque AS "niveauRisque",
           s.recommandation, s.calcule_at AS "calculeAt", m.nom AS "modeleNom", m.version AS "modeleVersion"
@@ -78,6 +123,15 @@ export class CommitteeRepository {
          FROM decisions_comite WHERE dossier_id = $1 ORDER BY date_decision DESC`,
         [id],
       ),
+      this.db.query(
+        `SELECT h.ancien_statut AS "ancienStatut", h.nouveau_statut AS "nouveauStatut",
+          h.commentaire, h.changed_at AS "changedAt",
+          NULLIF(CONCAT_WS(' ', u.prenom, u.nom), '') AS "acteurNom"
+         FROM dossier_statuts_historique h
+         LEFT JOIN utilisateurs u ON u.id = h.utilisateur_id
+         WHERE h.dossier_id = $1 ORDER BY h.changed_at ASC`,
+        [id],
+      ),
     ]);
 
     const score = scoreResult.rows[0] ?? null;
@@ -94,6 +148,7 @@ export class CommitteeRepository {
       score: score ? { ...score, criteres: scoreDetails?.rows ?? [] } : null,
       documents: documents.rows,
       decisions: decisions.rows,
+      historique: history.rows,
     };
   }
 

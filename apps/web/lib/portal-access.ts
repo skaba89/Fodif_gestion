@@ -29,7 +29,7 @@ export const PORTAL_ACCESS: Record<PortalId, PortalAccessRule> = {
   },
   comite: {
     loginHref: LOGIN_HREF,
-    homeHref: '/comite/dossiers',
+    homeHref: '/comite/tableau-de-bord',
     allowedRoles: ['COMITE_FINANCEMENT', 'SUPER_ADMIN'],
   },
   direction: {

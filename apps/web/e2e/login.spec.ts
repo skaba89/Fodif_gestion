@@ -22,7 +22,7 @@ test.describe('Unified login flow', () => {
       ['DIRECTION_FODIP', '/direction/tableau-de-bord'],
       ['ANALYSTE', '/direction/tableau-de-bord'],
       ['AGENT_FODIP', '/agent/tableau-de-bord'],
-      ['COMITE_FINANCEMENT', '/comite/dossiers'],
+      ['COMITE_FINANCEMENT', '/comite/tableau-de-bord'],
       ['AUDITEUR', '/auditeur/tableau-de-bord'],
       ['PARTENAIRE_BANCAIRE', '/partenaire/financements'],
       ['PME', '/entrepreneur'],
