@@ -2,7 +2,8 @@ import { expect, type Page, test } from '@playwright/test';
 
 const AGENT_EMAIL = 'qualification-agent@fodip.local';
 const DEMO_PASSWORD = 'FodipDemo2026!';
-const AGENT_HOME = '/agent/dossiers';
+const AGENT_HOME = '/agent/tableau-de-bord';
+const AGENT_QUEUE = '/agent/dossiers?vue=A_PRENDRE';
 const AGENT_DETAIL = '/agent/dossiers/60000000-0000-4000-8000-000000000002';
 
 async function loginAgent(page: Page) {
@@ -10,7 +11,7 @@ async function loginAgent(page: Page) {
   await page.getByLabel('Email').fill(AGENT_EMAIL);
   await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
   await page.getByRole('button', { name: 'Se connecter' }).click();
-  await expect(page).toHaveURL(/\/agent\/dossiers$/);
+  await expect(page).toHaveURL(new RegExp(`${AGENT_HOME}$`));
 }
 
 async function expectNoPageOverflow(page: Page) {
@@ -29,16 +30,17 @@ async function expectNoSidebarOverflow(page: Page) {
 
 test.describe('Authenticated portal responsive bounds', () => {
   for (const viewport of [
-    { width: 1280, height: 800 },
+    { width: 1366, height: 900 },
     { width: 1024, height: 800 },
-    { width: 960, height: 900 },
-    { width: 390, height: 844 },
+    { width: 768, height: 900 },
+    { width: 430, height: 900 },
+    { width: 375, height: 812 },
   ]) {
     test(`Agent workspace has no horizontal overflow at ${viewport.width}px`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await loginAgent(page);
 
-      await expect(page.getByRole('heading', { name: 'Dossiers à traiter' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Tableau de bord Agent' })).toBeVisible();
       await expectNoPageOverflow(page);
 
       if (viewport.width > 960) {
@@ -48,6 +50,10 @@ test.describe('Authenticated portal responsive bounds', () => {
         await expect(page.getByRole('navigation', { name: 'Navigation mobile Espace Agent' })).toBeVisible();
       }
 
+      await page.goto(AGENT_QUEUE);
+      await expect(page.getByRole('heading', { name: 'Dossiers à prendre en charge' })).toBeVisible();
+      await expectNoPageOverflow(page);
+
       await page.goto(AGENT_DETAIL);
       await expect(page.getByRole('heading', { name: 'Instruction du dossier' })).toBeVisible();
       await expectNoPageOverflow(page);
@@ -55,7 +61,7 @@ test.describe('Authenticated portal responsive bounds', () => {
   }
 
   test('account actions stay inside the desktop sidebar', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.setViewportSize({ width: 1366, height: 900 });
     await loginAgent(page);
 
     const sidebar = page.getByRole('complementary', { name: 'Navigation Espace Agent' });
