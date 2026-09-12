@@ -201,7 +201,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
       await login(page, '/connexion', comite.email, password);
       await expect(page).toHaveURL(/\/comite\/tableau-de-bord$/);
       await page.goto(dossierUrl.replace('/agent/dossiers/', '/comite/dossiers/'));
-      await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
+      await expect(page.getByText('Prêt pour le comité', { exact: true })).toBeVisible();
       await page.getByLabel('Décision').selectOption('APPROUVE');
       await expect(page.getByLabel('Montant approuvé (GNF)')).not.toHaveValue('');
       await page.getByLabel('Durée (mois)').fill('24');

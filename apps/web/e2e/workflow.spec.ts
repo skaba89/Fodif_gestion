@@ -101,7 +101,7 @@ test.describe('Cycle complet d\'un dossier', () => {
     await reviewDialog.getByRole('button', { name: 'Confirmer la décision' }).click();
 
     await expect(page.getByText('Décision d’instruction enregistrée.')).toBeVisible();
-    await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
+    await expect(page.getByText('Prêt pour le comité', { exact: true })).toBeVisible();
 
     await logout(page);
     await expect(page).toHaveURL(/\/connexion$/);
@@ -112,7 +112,7 @@ test.describe('Cycle complet d\'un dossier', () => {
 
     const committeeUrl = dossierUrl.replace('/agent/dossiers/', '/comite/dossiers/');
     await page.goto(committeeUrl);
-    await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
+    await expect(page.getByText('Prêt pour le comité', { exact: true })).toBeVisible();
     await expect(page.getByText('80.00/100', { exact: true })).toBeVisible();
 
     await page.getByLabel('Décision').selectOption('APPROUVE');
