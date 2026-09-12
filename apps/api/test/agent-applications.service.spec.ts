@@ -6,6 +6,21 @@ const agent = {
 };
 
 describe('AgentApplicationsService', () => {
+  it('scopes workload views to the authenticated user id', async () => {
+    const repository = { list: jest.fn().mockResolvedValue({ items: [], total: 0, page: 1, limite: 25 }) };
+    const service = new AgentApplicationsService(repository as never);
+    const query = { page: 1, limite: 25, vue: 'MES_DOSSIERS' };
+    await service.list(agent, query);
+    expect(repository.list).toHaveBeenCalledWith(query, 'agent-a');
+  });
+
+  it('scopes dashboard summary to the authenticated user id', async () => {
+    const repository = { summary: jest.fn().mockResolvedValue({ mesDossiers: 2 }) };
+    const service = new AgentApplicationsService(repository as never);
+    await service.summary(agent);
+    expect(repository.summary).toHaveBeenCalledWith('agent-a');
+  });
+
   it('cannot claim a dossier already at committee stage', async () => {
     const repository = { findById: jest.fn().mockResolvedValue({ id: 'd1', statut: 'PRET_COMITE' }) };
     const service = new AgentApplicationsService(repository as never);

@@ -24,7 +24,7 @@ export const PORTAL_ACCESS: Record<PortalId, PortalAccessRule> = {
   },
   agent: {
     loginHref: LOGIN_HREF,
-    homeHref: '/agent/dossiers',
+    homeHref: '/agent/tableau-de-bord',
     allowedRoles: ['AGENT_FODIP', 'SUPER_ADMIN'],
   },
   comite: {

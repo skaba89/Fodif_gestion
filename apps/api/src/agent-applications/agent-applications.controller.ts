@@ -19,8 +19,14 @@ export class AgentApplicationsController {
 
   @Get()
   @RequirePermissions('application.read')
-  list(@Query() query: ListAgentApplicationsDto) {
-    return this.applications.list(query);
+  list(@Req() request: AuthenticatedRequest, @Query() query: ListAgentApplicationsDto) {
+    return this.applications.list(request.user, query);
+  }
+
+  @Get('summary')
+  @RequirePermissions('application.read')
+  summary(@Req() request: AuthenticatedRequest) {
+    return this.applications.summary(request.user);
   }
 
   @Get(':id')
