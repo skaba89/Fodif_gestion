@@ -53,7 +53,8 @@ const PORTAL_ROUTES: Record<PortalId, RouteCase[]> = {
     { source: '/auditeur/tableau-de-bord', sample: '/auditeur/tableau-de-bord' },
   ],
   comite: [
-    { source: '/comite', sample: '/comite', expected: '/comite/dossiers' },
+    { source: '/comite', sample: '/comite', expected: '/comite/tableau-de-bord' },
+    { source: '/comite/tableau-de-bord', sample: '/comite/tableau-de-bord' },
     { source: '/comite/dossiers', sample: '/comite/dossiers' },
     {
       source: '/comite/dossiers/[id]',
@@ -103,7 +104,7 @@ const ROLE_CASES: RoleCase[] = [
   },
   {
     role: 'COMITE_FINANCEMENT', roleLabel: 'Comité de financement', email: 'qualification-comite@fodip.local', portal: 'comite',
-    home: '/comite/dossiers', forbidden: '/administration/utilisateurs',
+    home: '/comite/tableau-de-bord', forbidden: '/administration/utilisateurs',
   },
   {
     role: 'DIRECTION_FODIP', roleLabel: 'Direction FODIP', email: 'qualification-direction@fodip.local', portal: 'direction',

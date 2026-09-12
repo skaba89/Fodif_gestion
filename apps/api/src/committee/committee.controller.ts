@@ -23,6 +23,12 @@ export class CommitteeController {
     return this.committee.list(query);
   }
 
+  @Get('summary')
+  @RequirePermissions('application.read', 'scoring.read')
+  summary() {
+    return this.committee.summary();
+  }
+
   @Get(':id')
   @RequirePermissions('application.read', 'scoring.read')
   get(@Param('id', new ParseUUIDPipe()) id: string) {

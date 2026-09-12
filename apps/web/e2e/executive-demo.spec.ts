@@ -199,13 +199,14 @@ test.describe('Scénario de démonstration Direction générale', () => {
 
       // --- 7. Décision comité ---
       await login(page, '/connexion', comite.email, password);
-      await expect(page).toHaveURL(/\/comite\/dossiers$/);
+      await expect(page).toHaveURL(/\/comite\/tableau-de-bord$/);
       await page.goto(dossierUrl.replace('/agent/dossiers/', '/comite/dossiers/'));
       await expect(page.getByText('PRET_COMITE', { exact: true })).toBeVisible();
       await page.getByLabel('Décision').selectOption('APPROUVE');
       await expect(page.getByLabel('Montant approuvé (GNF)')).not.toHaveValue('');
       await page.getByLabel('Durée (mois)').fill('24');
-      await page.getByRole('button', { name: 'Enregistrer la décision' }).click();
+      await page.getByLabel('Je confirme avoir relu le dossier').check();
+      await page.getByRole('button', { name: 'Confirmer et enregistrer la décision' }).click();
       await expect(page.getByText('Décision du comité enregistrée et auditée.')).toBeVisible();
       await logout(page);
 

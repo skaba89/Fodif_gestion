@@ -37,4 +37,13 @@ describe('CommitteeService', () => {
     await expect(service.list({ page: 2, limite: 25 })).resolves.toEqual(page);
     expect(repository.list).toHaveBeenCalledWith({ page: 2, limite: 25 });
   });
+
+  it('returns the real committee workload summary', async () => {
+    const summary = { aStatuer: 3, montantDemande: '4500000.00', risqueEleve: 1, decisionsTotal: 8 };
+    const repository = { summary: jest.fn().mockResolvedValue(summary) };
+    const service = new CommitteeService(repository as never);
+
+    await expect(service.summary()).resolves.toEqual(summary);
+    expect(repository.summary).toHaveBeenCalledTimes(1);
+  });
 });
