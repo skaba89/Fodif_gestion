@@ -19,6 +19,7 @@ const baseUser: AuthUserRecord = {
   prenom: null,
   passwordHash: 'irrelevant',
   actif: true,
+  sessionVersion: 1,
   mfaRequired: true,
   mfaSecretEncrypted: null,
   mfaConfirmedAt: null,
