@@ -108,6 +108,89 @@ function deriveSecret(baseSecret, context) {
 }
 
 /**
+ * Resolves one secret dedicated to a single cryptographic purpose. PPD/PROD deployments must
+ * provision every required dedicated secret; development and qualification retain the historical
+ * JWT_SECRET fallback so upgrades remain deployable before the operators complete secret rollout.
+ * A supplied value is always validated in production-like environments instead of silently
+ * falling back when it is weak.
+ */
+function resolvePurposeSecret(
+  secret,
+  fallbackSecret,
+  nodeEnvironment,
+  appEnvironment,
+  variableName,
+  requiredInInstitutionalEnvironment = true,
+) {
+  const normalized = typeof secret === 'string' ? secret.trim() : '';
+  const nodeEnv = String(nodeEnvironment || 'development').toLowerCase();
+  const appEnv = String(appEnvironment || 'DEV').toUpperCase();
+  const productionLike = nodeEnv === 'production' || appEnv === 'PPD' || appEnv === 'PROD';
+  const unsafe = !normalized || normalized === 'CHANGE_ME' || normalized.length < 32;
+
+  if (normalized && unsafe && productionLike) {
+    throw new Error(`${variableName} must contain at least 32 characters in production`);
+  }
+  if (!normalized && requiredInInstitutionalEnvironment && (appEnv === 'PPD' || appEnv === 'PROD')) {
+    throw new Error(`${variableName} is required in ${appEnv}`);
+  }
+
+  return unsafe ? fallbackSecret : normalized;
+}
+
+/**
+ * Builds a purpose-bound keyring. New values carry the current key id, while previous and legacy
+ * roots stay available only for verification/decryption during a controlled rotation.
+ */
+function createPurposeKeyring(currentSecret, previousSecret, legacySecrets, context) {
+  const keys = {};
+  const add = (baseSecret) => {
+    if (typeof baseSecret !== 'string' || !baseSecret.trim()) return;
+    const key = deriveSecret(baseSecret.trim(), context);
+    const kid = computeKeyId(key);
+    if (!keys[kid]) keys[kid] = key;
+  };
+
+  add(currentSecret);
+  add(previousSecret);
+  for (const legacySecret of Array.isArray(legacySecrets) ? legacySecrets : []) add(legacySecret);
+
+  const currentKey = deriveSecret(currentSecret, context);
+  const currentKid = computeKeyId(currentKey);
+  return { currentKid, currentKey, keys };
+}
+
+/**
+ * Versioned AES-256-GCM envelope. Historical payloads had no prefix; decryption tries every
+ * explicitly configured candidate for those values. A versioned value names one exact key and
+ * therefore fails closed when that key is no longer in the deployment keyring.
+ */
+function encryptVersionedWithKeyring(plaintext, keyring) {
+  return `v1:${keyring.currentKid}:${encryptWithKey(plaintext, keyring.currentKey)}`;
+}
+
+function decryptVersionedWithKeyring(payload, keyring) {
+  const value = String(payload);
+  const versioned = value.match(/^v1:([0-9a-f]{8}):(.+)$/);
+  if (versioned) {
+    const key = keyring.keys[versioned[1]];
+    if (!key) throw new Error(`Unknown encryption key id: ${versioned[1]}`);
+    return decryptWithKey(versioned[2], key);
+  }
+  if (value.startsWith('v1:')) throw new Error('Invalid versioned ciphertext envelope');
+
+  let lastError;
+  for (const key of Object.values(keyring.keys)) {
+    try {
+      return decryptWithKey(value, key);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error('No decryption key is configured');
+}
+
+/**
  * AES-256-GCM encrypt/decrypt helpers for small secrets at rest (e.g. TOTP seeds).
  * Output packs iv (12 bytes) + auth tag (16 bytes) + ciphertext into a single base64 string.
  */
@@ -137,6 +220,10 @@ module.exports = {
   resolveJwtSigningKeys,
   parseDurationSeconds,
   deriveSecret,
+  resolvePurposeSecret,
+  createPurposeKeyring,
   encryptWithKey,
   decryptWithKey,
+  encryptVersionedWithKeyring,
+  decryptVersionedWithKeyring,
 };
