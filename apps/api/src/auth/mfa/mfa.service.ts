@@ -46,8 +46,9 @@ const TOTP_ISSUER = 'FODIP Digital 2030';
  *     POST /auth/mfa/confirm to finish enrollment.
  *  3. Otherwise a login challenge is returned: the client must submit one valid code via
  *     POST /auth/mfa/verify.
- * Both challenge tokens are short-lived, purpose-scoped JWTs signed with a key derived from
- * JWT_SECRET (never the main signing key), so they cannot be reused as a bearer access token.
+ * Both challenge tokens are short-lived, purpose-scoped JWTs signed with MFA_CHALLENGE_SECRET.
+ * TOTP seeds use the independent MFA_SECRET_ENCRYPTION_KEY and a versioned AES-GCM envelope.
+ * Legacy JWT-derived values remain readable only through the explicit migration keyring.
  */
 @Injectable()
 export class MfaService {
