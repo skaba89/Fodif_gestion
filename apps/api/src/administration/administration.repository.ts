@@ -3,7 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { PoolClient } from 'pg';
 import { canDeactivateUser, requiresMfa } from '../admin-policy';
 import { DatabaseService } from '../database/database.service';
-import { decryptWithKey, deriveSecret, encryptWithKey, resolveJwtSecret } from '../security-policy';
+import {
+  createPurposeKeyring,
+  decryptVersionedWithKeyring,
+  encryptVersionedWithKeyring,
+  PurposeKeyring,
+  resolveJwtSecret,
+  resolvePurposeSecret,
+} from '../security-policy';
 
 type UserWrite = {
   email: string; nom: string; prenom?: string; telephone?: string; passwordHash: string;
@@ -18,11 +25,41 @@ type PartnerBankWrite = { code: string; raisonSociale: string };
 
 @Injectable()
 export class AdministrationRepository {
-  private readonly piiEncryptionKey: Buffer;
+  private readonly piiEncryptionKeys: PurposeKeyring;
 
   constructor(private readonly db: DatabaseService, config: ConfigService) {
-    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV'));
-    this.piiEncryptionKey = deriveSecret(jwtSecret, 'fodip-pii-telephone-encryption-v1');
+    const nodeEnvironment = config.get<string>('NODE_ENV');
+    const appEnvironment = config.get<string>('APP_ENV');
+    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), nodeEnvironment);
+    const currentSecret = resolvePurposeSecret(
+      config.get<string>('PII_ENCRYPTION_KEY'),
+      jwtSecret,
+      nodeEnvironment,
+      appEnvironment,
+      'PII_ENCRYPTION_KEY',
+    );
+    const previousSecret = resolvePurposeSecret(
+      config.get<string>('PII_ENCRYPTION_KEY_PREVIOUS'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'PII_ENCRYPTION_KEY_PREVIOUS',
+      false,
+    );
+    const legacyDataSecret = resolvePurposeSecret(
+      config.get<string>('LEGACY_DATA_ENCRYPTION_SECRET'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'LEGACY_DATA_ENCRYPTION_SECRET',
+      false,
+    );
+    this.piiEncryptionKeys = createPurposeKeyring(
+      currentSecret,
+      previousSecret,
+      [legacyDataSecret, jwtSecret, config.get<string>('JWT_SECRET_PREVIOUS')],
+      'fodip-pii-telephone-encryption-v1',
+    );
   }
 
   async listUsers(search?: string) {
@@ -54,7 +91,7 @@ export class AdministrationRepository {
   }
 
   private decryptTelephone(value: string | null): string | null {
-    return value ? decryptWithKey(value, this.piiEncryptionKey) : null;
+    return value ? decryptVersionedWithKeyring(value, this.piiEncryptionKeys) : null;
   }
 
   async listPartnerBanks() {
@@ -142,7 +179,7 @@ export class AdministrationRepository {
         `INSERT INTO utilisateurs (email, nom, prenom, telephone, password_hash, actif, mfa_required, partenaire_bancaire_id)
          VALUES (LOWER($1), $2, $3, $4, $5, TRUE, $6, $7) RETURNING id`,
         [input.email.trim(), input.nom.trim(), input.prenom?.trim() || null,
-          telephone ? encryptWithKey(telephone, this.piiEncryptionKey) : null,
+          telephone ? encryptVersionedWithKeyring(telephone, this.piiEncryptionKeys) : null,
           input.passwordHash, mfaRequired, input.partenaireBancaireId ?? null],
       );
       const id = inserted.rows[0].id;
