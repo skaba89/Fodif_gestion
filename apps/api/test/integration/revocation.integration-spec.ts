@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../../src/common/guards/jwt-auth.guard';
 import { RevocationService } from '../../src/common/revocation/revocation.service';
 import { seedUser } from './support/fixtures';
 import { IntegrationDatabase, startIntegrationDatabase } from './support/database';
+import { UsersRepository } from '../../src/users/users.repository';
 
 function contextFor(authorization?: string) {
   const request: { headers: Record<string, string | undefined>; user?: unknown } = {
@@ -32,10 +33,12 @@ function contextFor(authorization?: string) {
 describe('Session revocation (real PostgreSQL)', () => {
   let integrationDb: IntegrationDatabase;
   let revocation: RevocationService;
+  let users: UsersRepository;
 
   beforeAll(async () => {
     integrationDb = await startIntegrationDatabase();
     revocation = new RevocationService(integrationDb.db);
+    users = new UsersRepository(integrationDb.db);
   }, 120_000);
 
   afterAll(async () => {
@@ -95,14 +98,14 @@ describe('Session revocation (real PostgreSQL)', () => {
     const jwtKeys = { resolveVerificationSecret: () => 'integration-test-secret' };
 
     async function signToken(userId: string, jti: string) {
-      return jwtService.signAsync({ sub: userId, email: 'agent@fodip.test', roles: ['AGENT_FODIP'], permissions: [], jti }, { expiresIn: '15m' });
+      return jwtService.signAsync({ sub: userId, email: 'agent@fodip.test', roles: ['AGENT_FODIP'], permissions: [], sessionVersion: 1, jti }, { expiresIn: '15m' });
     }
 
     it('accepts a fresh token, then rejects the same token once it has been logged out', async () => {
       const user = await seedUser(integrationDb.pool);
       const jti = randomUUID();
       const token = await signToken(user.id, jti);
-      const guard = new JwtAuthGuard({ getAllAndOverride: jest.fn().mockReturnValue(false) } as never, jwtService, revocation, jwtKeys as never);
+      const guard = new JwtAuthGuard({ getAllAndOverride: jest.fn().mockReturnValue(false) } as never, jwtService, revocation, jwtKeys as never, users);
 
       const { context: firstContext, request: firstRequest } = contextFor(`Bearer ${token}`);
       await expect(guard.canActivate(firstContext)).resolves.toBe(true);
@@ -119,7 +122,7 @@ describe('Session revocation (real PostgreSQL)', () => {
       const user = await seedUser(integrationDb.pool);
       const [jtiA, jtiB] = [randomUUID(), randomUUID()];
       const [tokenA, tokenB] = await Promise.all([signToken(user.id, jtiA), signToken(user.id, jtiB)]);
-      const guard = new JwtAuthGuard({ getAllAndOverride: jest.fn().mockReturnValue(false) } as never, jwtService, revocation, jwtKeys as never);
+      const guard = new JwtAuthGuard({ getAllAndOverride: jest.fn().mockReturnValue(false) } as never, jwtService, revocation, jwtKeys as never, users);
 
       const decodedA = jwtService.decode<{ exp: number }>(tokenA);
       await revocation.revoke(jtiA, user.id, decodedA.exp);
