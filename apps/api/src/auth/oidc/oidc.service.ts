@@ -263,7 +263,7 @@ export class OidcService {
     return payload.sub;
   }
 
-  private async verifyWithKeys<T>(
+  private async verifyWithKeys<T extends object>(
     token: string,
     keyring: PurposeKeyring,
     audience: string,
