@@ -3,6 +3,7 @@ export interface AuthenticatedUser {
   email: string;
   roles: string[];
   permissions: string[];
+  sessionVersion: number;
   entrepriseId?: string | null;
   partenaireBancaireId?: string | null;
   // Present on tokens issued after axe E4's session revocation (docs/14-ROADMAP-SAAS-PREMIUM.md):
