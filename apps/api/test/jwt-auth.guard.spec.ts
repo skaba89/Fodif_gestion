@@ -22,12 +22,16 @@ function defaultJwtKeys() {
   return { resolveVerificationSecret: jest.fn().mockReturnValue('current-secret') };
 }
 
+function defaultUsers() {
+  return { findSessionStateById: jest.fn().mockResolvedValue({ actif: true, sessionVersion: 1 }) };
+}
+
 describe('JwtAuthGuard', () => {
   it('lets a @Public() route through without even looking for a bearer token', async () => {
     const { context, reflector } = contextFor(undefined, true);
     const jwtService = { verifyAsync: jest.fn(), decode: jest.fn() };
     const revocation = { isRevoked: jest.fn() };
-    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never);
+    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, defaultUsers() as never);
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(jwtService.verifyAsync).not.toHaveBeenCalled();
@@ -37,7 +41,7 @@ describe('JwtAuthGuard', () => {
     const { context, reflector } = contextFor(undefined);
     const jwtService = { verifyAsync: jest.fn(), decode: jest.fn() };
     const revocation = { isRevoked: jest.fn() };
-    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never);
+    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, defaultUsers() as never);
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
   });
@@ -46,7 +50,7 @@ describe('JwtAuthGuard', () => {
     const { context, reflector } = contextFor('Bearer bad-token');
     const jwtService = { verifyAsync: jest.fn().mockRejectedValue(new Error('invalid signature')), decode: jest.fn() };
     const revocation = { isRevoked: jest.fn() };
-    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never);
+    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, defaultUsers() as never);
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
     expect(revocation.isRevoked).not.toHaveBeenCalled();
@@ -57,7 +61,7 @@ describe('JwtAuthGuard', () => {
     const { context, request, reflector } = contextFor('Bearer good-token');
     const jwtService = { verifyAsync: jest.fn().mockResolvedValue({ sub: 'user-1', jti: 'jti-1' }), decode: jest.fn() };
     const revocation = { isRevoked: jest.fn().mockResolvedValue(true) };
-    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never);
+    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, defaultUsers() as never);
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
     expect(revocation.isRevoked).toHaveBeenCalledWith('jti-1');
@@ -66,41 +70,63 @@ describe('JwtAuthGuard', () => {
 
   it('accepts a signature-valid, non-revoked token and populates request.user', async () => {
     const { context, request, reflector } = contextFor('Bearer good-token');
-    const payload = { sub: 'user-1', jti: 'jti-1', roles: ['AGENT_FODIP'] };
+    const payload = { sub: 'user-1', jti: 'jti-1', roles: ['AGENT_FODIP'], sessionVersion: 1 };
     const jwtService = { verifyAsync: jest.fn().mockResolvedValue(payload), decode: jest.fn() };
     const revocation = { isRevoked: jest.fn().mockResolvedValue(false) };
-    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never);
+    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, defaultUsers() as never);
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(request.user).toEqual(payload);
   });
 
-  // Tokens issued before this axis (or built by hand, e.g. in another test) never had a jti -
-  // never blocked on revocation grounds alone, since there is nothing to look up.
-  it('accepts a token with no jti without ever calling the revocation check', async () => {
-    const { context, request, reflector } = contextFor('Bearer good-token');
+  it('rejects a legacy token without a session version and forces a new login', async () => {
+    const { context, request, reflector } = contextFor('Bearer legacy-token');
     const payload = { sub: 'user-1', roles: ['AGENT_FODIP'] };
     const jwtService = { verifyAsync: jest.fn().mockResolvedValue(payload), decode: jest.fn() };
     const revocation = { isRevoked: jest.fn() };
-    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never);
+    const users = defaultUsers();
+    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, users as never);
 
-    await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect(revocation.isRevoked).not.toHaveBeenCalled();
-    expect(request.user).toEqual(payload);
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(users.findSessionStateById).not.toHaveBeenCalled();
+    expect(request.user).toBeUndefined();
+  });
+
+  it('rejects a token after the account has been deactivated', async () => {
+    const { context, request, reflector } = contextFor('Bearer good-token');
+    const payload = { sub: 'user-1', roles: ['AGENT_FODIP'], sessionVersion: 1 };
+    const jwtService = { verifyAsync: jest.fn().mockResolvedValue(payload), decode: jest.fn() };
+    const revocation = { isRevoked: jest.fn().mockResolvedValue(false) };
+    const users = { findSessionStateById: jest.fn().mockResolvedValue({ actif: false, sessionVersion: 2 }) };
+    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, users as never);
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(request.user).toBeUndefined();
+  });
+
+  it('rejects a token issued before an authorization-sensitive account change', async () => {
+    const { context, reflector } = contextFor('Bearer stale-token');
+    const payload = { sub: 'user-1', roles: ['AGENT_FODIP'], sessionVersion: 1 };
+    const jwtService = { verifyAsync: jest.fn().mockResolvedValue(payload), decode: jest.fn() };
+    const revocation = { isRevoked: jest.fn().mockResolvedValue(false) };
+    const users = { findSessionStateById: jest.fn().mockResolvedValue({ actif: true, sessionVersion: 2 }) };
+    const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, users as never);
+
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   // Axe E4 (key rotation, docs/14-ROADMAP-SAAS-PREMIUM.md).
   describe('key rotation', () => {
     it("reads the token's kid from its header and verifies against the secret that kid resolves to, not always the current one", async () => {
       const { context, request, reflector } = contextFor('Bearer old-key-token');
-      const payload = { sub: 'user-1', roles: ['PME'] };
+      const payload = { sub: 'user-1', roles: ['PME'], sessionVersion: 1 };
       const jwtService = {
         decode: jest.fn().mockReturnValue({ header: { kid: 'abcd1234' }, payload }),
         verifyAsync: jest.fn().mockResolvedValue(payload),
       };
       const jwtKeys = { resolveVerificationSecret: jest.fn().mockReturnValue('previous-secret-value') };
       const revocation = { isRevoked: jest.fn().mockResolvedValue(false) };
-      const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, jwtKeys as never);
+      const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, jwtKeys as never, defaultUsers() as never);
 
       await expect(guard.canActivate(context)).resolves.toBe(true);
       expect(jwtKeys.resolveVerificationSecret).toHaveBeenCalledWith('abcd1234');
@@ -110,14 +136,14 @@ describe('JwtAuthGuard', () => {
 
     it('falls back to the current secret for a token with no kid (issued before this axis) rather than rejecting it outright', async () => {
       const { context, reflector } = contextFor('Bearer legacy-token');
-      const payload = { sub: 'user-1', roles: ['PME'] };
+      const payload = { sub: 'user-1', roles: ['PME'], sessionVersion: 1 };
       const jwtService = {
         decode: jest.fn().mockReturnValue({ header: {}, payload }),
         verifyAsync: jest.fn().mockResolvedValue(payload),
       };
       const jwtKeys = { resolveVerificationSecret: jest.fn().mockReturnValue('current-secret') };
       const revocation = { isRevoked: jest.fn().mockResolvedValue(false) };
-      const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, jwtKeys as never);
+      const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, jwtKeys as never, defaultUsers() as never);
 
       await expect(guard.canActivate(context)).resolves.toBe(true);
       expect(jwtKeys.resolveVerificationSecret).toHaveBeenCalledWith(undefined);
@@ -127,7 +153,7 @@ describe('JwtAuthGuard', () => {
       const { context, reflector } = contextFor('Bearer not-even-a-jwt');
       const jwtService = { decode: jest.fn().mockReturnValue(null), verifyAsync: jest.fn().mockRejectedValue(new Error('jwt malformed')) };
       const revocation = { isRevoked: jest.fn() };
-      const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never);
+      const guard = new JwtAuthGuard(reflector as never, jwtService as never, revocation as never, defaultJwtKeys() as never, defaultUsers() as never);
 
       await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
     });
