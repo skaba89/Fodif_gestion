@@ -29,6 +29,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PartnerModule } from './partner/partner.module';
 import { ProgramsModule } from './programs/programs.module';
 import { ScoringModule } from './scoring/scoring.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { ScoringModule } from './scoring/scoring.module';
     PartnerModule,
     ProgramsModule,
     ScoringModule,
+    UsersModule,
   ],
   controllers: [HealthController],
   providers: [

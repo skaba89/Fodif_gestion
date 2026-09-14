@@ -113,7 +113,8 @@ export class DataRightsRepository {
         `UPDATE utilisateurs SET
           nom = 'Compte anonymisé', prenom = NULL, telephone = NULL,
           email = 'anonymise+' || id || '@fodip.invalid',
-          actif = FALSE, anonymized_at = NOW(), updated_at = NOW()
+          actif = FALSE, anonymized_at = NOW(),
+          session_version = session_version + 1, updated_at = NOW()
          WHERE id = $1`,
         [targetId],
       );

@@ -8,6 +8,7 @@ export interface AuthUserRecord {
   prenom: string | null;
   passwordHash: string | null;
   actif: boolean;
+  sessionVersion: number;
   mfaRequired: boolean;
   mfaSecretEncrypted: string | null;
   mfaConfirmedAt: Date | null;
@@ -24,6 +25,7 @@ interface AuthUserRow {
   prenom: string | null;
   password_hash: string | null;
   actif: boolean;
+  session_version: number;
   mfa_required: boolean;
   mfa_secret_encrypted: string | null;
   mfa_confirmed_at: Date | null;
@@ -41,6 +43,7 @@ const AUTH_USER_QUERY = `
     u.prenom,
     u.password_hash,
     u.actif,
+    u.session_version,
     u.mfa_required,
     u.mfa_secret_encrypted,
     u.mfa_confirmed_at,
@@ -75,6 +78,17 @@ export class UsersRepository {
 
   findAuthenticatedById(id: string): Promise<AuthUserRecord | null> {
     return this.findOne('u.id = $1', [id]);
+  }
+
+  async findSessionStateById(id: string): Promise<{ actif: boolean; sessionVersion: number } | null> {
+    const result = await this.db.query<{ actif: boolean; sessionVersion: number }>(
+      `SELECT actif, session_version AS "sessionVersion"
+       FROM utilisateurs
+       WHERE id = $1
+       LIMIT 1`,
+      [id],
+    );
+    return result.rows[0] ?? null;
   }
 
   async updateLastLogin(userId: string): Promise<void> {
@@ -123,6 +137,7 @@ export class UsersRepository {
       prenom: row.prenom,
       passwordHash: row.password_hash,
       actif: row.actif,
+      sessionVersion: row.session_version,
       mfaRequired: row.mfa_required,
       mfaSecretEncrypted: row.mfa_secret_encrypted,
       mfaConfirmedAt: row.mfa_confirmed_at,
