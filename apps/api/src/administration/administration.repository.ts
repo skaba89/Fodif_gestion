@@ -202,6 +202,7 @@ export class AdministrationRepository {
       await client.query(
         `UPDATE utilisateurs SET actif = COALESCE($2, actif),
           mfa_required = $3,
+          session_version = session_version + 1,
           partenaire_bancaire_id = CASE WHEN $4 THEN $5::uuid ELSE partenaire_bancaire_id END,
           updated_at = NOW() WHERE id = $1`,
         [id, input.actif ?? null, mfaRequired, input.partenaireBancaireId !== undefined, input.partenaireBancaireId ?? null],
@@ -227,7 +228,8 @@ export class AdministrationRepository {
       if (target.rows[0].anonymizedAt) return { error: 'ANONYMIZED_USER' } as const;
 
       await client.query(
-        `UPDATE utilisateurs SET password_hash = $2, actif = TRUE, updated_at = NOW() WHERE id = $1`,
+        `UPDATE utilisateurs SET password_hash = $2, actif = TRUE,
+          session_version = session_version + 1, updated_at = NOW() WHERE id = $1`,
         [id, passwordHash],
       );
       await this.audit(client, actorId, 'RESET_USER_PASSWORD', id, null, { passwordReset: true, reactivated: true });
