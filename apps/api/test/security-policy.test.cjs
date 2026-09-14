@@ -8,8 +8,12 @@ const {
   resolveJwtSigningKeys,
   parseDurationSeconds,
   deriveSecret,
+  resolvePurposeSecret,
+  createPurposeKeyring,
   encryptWithKey,
   decryptWithKey,
+  encryptVersionedWithKeyring,
+  decryptVersionedWithKeyring,
 } = require('../src/security-policy.js');
 
 test('password policy accepts a strong password', () => {
@@ -117,4 +121,54 @@ test('decryptWithKey rejects the wrong key', () => {
   const otherKey = deriveSecret('different-secret-value', 'mfa-test');
   const ciphertext = encryptWithKey('JBSWY3DPEHPK3PXP', key);
   assert.throws(() => decryptWithKey(ciphertext, otherKey));
+});
+
+
+test('purpose secrets are mandatory in PPD/PROD but keep the qualification fallback', () => {
+  const fallback = 'j'.repeat(48);
+  assert.equal(
+    resolvePurposeSecret(undefined, fallback, 'production', 'QUALIFICATION', 'PII_ENCRYPTION_KEY'),
+    fallback,
+  );
+  assert.throws(
+    () => resolvePurposeSecret(undefined, fallback, 'production', 'PROD', 'PII_ENCRYPTION_KEY'),
+    /PII_ENCRYPTION_KEY is required in PROD/,
+  );
+  assert.throws(
+    () => resolvePurposeSecret('CHANGE_ME', fallback, 'production', 'QUALIFICATION', 'PII_ENCRYPTION_KEY'),
+    /PII_ENCRYPTION_KEY must contain at least 32 characters/,
+  );
+});
+
+test('versioned ciphertext identifies its encryption key and round-trips', () => {
+  const keys = createPurposeKeyring('c'.repeat(48), undefined, [], 'pii-test');
+  const ciphertext = encryptVersionedWithKeyring('+224622000000', keys);
+  assert.match(ciphertext, new RegExp(`^v1:${keys.currentKid}:`));
+  assert.equal(decryptVersionedWithKeyring(ciphertext, keys), '+224622000000');
+});
+
+test('a rotated keyring decrypts ciphertext tagged with the previous key', () => {
+  const oldKeys = createPurposeKeyring('o'.repeat(48), undefined, [], 'mfa-test');
+  const ciphertext = encryptVersionedWithKeyring('JBSWY3DPEHPK3PXP', oldKeys);
+  const rotated = createPurposeKeyring('n'.repeat(48), 'o'.repeat(48), [], 'mfa-test');
+  assert.equal(decryptVersionedWithKeyring(ciphertext, rotated), 'JBSWY3DPEHPK3PXP');
+});
+
+test('legacy unversioned ciphertext remains readable through an explicit migration root', () => {
+  const legacyKey = deriveSecret('legacy-jwt-secret'.repeat(3), 'pii-test');
+  const legacyCiphertext = encryptWithKey('+224622000000', legacyKey);
+  const keys = createPurposeKeyring(
+    'dedicated-pii-secret'.repeat(3),
+    undefined,
+    ['legacy-jwt-secret'.repeat(3)],
+    'pii-test',
+  );
+  assert.equal(decryptVersionedWithKeyring(legacyCiphertext, keys), '+224622000000');
+});
+
+test('versioned ciphertext fails closed when its key id is not configured', () => {
+  const oldKeys = createPurposeKeyring('o'.repeat(48), undefined, [], 'mfa-test');
+  const ciphertext = encryptVersionedWithKeyring('secret', oldKeys);
+  const unrelatedKeys = createPurposeKeyring('n'.repeat(48), undefined, [], 'mfa-test');
+  assert.throws(() => decryptVersionedWithKeyring(ciphertext, unrelatedKeys), /Unknown encryption key id/);
 });
