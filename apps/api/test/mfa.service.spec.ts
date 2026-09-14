@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as OTPAuth from 'otpauth';
 import { MfaLoginChallenge, MfaService, MfaSetupChallenge } from '../src/auth/mfa/mfa.service';
 import { AuthUserRecord } from '../src/users/users.repository';
+import { deriveSecret, encryptWithKey } from '../src/security-policy';
 
 function expectSetup(result: MfaSetupChallenge | MfaLoginChallenge): MfaSetupChallenge {
   if (!('mfaSetupRequired' in result)) throw new Error('expected a setup challenge');
@@ -34,7 +35,7 @@ function codeFor(secretBase32: string): string {
   return totp.generate();
 }
 
-function makeService() {
+function makeService(serviceConfig: ConfigService = config) {
   const users = {
     findAuthenticatedById: jest.fn(),
     setPendingMfaSecret: jest.fn().mockResolvedValue(undefined),
@@ -42,7 +43,7 @@ function makeService() {
     consumeMfaStep: jest.fn().mockResolvedValue(true),
   };
   const sessions = { issue: jest.fn().mockResolvedValue({ tokenType: 'Bearer', accessToken: 'final-token' }) };
-  const service = new MfaService(config, users as never, new JwtService(), sessions as never);
+  const service = new MfaService(serviceConfig, users as never, new JwtService(), sessions as never);
   return { service, users, sessions };
 }
 
@@ -54,6 +55,7 @@ describe('MfaService', () => {
     expect(result.secret).toMatch(/^[A-Z2-7]+=*$/);
     expect(result.otpauthUrl).toContain('admin%40fodip.local');
     expect(users.setPendingMfaSecret).toHaveBeenCalledTimes(1);
+    expect(users.setPendingMfaSecret.mock.calls[0][1]).toMatch(/^v1:[0-9a-f]{8}:/);
   });
 
   it('reuses the pending secret instead of regenerating it on a second login attempt', async () => {
@@ -66,6 +68,42 @@ describe('MfaService', () => {
 
     expect(second.secret).toBe(first.secret);
     expect(users.setPendingMfaSecret).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads an unversioned seed encrypted by the historical JWT-derived key', async () => {
+    const jwtSecret = 'x'.repeat(40);
+    const dedicatedSecret = 'm'.repeat(48);
+    const env: Record<string, string> = {
+      JWT_SECRET: jwtSecret,
+      NODE_ENV: 'test',
+      MFA_SECRET_ENCRYPTION_KEY: dedicatedSecret,
+      MFA_CHALLENGE_SECRET: 'c'.repeat(48),
+    };
+    const legacySecret = 'JBSWY3DPEHPK3PXP';
+    const legacyCiphertext = encryptWithKey(
+      legacySecret,
+      deriveSecret(jwtSecret, 'fodip-mfa-secret-encryption-v1'),
+    );
+    const serviceConfig = { get: (key: string) => env[key] } as ConfigService;
+    const { service, users } = makeService(serviceConfig);
+
+    const result = expectSetup(await service.beginChallenge({
+      ...baseUser,
+      mfaSecretEncrypted: legacyCiphertext,
+    }));
+
+    expect(result.secret).toBe(legacySecret);
+    expect(users.setPendingMfaSecret).not.toHaveBeenCalled();
+  });
+
+  it('requires independent MFA roots in the institutional production environments', () => {
+    const env: Record<string, string> = {
+      JWT_SECRET: 'x'.repeat(48),
+      NODE_ENV: 'production',
+      APP_ENV: 'PROD',
+    };
+    const serviceConfig = { get: (key: string) => env[key] } as ConfigService;
+    expect(() => makeService(serviceConfig)).toThrow(/MFA_SECRET_ENCRYPTION_KEY is required in PROD/);
   });
 
   it('requests a login challenge (not setup) once the seed is confirmed', async () => {
