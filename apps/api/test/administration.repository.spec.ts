@@ -1,12 +1,23 @@
 import { ConfigService } from '@nestjs/config';
 import { AdministrationRepository } from '../src/administration/administration.repository';
-import { decryptWithKey, deriveSecret, encryptWithKey } from '../src/security-policy';
+import {
+  createPurposeKeyring,
+  decryptVersionedWithKeyring,
+  deriveSecret,
+  encryptWithKey,
+} from '../src/security-policy';
 
 // Axe B5 (docs/14-ROADMAP-SAAS-PREMIUM.md): utilisateurs.telephone is encrypted at rest
 // (AES-256-GCM, see security-policy.js) rather than stored as plaintext.
 const JWT_SECRET = 'a-test-only-jwt-secret-at-least-32-chars-long';
 const config = { get: (key: string) => (key === 'JWT_SECRET' ? JWT_SECRET : 'test') } as unknown as ConfigService;
 const expectedKey = deriveSecret(JWT_SECRET, 'fodip-pii-telephone-encryption-v1');
+const expectedKeyring = createPurposeKeyring(
+  JWT_SECRET,
+  undefined,
+  [JWT_SECRET],
+  'fodip-pii-telephone-encryption-v1',
+);
 
 describe('AdministrationRepository', () => {
   it('decrypts telephone on listUsers, leaving accounts with no telephone as null', async () => {
@@ -49,7 +60,8 @@ describe('AdministrationRepository', () => {
     expect(insertCalls).toHaveLength(1);
     const telephoneParam = insertCalls[0][3] as string;
     expect(telephoneParam).not.toBe('+224622111111');
-    expect(decryptWithKey(telephoneParam, expectedKey)).toBe('+224622111111');
+    expect(telephoneParam).toMatch(/^v1:[0-9a-f]{8}:/);
+    expect(decryptVersionedWithKeyring(telephoneParam, expectedKeyring)).toBe('+224622111111');
 
     await repository.create('actor-1', {
       email: 'no-phone@fodip.local', nom: 'Test', passwordHash: 'hash', roles: ['AGENT_FODIP'], mfaRequired: false,

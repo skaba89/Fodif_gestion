@@ -29,6 +29,18 @@ services:
         value: "true"
       - key: JWT_SECRET
         generateValue: true
+      # Independent roots for PII, MFA and OIDC. Render generates each value once and keeps it
+      # across Blueprint syncs; they must never be copied into one another.
+      - key: PII_ENCRYPTION_KEY
+        generateValue: true
+      - key: MFA_SECRET_ENCRYPTION_KEY
+        generateValue: true
+      - key: MFA_CHALLENGE_SECRET
+        generateValue: true
+      - key: OIDC_FLOW_SECRET
+        generateValue: true
+      - key: OIDC_DELIVERY_SECRET
+        generateValue: true
       - key: JWT_ISSUER
         value: fodip-digital-2030
       - key: JWT_AUDIENCE
