@@ -20,7 +20,7 @@ test.describe('BFF CSRF boundary', () => {
     expect(response.headers().location).toMatch(/\/connexion\?oidc=continue$/);
     expect(response.headers().location).not.toContain('fake.header.signature');
     expect(response.headers()['set-cookie']).toContain('HttpOnly');
-    expect(response.headers()['set-cookie']).toContain('SameSite=Strict');
+    expect(response.headers()['set-cookie']).toMatch(/samesite=strict/i);
     expect(response.headers()['referrer-policy']).toBe('no-referrer');
   });
 
@@ -34,6 +34,6 @@ test.describe('BFF CSRF boundary', () => {
     expect(payload.accessToken).toBeUndefined();
     expect(payload.user?.roles).toContain('PME');
     expect(response.headers()['set-cookie']).toContain('HttpOnly');
-    expect(response.headers()['set-cookie']).toContain('SameSite=Strict');
+    expect(response.headers()['set-cookie']).toMatch(/samesite=strict/i);
   });
 });
