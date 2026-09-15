@@ -106,10 +106,13 @@ Détails B4 (`apps/api/src/auth/oidc/`, `apps/web/app/api/session/oidc/`) :
 - le MFA TOTP existant n'est jamais contourné : si le compte résolu a `mfa_required`, le retour
   d'OIDC déclenche exactement le même challenge MFA que la connexion par mot de passe
   (`MfaService#beginChallenge`), avant l'émission du token de session final ;
-- la redirection navigateur `/auth/oidc/callback` → page de connexion du portail ne transporte
-  jamais le token de session final ni le secret TOTP dans l'URL, seulement un jeton de livraison
-  opaque à usage unique et à très courte durée (2 min), échangé côté serveur (BFF) contre la
-  session — analogue à un `authorization_code` OAuth ;
+- la redirection `/auth/oidc/callback` → callback BFF transporte un jeton opaque à usage unique et
+  très courte durée (2 min). Le BFF le place immédiatement dans un cookie `HttpOnly`, puis renvoie
+  vers `/connexion?oidc=continue` : aucun jeton OIDC, token de session ou secret TOTP n'atteint
+  l'URL de la page ni React ;
+- les réponses connexion/MFA/OIDC suppriment `accessToken` avant de franchir le BFF. Le cookie de
+  session est `HttpOnly`, `SameSite=Strict`, `Secure` + `__Host-` sous HTTPS ; toutes les mutations
+  `/api/*` sont protégées par correspondance exacte d'`Origin` et Fetch Metadata ;
 - désactivé par défaut : `OidcService#isEnabled()` exige les quatre variables
   `OIDC_ISSUER_URL`/`OIDC_CLIENT_ID`/`OIDC_CLIENT_SECRET`/`OIDC_REDIRECT_URI` ; en leur absence,
   `/auth/oidc/login` et `/auth/oidc/callback` répondent 404 et aucun bouton SSO n'apparaît côté

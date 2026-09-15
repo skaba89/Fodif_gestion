@@ -85,7 +85,9 @@ export class OidcController {
       }
 
       const token = await this.oidc.issueDeliveryToken(user.id);
-      response.redirect(`${webBaseUrl}${this.oidc.loginPathFor(portal)}?oidc_token=${encodeURIComponent(token)}`);
+      const callbackUrl = new URL('/api/session/oidc/callback', webBaseUrl);
+      callbackUrl.searchParams.set('token', token);
+      response.redirect(callbackUrl.toString());
     } catch {
       const path = portal ? this.oidc.loginPathFor(portal) : '/connexion';
       response.redirect(`${webBaseUrl}${path}?oidc_error=login_failed`);

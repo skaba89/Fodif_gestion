@@ -61,12 +61,14 @@ décision.
 - le MFA TOTP existant n'est **jamais contourné** : si le compte résolu a `mfa_required = true`,
   l'étape suivante déclenche exactement le même défi que la connexion par mot de passe
   (`MfaService#beginChallenge`) avant l'émission du token final ;
-- la redirection navigateur du callback vers la page de connexion du portail ne transporte jamais
-  le token de session final : uniquement un jeton de livraison opaque à usage unique et très
-  courte durée (`?oidc_token=...`, 2 minutes), signé avec une clé dérivée dédiée
-  (`security-policy.js#deriveSecret`, distincte de celle des jetons de défi MFA et des tokens
-  d'accès), échangé côté serveur par `POST /auth/oidc/exchange` — analogue à un
-  `authorization_code` OAuth, jamais à une session utilisable directement.
+- le callback API transmet son jeton de livraison à usage unique au callback du BFF, qui le déplace
+  immédiatement dans un cookie `HttpOnly`/`SameSite=Strict`, répond `no-store`/`no-referrer`, puis
+  redirige vers `/connexion?oidc=continue`. React et l'URL de la page ne reçoivent aucun jeton ;
+- les réponses BFF mot de passe/MFA/OIDC retirent `accessToken` du JSON. Le JWT reste uniquement
+  dans un cookie `HttpOnly`/`SameSite=Strict`, préfixé `__Host-` sous HTTPS ;
+- toutes les mutations `/api/*` vérifient l'origine exacte et Fetch Metadata. En `PPD`/`PROD`, une
+  mutation sans `Origin` est refusée ; DEV/QUALIFICATION ne tolèrent son absence que pour les
+  clients non-navigateurs qui n'envoient aucun en-tête Fetch Metadata.
 
 ## Portail Auditeur (supervision en lecture seule)
 

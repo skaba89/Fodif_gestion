@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ACCESS_COOKIE, backendApiUrl } from '../../../../lib/backend';
-import { cookies } from 'next/headers';
+import { backendApiUrl, clearSessionCookies, sessionToken } from '../../../../lib/backend';
 
 // Axe E4 (session revocation, docs/14-ROADMAP-SAAS-PREMIUM.md) - clearing the cookie alone left
 // the JWT itself valid on the API until its own natural expiry (up to JWT_ACCESS_TTL, 15 minutes
@@ -9,8 +8,7 @@ import { cookies } from 'next/headers';
 // this browser actually controls), even if the backend call fails - a failed revocation call is a
 // worse outcome for THIS token's remaining lifetime, not a worse outcome than not trying at all.
 export async function POST() {
-  const store = await cookies();
-  const token = store.get(ACCESS_COOKIE)?.value;
+  const token = await sessionToken();
   if (token) {
     await fetch(backendApiUrl('/auth/logout'), {
       method: 'POST',
@@ -19,6 +17,6 @@ export async function POST() {
     }).catch(() => undefined);
   }
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(ACCESS_COOKIE, '', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 0 });
+  clearSessionCookies(response);
   return response;
 }
