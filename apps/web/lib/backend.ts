@@ -1,7 +1,77 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
-export const ACCESS_COOKIE = 'fodip_access_token';
+const LEGACY_ACCESS_COOKIE = 'fodip_access_token';
+const SECURE_ACCESS_COOKIE = '__Host-fodip_access_token';
+
+function usesSecureCookies(): boolean {
+  return process.env.COOKIE_SECURE === 'true';
+}
+
+function accessCookieName(): string {
+  return usesSecureCookies() ? SECURE_ACCESS_COOKIE : LEGACY_ACCESS_COOKIE;
+}
+
+function sessionCookieMaxAge(): number {
+  const configured = Number.parseInt(process.env.SESSION_COOKIE_MAX_AGE_SECONDS ?? '', 10);
+  return Number.isSafeInteger(configured) && configured > 0 ? configured : 15 * 60;
+}
+
+export async function sessionToken(): Promise<string | undefined> {
+  const store = await cookies();
+  return store.get(accessCookieName())?.value ?? store.get(LEGACY_ACCESS_COOKIE)?.value;
+}
+
+export function setSessionCookie(response: NextResponse, token: string): void {
+  response.cookies.set(accessCookieName(), token, {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: usesSecureCookies(),
+    path: '/',
+    maxAge: sessionCookieMaxAge(),
+  });
+}
+
+export function clearSessionCookies(response: NextResponse): void {
+  for (const name of new Set([accessCookieName(), LEGACY_ACCESS_COOKIE])) {
+    response.cookies.set(name, '', {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: name.startsWith('__Host-'),
+      path: '/',
+      maxAge: 0,
+    });
+  }
+}
+
+/** Keep the bearer token inside the BFF: only MFA/user fields may cross into the browser. */
+export async function sessionResponseFromBackend(backend: Response): Promise<NextResponse> {
+  const text = await backend.text();
+  const contentType = backend.headers.get('content-type') ?? 'application/json';
+  let body = text;
+  let accessToken: string | undefined;
+
+  if (text && contentType.includes('application/json')) {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const payload = parsed as Record<string, unknown>;
+        if (backend.ok && typeof payload.accessToken === 'string') accessToken = payload.accessToken;
+        delete payload.accessToken;
+        body = JSON.stringify(payload);
+      }
+    } catch {
+      // Preserve a malformed upstream error instead of masking it with an unrelated BFF error.
+    }
+  }
+
+  const response = new NextResponse(body || null, {
+    status: backend.status,
+    headers: { 'content-type': contentType, 'cache-control': 'no-store' },
+  });
+  if (accessToken) setSessionCookie(response, accessToken);
+  return response;
+}
 
 export function backendApiUrl(path: string): string {
   const configured = (process.env.API_BASE_URL ?? 'http://localhost:4000').replace(/\/$/, '');
@@ -38,8 +108,7 @@ export function idempotencyKeyHeaders(request: Request): HeadersInit | undefined
 }
 
 export async function proxyWithSession(path: string, init: RequestInit = {}): Promise<NextResponse> {
-  const store = await cookies();
-  const token = store.get(ACCESS_COOKIE)?.value;
+  const token = await sessionToken();
   if (!token) return NextResponse.json({ message: 'Authentication required' }, { status: 401 });
 
   const headers = new Headers(init.headers);

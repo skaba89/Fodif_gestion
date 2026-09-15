@@ -64,10 +64,9 @@ interface DeliveryPayload {
  * Entirely opt-in: every method throws/no-ops unless OIDC_ISSUER_URL, OIDC_CLIENT_ID,
  * OIDC_CLIENT_SECRET and OIDC_REDIRECT_URI are all configured.
  *
- * Axe E4 (durcissement OIDC) - the delivery token issueDeliveryToken() hands the browser (via a
- * redirect URL query string - an exposure-prone channel: history, access logs, a shared computer)
- * is single-use: resolveDeliveryToken() claims its jti in oidc_delivery_tokens_used on first use
- * and rejects a second attempt, rather than accepting it repeatedly until its own 2-minute expiry.
+ * Axe E4 (durcissement OIDC) - the delivery token is single-use: resolveDeliveryToken() claims its
+ * jti in oidc_delivery_tokens_used on first use. The web BFF immediately moves it from the callback
+ * query into a short-lived HttpOnly cookie before loading React, then redeems it server-to-server.
  */
 @Injectable()
 export class OidcService {

@@ -70,7 +70,7 @@ function LoginFormInner({
 }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const oidcToken = searchParams.get('oidc_token');
+  const oidcContinuation = searchParams.get('oidc') === 'continue';
   const sessionExpired = searchParams.get('reason') === 'session-expired';
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
@@ -81,8 +81,8 @@ function LoginFormInner({
   const [challenge, setChallenge] = useState('');
   const [secret, setSecret] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(() => Boolean(oidcToken));
-  const [checkingSession, setCheckingSession] = useState(() => !oidcToken);
+  const [loading, setLoading] = useState(() => oidcContinuation);
+  const [checkingSession, setCheckingSession] = useState(() => !oidcContinuation);
   const [existingSessionHome, setExistingSessionHome] = useState<string | null>(null);
 
   async function postJson(path: string, body: unknown): Promise<SessionResponse> {
@@ -176,8 +176,9 @@ function LoginFormInner({
   }
 
   useEffect(() => {
-    if (oidcToken) {
-      postJson('/api/session/oidc/finish', { token: oidcToken })
+    if (oidcContinuation) {
+      window.history.replaceState(null, '', '/connexion');
+      postJson('/api/session/oidc/finish', {})
         .then(async (data) => {
           if (data.mfaSetupRequired && data.mfaChallenge && data.secret) {
             setChallenge(data.mfaChallenge);

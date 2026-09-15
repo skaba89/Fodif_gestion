@@ -1,19 +1,29 @@
 import { NextResponse } from 'next/server';
-import { ACCESS_COOKIE, backendApiUrl } from '../../../../../lib/backend';
+import { backendApiUrl, sessionResponseFromBackend } from '../../../../../lib/backend';
+import { clearOidcDeliveryCookie, oidcDeliveryToken } from '../../../../../lib/oidc-delivery';
 
-export async function POST(request: Request) {
-  const body = await request.text();
-  const backend = await fetch(backendApiUrl('/auth/oidc/exchange'), {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body, cache: 'no-store',
-  });
-  const text = await backend.text();
-  const response = new NextResponse(text || null, {
-    status: backend.status,
-    headers: { 'content-type': backend.headers.get('content-type') ?? 'application/json' },
-  });
-  if (backend.ok && text) {
-    const payload = JSON.parse(text);
-    if (payload.accessToken) response.cookies.set(ACCESS_COOKIE, payload.accessToken, { httpOnly: true, sameSite: 'lax', secure: process.env.COOKIE_SECURE === 'true', path: '/', maxAge: 15 * 60 });
+export async function POST() {
+  const token = await oidcDeliveryToken();
+  if (!token) {
+    return NextResponse.json(
+      { message: 'Invalid or expired institutional sign-in session' },
+      { status: 400, headers: { 'cache-control': 'no-store' } },
+    );
   }
+
+  let response: NextResponse;
+  try {
+    const backend = await fetch(backendApiUrl('/auth/oidc/exchange'), {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token }), cache: 'no-store',
+    });
+    response = await sessionResponseFromBackend(backend);
+  } catch {
+    response = NextResponse.json(
+      { message: 'Institutional sign-in service unavailable' },
+      { status: 502, headers: { 'cache-control': 'no-store' } },
+    );
+  }
+  clearOidcDeliveryCookie(response);
   return response;
 }

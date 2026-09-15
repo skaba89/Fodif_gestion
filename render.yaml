@@ -47,6 +47,8 @@ services:
         value: fodip-web
       - key: JWT_ACCESS_TTL
         value: 15m
+      - key: COOKIE_SECURE
+        value: "true"
       - key: BOOTSTRAP_ADMIN_EMAIL
         sync: false # remove all BOOTSTRAP_* values immediately after first successful deploy
       - key: BOOTSTRAP_ADMIN_NOM
@@ -85,6 +87,8 @@ services:
         value: QUALIFICATION
       - key: COOKIE_SECURE
         value: "true"
+      - key: SESSION_COOKIE_MAX_AGE_SECONDS
+        value: "900"
       - key: DEMO_MODE
         value: "true"
       - key: API_BASE_URL

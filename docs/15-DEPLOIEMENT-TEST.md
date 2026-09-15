@@ -119,8 +119,10 @@ Le Blueprint a déjà créé `fodip-web`. Renseignez ses variables :
 | Variable | Valeur |
 |---|---|
 | `NODE_ENV` | `production` |
+| `APP_ENV` | `QUALIFICATION` (`PPD`/`PROD` activent le refus CSRF strict sans `Origin`) |
 | `API_BASE_URL` | l'URL Render de l'API (étape 3) |
 | `COOKIE_SECURE` | `true` — **obligatoire dès que le site est servi en HTTPS** (le cas sur Render/Netlify) ; à `false` le cookie de session n'est jamais envoyé par le navigateur et la connexion semble silencieusement échouer |
+| `SESSION_COOKIE_MAX_AGE_SECONDS` | `900`, aligné avec `JWT_ACCESS_TTL=15m` |
 | `DEMO_MODE` | `true` — affiche explicitement « données de démonstration » |
 
 ## Étape 6 — Reboucler les URLs

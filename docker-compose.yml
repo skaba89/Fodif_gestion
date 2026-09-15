@@ -99,6 +99,7 @@ services:
       JWT_ISSUER: fodip-digital-2030
       JWT_AUDIENCE: fodip-web
       JWT_ACCESS_TTL: 15m
+      COOKIE_SECURE: "false"
       STORAGE_ENDPOINT: http://minio:9000
       STORAGE_REGION: us-east-1
       STORAGE_BUCKET: fodip-documents
@@ -135,12 +136,14 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      APP_ENV: ${APP_ENV:-DEV}
       API_BASE_URL: http://api:4000
       # Browser-reachable API URL, distinct from the Docker-internal API_BASE_URL above: needed
       # so the OIDC "sign in with SSO" link can redirect the browser straight to the API (which
       # the browser cannot reach via the `api` service name). Only used when OIDC is enabled.
       API_PUBLIC_URL: http://localhost:${API_PORT:-4000}
       COOKIE_SECURE: "false"
+      SESSION_COOKIE_MAX_AGE_SECONDS: 900
       # Mission "présentation Directeur général", axe 9 (mode présentation) - a runtime env var,
       # not a NEXT_PUBLIC_ build-time one: this same `web` image serves both the plain local demo
       # and the presentation profile unmodified, read via GET /api/config
