@@ -18,7 +18,7 @@ const LEGACY_LOGIN_PATHS = [
 test.describe('Unified login flow', () => {
   test('the canonical role registry covers every RBAC role while every portal shares one login', () => {
     const expectedHomes: Array<[string, string]> = [
-      ['SUPER_ADMIN', '/administration/utilisateurs'],
+      ['SUPER_ADMIN', '/administration/tableau-de-bord'],
       ['DIRECTION_FODIP', '/direction/tableau-de-bord'],
       ['ANALYSTE', '/direction/tableau-de-bord'],
       ['AGENT_FODIP', '/agent/tableau-de-bord'],
@@ -72,7 +72,7 @@ test.describe('Unified login flow', () => {
     await page.getByLabel('Email').fill('admin@fodip.local');
     await page.getByLabel('Mot de passe').fill(DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Se connecter' }).click();
-    await expect(page).toHaveURL(/\/administration\/utilisateurs$/);
+    await expect(page).toHaveURL(/\/administration\/tableau-de-bord$/);
   });
 
   test('a PME account uses the desktop role sidebar and the 375px PWA navigation without exposing identity details', async ({ page }) => {

@@ -39,7 +39,7 @@ export const PORTAL_ACCESS: Record<PortalId, PortalAccessRule> = {
   },
   administration: {
     loginHref: LOGIN_HREF,
-    homeHref: '/administration/utilisateurs',
+    homeHref: '/administration/tableau-de-bord',
     allowedRoles: ['SUPER_ADMIN'],
   },
   auditeur: {

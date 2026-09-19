@@ -8,6 +8,7 @@ import { AdministrationService } from './administration.service';
 import { CreateEnterpriseDto } from './dto/create-enterprise.dto';
 import { CreatePartnerBankDto } from './dto/create-partner-bank.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ListAdministrationAuditDto } from './dto/list-administration-audit.dto';
 import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -23,6 +24,14 @@ export class AdministrationController {
   @Get('users')
   @RequirePermissions('user.manage')
   listUsers(@Query('search') search?: string) { return this.administration.listUsers(search); }
+
+  @Get('summary')
+  @RequirePermissions('user.manage')
+  summary() { return this.administration.summary(); }
+
+  @Get('audit')
+  @RequirePermissions('audit.read')
+  listAudit(@Query() query: ListAdministrationAuditDto) { return this.administration.listAudit(query); }
 
   @Post('users')
   @RequirePermissions('user.manage')
