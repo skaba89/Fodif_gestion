@@ -90,4 +90,15 @@ export class AdministrationService {
     }
     return result;
   }
+
+  async resetUserMfa(actorId: string, id: string, reason: string) {
+    const result = await this.administration.resetMfa(actorId, id, reason.trim());
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') throw new NotFoundException('User not found');
+      if (result.error === 'SELF_MFA_RESET_FORBIDDEN') throw new ForbiddenException(result.error);
+      if (result.error === 'ANONYMIZED_USER') throw new BadRequestException(result.error);
+      throw new BadRequestException(result.error);
+    }
+    return result;
+  }
 }

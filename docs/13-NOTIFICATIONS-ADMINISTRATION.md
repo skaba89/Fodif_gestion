@@ -33,6 +33,14 @@ Le MFA est **imposé, pas seulement proposé**, pour les rôles sensibles (`SUPE
 
 Les opérations `CREATE_USER` et `UPDATE_USER` sont écrites dans `audit_logs`. Le mot de passe et son hash ne sont jamais inclus dans l’audit.
 
+La récupération MFA est opérée par un autre `SUPER_ADMIN` depuis la gestion des utilisateurs :
+
+- l’auto-réinitialisation est interdite afin de maintenir une séparation minimale des responsabilités ;
+- un motif institutionnel de 10 à 500 caractères est obligatoire et journalisé sous `RESET_USER_MFA` ;
+- la graine TOTP et son état anti-rejeu sont supprimés sans jamais être copiés dans l’audit ;
+- `session_version` est incrémenté, ce qui révoque immédiatement toutes les sessions du compte ;
+- puisque le MFA reste obligatoire pour les rôles sensibles, la connexion suivante impose un nouvel enrôlement.
+
 ## Protections
 
 - email unique, normalisé en minuscules ;

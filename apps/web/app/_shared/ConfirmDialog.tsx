@@ -24,6 +24,7 @@ export default function ConfirmDialog({
   danger = false,
   requireComment = false,
   commentLabel = 'Commentaire',
+  commentMinLength = 1,
   onConfirm,
   onCancel,
 }: {
@@ -35,6 +36,7 @@ export default function ConfirmDialog({
   danger?: boolean;
   requireComment?: boolean;
   commentLabel?: string;
+  commentMinLength?: number;
   onConfirm: (comment?: string) => void;
   onCancel: () => void;
 }) {
@@ -73,7 +75,7 @@ export default function ConfirmDialog({
   }, [open, onCancel]);
 
   if (!open) return null;
-  const canConfirm = !requireComment || comment.trim().length > 0;
+  const canConfirm = !requireComment || comment.trim().length >= commentMinLength;
 
   return (
     <div className={styles.overlay}>
@@ -87,6 +89,7 @@ export default function ConfirmDialog({
             <textarea
               id="confirm-dialog-comment"
               required
+              minLength={commentMinLength}
               value={comment}
               onChange={(event) => setComment(event.target.value)}
             />

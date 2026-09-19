@@ -10,6 +10,7 @@ import { CreatePartnerBankDto } from './dto/create-partner-bank.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListAdministrationAuditDto } from './dto/list-administration-audit.dto';
 import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
+import { ResetUserMfaDto } from './dto/reset-user-mfa.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 interface AuthenticatedRequest extends Request { user: AuthenticatedUser }
@@ -54,6 +55,14 @@ export class AdministrationController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: ResetUserPasswordDto,
   ) { return this.administration.resetUserPassword(request.user.sub, id, dto.password); }
+
+  @Post('users/:id/reset-mfa')
+  @RequirePermissions('user.manage')
+  resetUserMfa(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: ResetUserMfaDto,
+  ) { return this.administration.resetUserMfa(request.user.sub, id, dto.reason); }
 
   @Get('roles')
   @RequirePermissions('role.read')

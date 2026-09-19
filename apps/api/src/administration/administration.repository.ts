@@ -67,6 +67,7 @@ export class AdministrationRepository {
     const result = await this.db.query<{ telephone: string | null; [key: string]: unknown }>(
       `SELECT utilisateur.id, utilisateur.email, utilisateur.nom, utilisateur.prenom, utilisateur.telephone,
         utilisateur.actif, utilisateur.mfa_required AS "mfaRequired",
+        (utilisateur.mfa_secret_encrypted IS NOT NULL) AS "mfaEnrolled",
         utilisateur.last_login_at AS "lastLoginAt", utilisateur.created_at AS "createdAt",
         utilisateur.anonymized_at AS "anonymizedAt",
         COALESCE(ARRAY_AGG(DISTINCT role.code) FILTER (WHERE role.code IS NOT NULL), '{}') AS roles,
@@ -308,6 +309,32 @@ export class AdministrationRepository {
       );
       await this.audit(client, actorId, 'RESET_USER_PASSWORD', id, null, { passwordReset: true, reactivated: true });
       return { id };
+    });
+  }
+
+  async resetMfa(actorId: string, id: string, reason: string) {
+    return this.db.transaction(async (client) => {
+      if (actorId === id) return { error: 'SELF_MFA_RESET_FORBIDDEN' } as const;
+      const target = await client.query<{ anonymizedAt: Date | null; mfaEnrolled: boolean }>(
+        `SELECT anonymized_at AS "anonymizedAt",
+          (mfa_secret_encrypted IS NOT NULL) AS "mfaEnrolled"
+         FROM utilisateurs WHERE id = $1 FOR UPDATE`,
+        [id],
+      );
+      if (!target.rows[0]) return { error: 'NOT_FOUND' } as const;
+      if (target.rows[0].anonymizedAt) return { error: 'ANONYMIZED_USER' } as const;
+
+      await client.query(
+        `UPDATE utilisateurs
+         SET mfa_secret_encrypted = NULL, mfa_confirmed_at = NULL, mfa_last_used_step = NULL,
+           session_version = session_version + 1, updated_at = NOW()
+         WHERE id = $1`,
+        [id],
+      );
+      await this.audit(client, actorId, 'RESET_USER_MFA', id,
+        { mfaEnrolled: target.rows[0].mfaEnrolled },
+        { mfaEnrolled: false, sessionsRevoked: true, reason });
+      return { id, reenrollmentRequired: true };
     });
   }
 

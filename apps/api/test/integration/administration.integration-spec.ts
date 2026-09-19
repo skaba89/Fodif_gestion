@@ -151,4 +151,38 @@ describe('Administration (real PostgreSQL)', () => {
       expect(audit.rows.map((row) => row.action)).toContain('UPDATE_USER');
     });
   });
+
+  describe('resetUserMfa - institutional recovery', () => {
+    it('clears the enrolled secret, revokes sessions and records the reason without secret material', async () => {
+      const actor = await seedUserWithRoles(integrationDb.pool, ['SUPER_ADMIN']);
+      const target = await seedUserWithRoles(integrationDb.pool, ['AGENT_FODIP']);
+      await integrationDb.pool.query(
+        `UPDATE utilisateurs SET mfa_secret_encrypted = 'encrypted-seed', mfa_confirmed_at = NOW(),
+          mfa_last_used_step = 123, session_version = 7 WHERE id = $1`, [target.id],
+      );
+
+      await service.resetUserMfa(actor.id, target.id, 'Téléphone professionnel déclaré perdu');
+
+      const account = await integrationDb.pool.query(
+        `SELECT mfa_secret_encrypted, mfa_confirmed_at, mfa_last_used_step,
+          session_version FROM utilisateurs WHERE id = $1`, [target.id],
+      );
+      expect(account.rows[0]).toMatchObject({
+        mfa_secret_encrypted: null, mfa_confirmed_at: null, mfa_last_used_step: null, session_version: 8,
+      });
+      const audit = await integrationDb.pool.query<{ action: string; new_values: Record<string, unknown> }>(
+        `SELECT action, new_values FROM audit_logs WHERE entity_id = $1 AND action = 'RESET_USER_MFA'`, [target.id],
+      );
+      expect(audit.rows[0].new_values).toMatchObject({
+        reason: 'Téléphone professionnel déclaré perdu', sessionsRevoked: true, mfaEnrolled: false,
+      });
+      expect(JSON.stringify(audit.rows[0])).not.toContain('encrypted-seed');
+    });
+
+    it('forbids an administrator from resetting their own MFA', async () => {
+      const actor = await seedUserWithRoles(integrationDb.pool, ['SUPER_ADMIN']);
+      await expect(service.resetUserMfa(actor.id, actor.id, 'Téléphone professionnel perdu'))
+        .rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
 });

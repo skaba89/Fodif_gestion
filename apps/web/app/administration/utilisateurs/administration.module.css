@@ -250,7 +250,14 @@
 }
 
 .usersSection table {
-  min-width: 980px;
+  min-width: 1080px;
+}
+
+.accountActions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
 }
 
 .usersSection th {

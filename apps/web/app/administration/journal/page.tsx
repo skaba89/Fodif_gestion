@@ -11,7 +11,7 @@ import portal from '../../entrepreneur/portal.module.css';
 
 type AuditLog = { id: string; action: string; entityType: string; entityId?: string | null; createdAt: string; actorEmail?: string | null; actorNom?: string | null; actorPrenom?: string | null };
 type Result = { items: AuditLog[]; total: number; page: number; limite: number };
-const ADMIN_ACTIONS = ['CREATE_USER', 'UPDATE_USER', 'RESET_USER_PASSWORD', 'ANONYMIZE_USER', 'CREATE_ENTERPRISE', 'CREATE_PARTNER_BANK'];
+const ADMIN_ACTIONS = ['CREATE_USER', 'UPDATE_USER', 'RESET_USER_PASSWORD', 'RESET_USER_MFA', 'ANONYMIZE_USER', 'CREATE_ENTERPRISE', 'CREATE_PARTNER_BANK'];
 
 function actor(log: AuditLog) {
   const name = [log.actorPrenom, log.actorNom].filter(Boolean).join(' ');
