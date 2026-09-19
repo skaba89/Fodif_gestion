@@ -28,7 +28,10 @@ test.describe('Espace Administration institutionnel', () => {
       await page.goto('/administration/journal');
       await page.getByLabel('Action', { exact: true }).selectOption('CREATE_USER');
       await page.getByRole('button', { name: 'Filtrer' }).click();
-      await expect(page.getByRole('table', { name: 'Journal des actions d’administration' })).toContainText('Create user');
+      const auditSurface = (page.viewportSize()?.width ?? 1280) < 768
+        ? page.getByRole('list', { name: 'Journal des actions d’administration — vue mobile' })
+        : page.getByRole('table', { name: 'Journal des actions d’administration' });
+      await expect(auditSurface).toContainText('Create user');
     } finally {
       await page.request.patch(`/api/administration/users/${user.id}`, { data: { actif: false } }).catch(() => undefined);
     }
