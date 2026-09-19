@@ -112,4 +112,37 @@ describe('AdministrationRepository', () => {
     expect(queries.some(({ text }) => text.includes("'ENTREPRISE'"))).toBe(true);
     expect(queries.some(({ text }) => text.includes("'PARTENAIRE_BANCAIRE'"))).toBe(true);
   });
+
+  it('clears MFA material, revokes sessions and audits only non-secret recovery data', async () => {
+    const queries: Array<{ text: string; values: unknown[] }> = [];
+    const client = {
+      query: jest.fn((text: string, values: unknown[] = []) => {
+        queries.push({ text, values });
+        if (text.includes('SELECT anonymized_at')) return { rows: [{ anonymizedAt: null, mfaEnrolled: true }] };
+        return { rows: [], rowCount: 1 };
+      }),
+    };
+    const db = { transaction: (callback: (client: unknown) => unknown) => callback(client) };
+    const repository = new AdministrationRepository(db as never, config);
+
+    await expect(repository.resetMfa('admin-1', 'user-1', 'Téléphone professionnel perdu'))
+      .resolves.toEqual({ id: 'user-1', reenrollmentRequired: true });
+
+    expect(queries.some(({ text }) => text.includes('mfa_secret_encrypted = NULL'))).toBe(true);
+    expect(queries.some(({ text }) => text.includes('session_version = session_version + 1'))).toBe(true);
+    const audit = queries.find(({ text }) => text.includes('INSERT INTO audit_logs'))!;
+    expect(audit.values).toEqual(expect.arrayContaining(['admin-1', 'RESET_USER_MFA', 'user-1']));
+    expect(JSON.stringify(audit.values)).not.toContain('mfa_secret_encrypted');
+    expect(JSON.stringify(audit.values)).toContain('Téléphone professionnel perdu');
+  });
+
+  it('rejects self MFA reset before reading or mutating the target account', async () => {
+    const client = { query: jest.fn() };
+    const db = { transaction: (callback: (client: unknown) => unknown) => callback(client) };
+    const repository = new AdministrationRepository(db as never, config);
+
+    await expect(repository.resetMfa('admin-1', 'admin-1', 'Appareil remplacé'))
+      .resolves.toEqual({ error: 'SELF_MFA_RESET_FORBIDDEN' });
+    expect(client.query).not.toHaveBeenCalled();
+  });
 });

@@ -99,6 +99,31 @@ describe('AdministrationService', () => {
       .rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('resets MFA with a trimmed institutional reason', async () => {
+    const repository = {
+      resetMfa: jest.fn().mockResolvedValue({ id: 'user-1', reenrollmentRequired: true }),
+    } as unknown as AdministrationRepository;
+    const service = new AdministrationService(repository);
+
+    await expect(service.resetUserMfa('admin', 'user-1', '  Téléphone institutionnel perdu  '))
+      .resolves.toEqual({ id: 'user-1', reenrollmentRequired: true });
+    expect(repository.resetMfa).toHaveBeenCalledWith('admin', 'user-1', 'Téléphone institutionnel perdu');
+  });
+
+  it('forbids self MFA reset and maps missing or anonymized accounts safely', async () => {
+    const forbidden = { resetMfa: jest.fn().mockResolvedValue({ error: 'SELF_MFA_RESET_FORBIDDEN' }) } as unknown as AdministrationRepository;
+    await expect(new AdministrationService(forbidden).resetUserMfa('admin', 'admin', 'Appareil remplacé'))
+      .rejects.toBeInstanceOf(ForbiddenException);
+
+    const missing = { resetMfa: jest.fn().mockResolvedValue({ error: 'NOT_FOUND' }) } as unknown as AdministrationRepository;
+    await expect(new AdministrationService(missing).resetUserMfa('admin', 'missing', 'Appareil remplacé'))
+      .rejects.toBeInstanceOf(NotFoundException);
+
+    const anonymized = { resetMfa: jest.fn().mockResolvedValue({ error: 'ANONYMIZED_USER' }) } as unknown as AdministrationRepository;
+    await expect(new AdministrationService(anonymized).resetUserMfa('admin', 'anon', 'Appareil remplacé'))
+      .rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('maps repository protections to safe HTTP errors', async () => {
     const protectedRepository = {
       update: jest.fn().mockResolvedValue({ error: 'PROTECTED_SUPER_ADMIN' }),
