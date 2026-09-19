@@ -184,6 +184,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
 
       const scoringForm = page.locator('form').filter({ has: page.getByRole('button', { name: 'Calculer et enregistrer' }) });
       const noteInputs = scoringForm.getByRole('spinbutton');
+      await expect(noteInputs).toHaveCount(4);
       for (const input of await noteInputs.all()) await input.fill('80');
       await scoringForm.getByRole('button', { name: 'Calculer et enregistrer' }).click();
       await expect(page.getByText('Scoring calculé et enregistré.')).toBeVisible();
