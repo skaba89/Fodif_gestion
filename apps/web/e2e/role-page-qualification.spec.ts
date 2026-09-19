@@ -34,6 +34,8 @@ const LEGACY_LOGIN_ROUTES = [
 
 const PORTAL_ROUTES: Record<PortalId, RouteCase[]> = {
   administration: [
+    { source: '/administration/tableau-de-bord', sample: '/administration/tableau-de-bord' },
+    { source: '/administration/journal', sample: '/administration/journal' },
     { source: '/administration/recuperation', sample: '/administration/recuperation' },
     { source: '/administration/utilisateurs', sample: '/administration/utilisateurs' },
   ],
@@ -124,7 +126,7 @@ const ROLE_CASES: RoleCase[] = [
   },
   {
     role: 'SUPER_ADMIN', roleLabel: 'Super administrateur', email: 'qualification-admin@fodip.local', portal: 'administration',
-    home: '/administration/utilisateurs', forbidden: '/entrepreneur',
+    home: '/administration/tableau-de-bord', forbidden: '/entrepreneur',
   },
 ];
 

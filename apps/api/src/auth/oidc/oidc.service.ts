@@ -56,7 +56,7 @@ interface DeliveryPayload {
  * This is a second AUTHENTICATION method for an EXISTING account, never a provisioning path: the
  * IdP only ever proves "this email belongs to whoever is signing in" (via its verified ID token),
  * it never creates an account or grants a role - those still come exclusively from
- * /administration/utilisateurs. An OIDC sign-in for an email with no matching active local
+ * /administration/tableau-de-bord. An OIDC sign-in for an email with no matching active local
  * account is rejected. Accounts flagged mfa_required (see admin-policy.js#PRIVILEGED_ROLES,
  * enforced regardless of login method by AdministrationRepository) still go through our own TOTP
  * check after OIDC identity is established - the IdP is not trusted to have enforced that itself.

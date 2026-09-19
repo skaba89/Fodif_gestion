@@ -20,7 +20,7 @@ Correspondances principales :
 
 | Rôle | Accueil canonique |
 |---|---|
-| `SUPER_ADMIN` | `/administration/utilisateurs` |
+| `SUPER_ADMIN` | `/administration/tableau-de-bord` |
 | `DIRECTION_FODIP` | `/direction/tableau-de-bord` |
 | `ANALYSTE` | `/direction/tableau-de-bord` |
 | `AGENT_FODIP` | `/agent/dossiers` |

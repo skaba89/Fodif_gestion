@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PoolClient } from 'pg';
 import { canDeactivateUser, requiresMfa } from '../admin-policy';
 import { DatabaseService } from '../database/database.service';
+import { ADMINISTRATION_AUDIT_ACTIONS, ListAdministrationAuditDto } from './dto/list-administration-audit.dto';
 import {
   createPurposeKeyring,
   decryptVersionedWithKeyring,
@@ -88,6 +89,42 @@ export class AdministrationRepository {
     );
     const items = result.rows.map((row) => ({ ...row, telephone: this.decryptTelephone(row.telephone) }));
     return { items, total: result.rowCount };
+  }
+
+  async summary() {
+    const result = await this.db.query(
+      `SELECT
+        COUNT(*)::INT AS "totalUsers",
+        COUNT(*) FILTER (WHERE actif = TRUE)::INT AS "activeUsers",
+        COUNT(*) FILTER (WHERE actif = FALSE)::INT AS "inactiveUsers",
+        COUNT(*) FILTER (WHERE mfa_required = TRUE)::INT AS "mfaRequiredUsers",
+        COUNT(*) FILTER (WHERE actif = TRUE AND last_login_at IS NULL)::INT AS "neverLoggedInUsers",
+        COUNT(*) FILTER (WHERE anonymized_at IS NOT NULL)::INT AS "anonymizedUsers"
+       FROM utilisateurs`,
+    );
+    const organizations = await this.db.query(
+      `SELECT
+        (SELECT COUNT(*)::INT FROM entreprises WHERE deleted_at IS NULL) AS "enterprises",
+        (SELECT COUNT(*)::INT FROM partenaires_bancaires WHERE actif = TRUE) AS "partnerBanks"`,
+    );
+    return { ...result.rows[0], ...organizations.rows[0] };
+  }
+
+  async listAudit(query: ListAdministrationAuditDto) {
+    const offset = (query.page - 1) * query.limite;
+    const result = await this.db.query(
+      `SELECT log.id, log.action, log.entity_type AS "entityType", log.entity_id AS "entityId",
+        log.created_at AS "createdAt", actor.email AS "actorEmail",
+        actor.nom AS "actorNom", actor.prenom AS "actorPrenom", COUNT(*) OVER()::INT AS "total"
+       FROM audit_logs log
+       LEFT JOIN utilisateurs actor ON actor.id = log.utilisateur_id
+       WHERE log.action = ANY($1::text[]) AND ($2::text IS NULL OR log.action = $2)
+       ORDER BY log.created_at DESC LIMIT $3 OFFSET $4`,
+      [ADMINISTRATION_AUDIT_ACTIONS, query.action ?? null, query.limite, offset],
+    );
+    const total = Number(result.rows[0]?.total ?? 0);
+    const items = result.rows.map(({ total: _total, ...item }) => item);
+    return { items, total, page: query.page, limite: query.limite };
   }
 
   private decryptTelephone(value: string | null): string | null {

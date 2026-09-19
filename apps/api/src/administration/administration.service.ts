@@ -5,6 +5,7 @@ import { AdministrationRepository } from './administration.repository';
 import { CreateEnterpriseDto } from './dto/create-enterprise.dto';
 import { CreatePartnerBankDto } from './dto/create-partner-bank.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ListAdministrationAuditDto } from './dto/list-administration-audit.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class AdministrationService {
   constructor(private readonly administration: AdministrationRepository) {}
 
   listUsers(search?: string) { return this.administration.listUsers(search); }
+  summary() { return this.administration.summary(); }
+  listAudit(query: ListAdministrationAuditDto) { return this.administration.listAudit(query); }
   listRoles() { return this.administration.listRoles(); }
   listEnterprises() { return this.administration.listEnterprises(); }
   listPartnerBanks() { return this.administration.listPartnerBanks(); }

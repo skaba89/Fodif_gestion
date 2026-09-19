@@ -20,6 +20,18 @@ const expectedKeyring = createPurposeKeyring(
 );
 
 describe('AdministrationRepository', () => {
+  it('returns global account KPIs and a paginated administration-only audit journal', async () => {
+    const db = { query: jest.fn()
+      .mockResolvedValueOnce({ rows: [{ totalUsers: 8, activeUsers: 6, inactiveUsers: 2, mfaRequiredUsers: 4, neverLoggedInUsers: 3, anonymizedUsers: 1 }] })
+      .mockResolvedValueOnce({ rows: [{ enterprises: 2, partnerBanks: 1 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'log-1', action: 'CREATE_USER', total: 1 }] }) };
+    const repository = new AdministrationRepository(db as never, config);
+
+    await expect(repository.summary()).resolves.toEqual({ totalUsers: 8, activeUsers: 6, inactiveUsers: 2, mfaRequiredUsers: 4, neverLoggedInUsers: 3, anonymizedUsers: 1, enterprises: 2, partnerBanks: 1 });
+    await expect(repository.listAudit({ page: 1, limite: 25, action: 'CREATE_USER' })).resolves.toEqual({ items: [{ id: 'log-1', action: 'CREATE_USER' }], total: 1, page: 1, limite: 25 });
+    expect(db.query).toHaveBeenLastCalledWith(expect.stringContaining('log.action = ANY'), [expect.arrayContaining(['CREATE_USER', 'UPDATE_USER']), 'CREATE_USER', 25, 0]);
+  });
+
   it('decrypts telephone on listUsers, leaving accounts with no telephone as null', async () => {
     const encrypted = encryptWithKey('+224622000000', expectedKey);
     const db = {
