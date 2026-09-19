@@ -26,7 +26,7 @@ test.describe('Espace Administration institutionnel', () => {
       await expect(row).toContainText('Jamais connecté');
 
       await page.goto('/administration/journal');
-      await page.getByLabel('Action').selectOption('CREATE_USER');
+      await page.getByLabel('Action', { exact: true }).selectOption('CREATE_USER');
       await page.getByRole('button', { name: 'Filtrer' }).click();
       await expect(page.getByRole('table', { name: 'Journal des actions d’administration' })).toContainText('Create user');
     } finally {
