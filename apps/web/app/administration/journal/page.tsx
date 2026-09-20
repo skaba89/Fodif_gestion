@@ -8,6 +8,7 @@ import Pagination from '../../_shared/Pagination';
 import ResponsiveTable, { type ResponsiveColumn } from '../../_shared/ResponsiveTable';
 import StatusBadge, { humanizeCode } from '../../_shared/StatusBadge';
 import portal from '../../entrepreneur/portal.module.css';
+import styles from '../utilisateurs/administration.module.css';
 
 type AuditLog = { id: string; action: string; entityType: string; entityId?: string | null; createdAt: string; actorEmail?: string | null; actorNom?: string | null; actorPrenom?: string | null };
 type Result = { items: AuditLog[]; total: number; page: number; limite: number };
@@ -38,7 +39,7 @@ export default function AdministrationAuditPage() {
     { key: 'action', header: 'Action', render: (log) => <StatusBadge label={humanizeCode(log.action)} tone="info" title={log.action} /> },
     { key: 'cible', header: 'Cible', render: (log) => <>{humanizeCode(log.entityType)}{log.entityId ? <><br />ID {log.entityId.slice(0, 8)}…</> : null}</> },
   ], []);
-  return <main className={portal.main}>
+  return <main className={`${portal.main} ${styles.auditPage}`}>
     <Breadcrumbs items={[{ label: 'Administration', href: '/administration/tableau-de-bord' }, { label: 'Journal' }]} />
     <p className={portal.eyebrow}>Traçabilité institutionnelle</p><h1 className={portal.title}>Journal des actions d’administration</h1><p className={portal.lead}>Consultez en lecture seule les actions sensibles, leur auteur, leur cible et leur horodatage.</p>
     {message ? <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div> : null}
