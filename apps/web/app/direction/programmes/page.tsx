@@ -34,8 +34,9 @@ export default function DirectionProgramsPage() {
     return <ProgramManagement />;
   }
 
-  return <>
-    <ProgramCatalog eyebrow="Référentiel programmes" title="Programmes FODIP actifs" homeHref="/direction/tableau-de-bord" homeLabel="Direction" />
-    {roles.includes('ANALYSTE') ? <ProgramProposalPanel /> : null}
-  </>;
+  return (
+    <ProgramCatalog eyebrow="Référentiel programmes" title="Programmes FODIP actifs" homeHref="/direction/tableau-de-bord" homeLabel="Direction">
+      {roles.includes('ANALYSTE') ? <ProgramProposalPanel /> : null}
+    </ProgramCatalog>
+  );
 }
