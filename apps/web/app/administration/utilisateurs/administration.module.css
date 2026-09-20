@@ -238,7 +238,7 @@
 }
 
 .usersSection table {
-  min-width: 1040px;
+  min-width: 960px;
 }
 
 .accountActions {
@@ -322,12 +322,9 @@
 }
 
 .roleOptions {
-  position: absolute;
-  z-index: 6;
-  top: calc(100% + 5px);
-  left: 0;
-  width: 230px;
-  max-height: 260px;
+  width: 100%;
+  min-width: 210px;
+  max-height: 240px;
   overflow: auto;
   display: grid;
   gap: 2px;
@@ -335,7 +332,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 .roleOptions label {
