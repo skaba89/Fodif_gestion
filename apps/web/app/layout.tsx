@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, Public_Sans } from 'next/font/google';
+import { Public_Sans } from 'next/font/google';
 import ServiceWorkerRegistration from './_shared/ServiceWorkerRegistration';
 import { ToastProvider } from './_shared/Toast';
 import './globals.css';
@@ -8,19 +8,13 @@ import './_shared/business-workspaces.css';
 import './institutional-typography.css';
 import './fodip-product-theme.css';
 
-// Public Sans stays the product body face. Bricolage Grotesque is reserved for display moments:
-// headings, KPI values and key financial figures. Both are self-hosted by next/font.
+// Public Sans is the single product typeface for body copy, navigation, headings and KPI values.
 const publicSans = Public_Sans({
   subsets: ['latin'],
   variable: '--font-public-sans',
   display: 'swap',
 });
 
-const bricolage = Bricolage_Grotesque({
-  subsets: ['latin'],
-  variable: '--font-bricolage',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'FODIP Digital 2030',
@@ -46,7 +40,7 @@ const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem('fodip-theme');if(t===
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr" className={`${publicSans.variable} ${bricolage.variable}`} suppressHydrationWarning>
+    <html lang="fr" className={publicSans.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
