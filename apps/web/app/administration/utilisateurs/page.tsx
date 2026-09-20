@@ -29,6 +29,13 @@ function userInitials(user: User) {
   return initials || user.email[0]?.toUpperCase() || 'U';
 }
 
+function roleSummary(codes: string[], roles: Role[]) {
+  const labels = codes.map((code) => roles.find((role) => role.code === code)?.nom ?? code);
+  if (labels.length === 0) return 'Aucun rôle';
+  if (labels.length <= 2) return labels.join(' · ');
+  return `${labels[0]} +${labels.length - 1}`;
+}
+
 export default function UsersAdministrationPage() {
   const [users, setUsers] = useState<User[]>([]); const [roles, setRoles] = useState<Role[]>([]);
   const [enterprises, setEnterprises] = useState<Enterprise[]>([]); const [partnerBanks, setPartnerBanks] = useState<PartnerBank[]>([]);
@@ -205,14 +212,32 @@ export default function UsersAdministrationPage() {
         <div><h2>Comptes existants</h2><p>Pilotez les rôles, périmètres, états de compte et exigences MFA depuis une vue consolidée.</p></div>
         <div className={`${portal.field} ${styles.searchField}`}><label htmlFor="search">Rechercher un compte</label><input id="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nom ou email" /></div>
       </div>
-      <div className={styles.tableScroller}><table className={portal.table}><thead><tr><th>Utilisateur</th><th>Dernier accès</th><th>Rôles</th><th>Entreprise PME</th><th>Banque partenaire</th><th>Actif</th><th>MFA exigé</th><th>Actions</th><th>Droits des personnes</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}>
+      <div className={styles.tableScroller}><table className={portal.table}><thead><tr><th>Utilisateur</th><th>Dernier accès</th><th>Rôles</th><th>Rattachement</th><th>Sécurité</th><th>Actions</th><th>Droits des personnes</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}>
         <td><div className={styles.userIdentity}><span className={styles.userAvatar} aria-hidden="true">{userInitials(user)}</span><div><strong>{user.prenom} {user.nom}</strong><span className={styles.userEmail}>{user.email}</span></div></div></td>
         <td>{user.lastLoginAt ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(user.lastLoginAt)) : 'Jamais connecté'}</td>
-        <td><select multiple value={user.roles} aria-label={`Rôles de ${user.email}`} onChange={(event) => patchLocal(user.id, { roles: Array.from(event.target.selectedOptions, (option) => option.value) })}>{roles.map((role) => <option value={role.code} key={role.code}>{role.nom}</option>)}</select></td>
-        <td><select value={user.entrepriseId ?? ''} disabled={!user.roles.includes('PME')} onChange={(event) => patchLocal(user.id, { entrepriseId: event.target.value || null })}><option value="">Aucune</option>{enterprises.map((enterprise) => <option key={enterprise.id} value={enterprise.id}>{enterprise.raisonSociale}</option>)}</select></td>
-        <td><select value={user.partenaireBancaireId ?? ''} disabled={!user.roles.includes('PARTENAIRE_BANCAIRE')} onChange={(event) => patchLocal(user.id, { partenaireBancaireId: event.target.value || null })}><option value="">Aucune</option>{partnerBanks.map((bank) => <option key={bank.id} value={bank.id}>{bank.raisonSociale}</option>)}</select></td>
-        <td className={styles.toggleCell}><input type="checkbox" checked={user.actif} onChange={(event) => patchLocal(user.id, { actif: event.target.checked })} aria-label={`Compte actif ${user.email}`} /></td>
-        <td className={styles.toggleCell}><input type="checkbox" checked={user.mfaRequired} onChange={(event) => patchLocal(user.id, { mfaRequired: event.target.checked })} aria-label={`MFA ${user.email}`} /></td>
+        <td>
+          <details className={styles.roleEditor}>
+            <summary>{roleSummary(user.roles, roles)}</summary>
+            <div className={styles.roleOptions}>
+              {roles.map((role) => {
+                const checked = user.roles.includes(role.code);
+                return <label key={role.code}><input type="checkbox" checked={checked} onChange={(event) => patchLocal(user.id, { roles: event.target.checked ? Array.from(new Set([...user.roles, role.code])) : user.roles.filter((code) => code !== role.code) })} /><span>{role.nom}</span></label>;
+              })}
+            </div>
+          </details>
+        </td>
+        <td>
+          <div className={styles.assignmentStack}>
+            <select aria-label={`Entreprise PME de ${user.email}`} value={user.entrepriseId ?? ''} disabled={!user.roles.includes('PME')} onChange={(event) => patchLocal(user.id, { entrepriseId: event.target.value || null })}><option value="">PME : aucune</option>{enterprises.map((enterprise) => <option key={enterprise.id} value={enterprise.id}>{enterprise.raisonSociale}</option>)}</select>
+            <select aria-label={`Banque partenaire de ${user.email}`} value={user.partenaireBancaireId ?? ''} disabled={!user.roles.includes('PARTENAIRE_BANCAIRE')} onChange={(event) => patchLocal(user.id, { partenaireBancaireId: event.target.value || null })}><option value="">Banque : aucune</option>{partnerBanks.map((bank) => <option key={bank.id} value={bank.id}>{bank.raisonSociale}</option>)}</select>
+          </div>
+        </td>
+        <td>
+          <div className={styles.securityControls}>
+            <label><input type="checkbox" checked={user.actif} onChange={(event) => patchLocal(user.id, { actif: event.target.checked })} aria-label={`Compte actif ${user.email}`} /><span>Actif</span></label>
+            <label><input type="checkbox" checked={user.mfaRequired} onChange={(event) => patchLocal(user.id, { mfaRequired: event.target.checked })} aria-label={`MFA ${user.email}`} /><span>MFA</span></label>
+          </div>
+        </td>
         <td><div className={styles.accountActions}><button className={`${portal.secondary} ${styles.actionButton}`} type="button" onClick={() => save(user)}>Enregistrer</button>{user.mfaEnrolled && <button className={`${portal.secondary} ${styles.actionButton}`} type="button" onClick={() => setPendingMfaReset(user)}>Réinitialiser MFA</button>}</div></td>
         <td><button className={`${portal.secondary} ${styles.dangerAction}`} type="button" onClick={() => setPendingAnonymize(user)} disabled={Boolean(user.anonymizedAt)}>{user.anonymizedAt ? 'Anonymisé' : 'Anonymiser'}</button></td>
       </tr>)}</tbody></table></div>
