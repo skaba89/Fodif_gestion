@@ -81,7 +81,7 @@ export default function PartnerFinancingDetailPage({ params }: { params: Promise
 
   return <main className={portal.main}>
     <p className={portal.eyebrow}>Exécution correspondante</p><h1 className={portal.title}>{financing.numeroFinancement}</h1>
-    <p className={portal.lead}>{financing.raisonSociale} · {financing.numeroDossier} · <span className={portal.pill}>{financing.statut}</span></p>
+    <p className={portal.lead}>{financing.raisonSociale} · {financing.numeroDossier} · <span className={portal.pill}>{humanizeCode(financing.statut)}</span></p>
     <div className={portal.buttonRow}><Link className={portal.secondary} href="/partenaire/financements">Retour au portefeuille</Link></div>
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
 
@@ -102,7 +102,7 @@ export default function PartnerFinancingDetailPage({ params }: { params: Promise
       </div><div className={portal.buttonRow}><button className={portal.primary}>Déclarer le décaissement</button></div></form> : <p className={portal.lead}>Le montant accordé est intégralement décaissé.</p>}
     </section>
 
-    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran"><div className={portal.formCard}><h2>Décaissements</h2></div><table className={portal.table}><thead><tr><th>N°</th><th>Montant</th><th>Date</th><th>Statut</th><th>Référence</th></tr></thead><tbody>{financing.disbursements.map((item) => <tr key={item.id}><td>{item.numeroDecaissement}</td><td>{amount(item.montant)} GNF</td><td>{item.dateEffective ? displayDate(item.dateEffective) : displayDate(item.datePrevue)}</td><td><span className={portal.pill}>{item.statut}</span></td><td>{item.referenceBancaire ?? '—'}</td></tr>)}</tbody></table>{financing.disbursements.length === 0 && <div className={portal.formCard}><p className={portal.lead}>Aucun décaissement enregistré.</p></div>}</section>
+    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran"><div className={portal.formCard}><h2>Décaissements</h2></div><table className={portal.table}><thead><tr><th>N°</th><th>Montant</th><th>Date</th><th>Statut</th><th>Référence</th></tr></thead><tbody>{financing.disbursements.map((item) => <tr key={item.id}><td>{item.numeroDecaissement}</td><td>{amount(item.montant)} GNF</td><td>{item.dateEffective ? displayDate(item.dateEffective) : displayDate(item.datePrevue)}</td><td><span className={portal.pill}>{humanizeCode(item.statut)}</span></td><td>{item.referenceBancaire ?? '—'}</td></tr>)}</tbody></table>{financing.disbursements.length === 0 && <div className={portal.formCard}><p className={portal.lead}>Aucun décaissement enregistré.</p></div>}</section>
 
     <section className={`${portal.card} ${portal.formCard} ${portal.section}`}>
       <h2>Déclarer un remboursement</h2>
