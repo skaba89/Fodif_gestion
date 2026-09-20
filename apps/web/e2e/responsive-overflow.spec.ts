@@ -4,7 +4,7 @@ const AGENT_EMAIL = 'qualification-agent@fodip.local';
 const DEMO_PASSWORD = 'FodipDemo2026!';
 const AGENT_HOME = '/agent/tableau-de-bord';
 const AGENT_QUEUE = '/agent/dossiers?vue=A_PRENDRE';
-const AGENT_DETAIL = '/agent/dossiers/60000000-0000-4000-8000-000000000002';
+const AGENT_DETAIL = '/agent/dossiers/60000000-0000-4000-8000-000000000008';
 
 async function loginAgent(page: Page) {
   await page.goto('/connexion');
@@ -60,7 +60,7 @@ test.describe('Authenticated portal responsive bounds', () => {
       await expectNoPageOverflow(page);
 
       await page.goto(AGENT_DETAIL);
-      await expect(page.getByRole('heading', { name: 'FODIP-2026-DEMO02' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'FODIP-2026-QUAL08' })).toBeVisible();
       await expectNoPageOverflow(page);
     }
 

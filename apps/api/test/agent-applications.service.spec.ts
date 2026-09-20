@@ -14,6 +14,13 @@ describe('AgentApplicationsService', () => {
     expect(repository.list).toHaveBeenCalledWith(query, 'agent-a');
   });
 
+  it('defaults an unqualified list request to the unassigned workload', async () => {
+    const repository = { list: jest.fn().mockResolvedValue({ items: [], total: 0, page: 1, limite: 25 }) };
+    const service = new AgentApplicationsService(repository as never);
+    await service.list(agent, { page: 1, limite: 25 });
+    expect(repository.list).toHaveBeenCalledWith({ page: 1, limite: 25, vue: 'A_PRENDRE' }, 'agent-a');
+  });
+
   it('scopes dashboard summary to the authenticated user id', async () => {
     const repository = { summary: jest.fn().mockResolvedValue({ mesDossiers: 2 }) };
     const service = new AgentApplicationsService(repository as never);
@@ -22,9 +29,43 @@ describe('AgentApplicationsService', () => {
   });
 
   it('cannot claim a dossier already at committee stage', async () => {
-    const repository = { findById: jest.fn().mockResolvedValue({ id: 'd1', statut: 'PRET_COMITE' }) };
+    const repository = { findById: jest.fn().mockResolvedValue({ id: 'd1', statut: 'PRET_COMITE', agentResponsableId: 'agent-a' }) };
     const service = new AgentApplicationsService(repository as never);
     await expect(service.claim(agent, 'd1')).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('cannot read a dossier assigned to another agent', async () => {
+    const repository = {
+      findById: jest.fn().mockResolvedValue({
+        id: 'd1', statut: 'EN_INSTRUCTION', agentResponsableId: 'agent-b', historique: [],
+      }),
+    };
+    const service = new AgentApplicationsService(repository as never);
+    await expect(service.get(agent, 'd1')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('can read an unassigned submitted dossier before claiming it', async () => {
+    const dossier = { id: 'd1', statut: 'SOUMIS', agentResponsableId: null, historique: [] };
+    const repository = { findById: jest.fn().mockResolvedValue(dossier) };
+    const service = new AgentApplicationsService(repository as never);
+    await expect(service.get(agent, 'd1')).resolves.toBe(dossier);
+  });
+
+  it('can recover an unassigned active dossier before claiming it', async () => {
+    const dossier = { id: 'd1', statut: 'EN_INSTRUCTION', agentResponsableId: null, historique: [] };
+    const repository = { findById: jest.fn().mockResolvedValue(dossier) };
+    const service = new AgentApplicationsService(repository as never);
+    await expect(service.get(agent, 'd1')).resolves.toBe(dossier);
+  });
+
+  it('can read a terminal dossier present in the own treatment history', async () => {
+    const dossier = {
+      id: 'd1', statut: 'APPROUVE', agentResponsableId: 'agent-b',
+      historique: [{ utilisateurId: 'agent-a' }],
+    };
+    const repository = { findById: jest.fn().mockResolvedValue(dossier) };
+    const service = new AgentApplicationsService(repository as never);
+    await expect(service.get(agent, 'd1')).resolves.toBe(dossier);
   });
 
   it('cannot review a dossier assigned to another agent', async () => {

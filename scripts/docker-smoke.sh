@@ -41,10 +41,10 @@ AGENT_NOTIFICATIONS="$agent_notifications" python -c \
 
 dossiers_response=$(curl --fail --silent \
   --header "authorization: Bearer $access_token" \
-  http://localhost:4000/api/v1/agent/applications)
+  'http://localhost:4000/api/v1/agent/applications?vue=A_PRENDRE')
 
 DOSSIERS_RESPONSE="$dossiers_response" python -c \
-  'import json, os; body=json.loads(os.environ["DOSSIERS_RESPONSE"]); assert body["total"] >= 2; assert len(body["items"]) >= 2'
+  'import json, os; body=json.loads(os.environ["DOSSIERS_RESPONSE"]); assert body["total"] >= 1; assert all(item["statut"] == "SOUMIS" and item["agentResponsableId"] is None for item in body["items"])'
 
 curl --fail --silent \
   --request POST \

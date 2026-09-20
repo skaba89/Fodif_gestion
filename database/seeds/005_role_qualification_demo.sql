@@ -45,6 +45,28 @@ FROM (
 JOIN roles ON roles.code = account.role_code
 ON CONFLICT DO NOTHING;
 
+-- Dedicated Agent workspace fixture. It must not reuse the shared workflow dossiers because the
+-- Docker smoke test legitimately claims and transitions those records before Playwright starts.
+-- Keeping this dossier assigned to the qualification Agent proves the same ownership boundary the
+-- production API enforces and removes cross-test races between identities.
+INSERT INTO dossiers_financement (
+    id, numero_dossier, entreprise_id, programme_id, montant_demande, apport_personnel,
+    objet_financement, description_projet, nombre_emplois_prevus, statut, date_soumission,
+    agent_responsable_id
+)
+VALUES (
+    '60000000-0000-4000-8000-000000000008', 'FODIP-2026-QUAL08',
+    '30000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
+    125000000, 25000000, 'Qualification du poste Agent',
+    'Dossier synthétique isolé pour la qualification responsive et RBAC du portail Agent.',
+    3, 'EN_INSTRUCTION', NOW() - INTERVAL '1 day',
+    '59000000-0000-4000-8000-000000000002'
+)
+ON CONFLICT (numero_dossier) DO UPDATE
+SET agent_responsable_id = EXCLUDED.agent_responsable_id,
+    statut = EXCLUDED.statut,
+    updated_at = NOW();
+
 -- PME pages need an owned enterprise; partner pages scope through partenaire_bancaire_id above.
 INSERT INTO utilisateur_entreprises (utilisateur_id, entreprise_id, relation, principal)
 VALUES (
