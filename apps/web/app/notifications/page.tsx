@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
+import Breadcrumbs from '../_shared/Breadcrumbs';
 import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
 import ThemeToggle from '../_shared/ThemeToggle';
 import portal from '../entrepreneur/portal.module.css';
@@ -58,6 +59,7 @@ export default function NotificationsPage() {
     <nav className={portal.nav}><Link href={returnPath}>Retour à mon espace</Link></nav>
     <ThemeToggle buttonClassName={portal.themeToggle} />
   </header><main id="main-content" tabIndex={-1} className={portal.main}>
+    <Breadcrumbs items={[{ label: 'Mon espace', href: returnPath }, { label: 'Notifications' }]} />
     <p className={portal.eyebrow}>Activité personnelle</p><h1 className={portal.title}>Notifications</h1>
     <p className={portal.lead}>{unread} notification{unread === 1 ? '' : 's'} non lue{unread === 1 ? '' : 's'}. Les événements sont enregistrés atomiquement avec les opérations métier.</p>
     <div className={portal.buttonRow}>
