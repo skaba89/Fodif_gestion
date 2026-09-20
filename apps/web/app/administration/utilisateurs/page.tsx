@@ -135,7 +135,7 @@ export default function UsersAdministrationPage() {
         <h1 className={portal.title}>Utilisateurs et rôles</h1>
         <p className={portal.lead}>Créez les PME et banques partenaires, puis les comptes utilisateurs et leurs périmètres. La désactivation de son propre compte et du dernier super-administrateur est interdite.</p>
       </div>
-      <span className={styles.securityBadge}><span className={styles.securityDot} aria-hidden="true" />Accès SUPER_ADMIN · actions journalisées</span>
+      <span className={styles.securityBadge}><span className={styles.securityDot} aria-hidden="true" />Accès d’administration renforcé · actions journalisées</span>
     </div>
 
     <section className={styles.statsGrid} aria-label="Synthèse de l’administration">
