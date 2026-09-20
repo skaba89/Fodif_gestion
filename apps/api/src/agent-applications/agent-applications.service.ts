@@ -54,7 +54,7 @@ export class AgentApplicationsService {
   }): boolean {
     if (user.roles.includes('SUPER_ADMIN')) return true;
     if (dossier.agentResponsableId === user.sub) return true;
-    if (dossier.statut === 'SOUMIS' && !dossier.agentResponsableId) return true;
+    if (!dossier.agentResponsableId && canClaimApplication(dossier)) return true;
     return dossier.historique?.some((entry) => entry.utilisateurId === user.sub) ?? false;
   }
 }

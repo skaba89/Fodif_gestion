@@ -51,6 +51,13 @@ describe('AgentApplicationsService', () => {
     await expect(service.get(agent, 'd1')).resolves.toBe(dossier);
   });
 
+  it('can recover an unassigned active dossier before claiming it', async () => {
+    const dossier = { id: 'd1', statut: 'EN_INSTRUCTION', agentResponsableId: null, historique: [] };
+    const repository = { findById: jest.fn().mockResolvedValue(dossier) };
+    const service = new AgentApplicationsService(repository as never);
+    await expect(service.get(agent, 'd1')).resolves.toBe(dossier);
+  });
+
   it('can read a terminal dossier present in the own treatment history', async () => {
     const dossier = {
       id: 'd1', statut: 'APPROUVE', agentResponsableId: 'agent-b',
