@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
+import { roleLabel } from '../_shared/displayLabels';
 import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
 import styles from './profile.module.css';
 
@@ -12,21 +13,6 @@ type SessionProfile = {
   email: string;
   roles: string[];
 };
-
-const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: 'Super administrateur',
-  AGENT_FODIP: 'Agent FODIP',
-  PME: 'PME',
-  PARTENAIRE_BANCAIRE: 'Partenaire bancaire',
-  DIRECTION_FODIP: 'Direction FODIP',
-  ANALYSTE: 'Analyste',
-  COMITE_FINANCEMENT: 'Comité de financement',
-  AUDITEUR: 'Auditeur',
-};
-
-function formatRole(role: string) {
-  return ROLE_LABELS[role] ?? role.replaceAll('_', ' ').toLocaleLowerCase('fr-FR').replace(/^./, (letter) => letter.toLocaleUpperCase('fr-FR'));
-}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -109,7 +95,7 @@ export default function ProfilePage() {
                   <dt>Rôle et habilitation</dt>
                   <dd className={styles.roles} data-testid="profile-roles">
                     {profile.roles.length > 0
-                      ? profile.roles.map((role) => <span className={styles.role} key={role}>{formatRole(role)}</span>)
+                      ? profile.roles.map((role) => <span className={styles.role} key={role}>{roleLabel(role)}</span>)
                       : <span>Aucun rôle affichable</span>}
                   </dd>
                 </div>
