@@ -172,16 +172,36 @@ async function expectHealthyPage(page: Page, route: RouteCase, apiErrors: string
   const before = apiErrors.length;
   await page.goto(route.sample);
   await expect(page).toHaveURL(pathPattern(route.expected ?? route.sample));
-  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
 
-  const viewport = await page.evaluate(() => ({
-    clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }));
+  const headings = page.getByRole('heading', { level: 1 });
+  await expect(headings.first()).toBeVisible();
+  await expect(headings, `${route.sample} must expose one clear page title`).toHaveCount(1);
+
+  const visual = await headings.first().evaluate((heading) => {
+    const style = window.getComputedStyle(heading);
+    const main = heading.closest('main');
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      lineHeight: Number.parseFloat(style.lineHeight),
+      mainWidth: main?.getBoundingClientRect().width ?? 0,
+      viewportWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+
+  const maxTitleSize = visual.viewportWidth <= 620 ? 34 : 42;
   expect(
-    viewport.scrollWidth,
-    `${route.sample} must not create page-level horizontal overflow (${viewport.scrollWidth}px > ${viewport.clientWidth}px)`,
-  ).toBeLessThanOrEqual(viewport.clientWidth + 1);
+    visual.fontSize,
+    `${route.sample} H1 is too large for the institutional hierarchy (${visual.fontSize}px > ${maxTitleSize}px)`,
+  ).toBeLessThanOrEqual(maxTitleSize);
+  expect(
+    visual.mainWidth,
+    `${route.sample} main content must stay inside the viewport`,
+  ).toBeLessThanOrEqual(visual.viewportWidth + 1);
+  expect(
+    visual.scrollWidth,
+    `${route.sample} must not create page-level horizontal overflow (${visual.scrollWidth}px > ${visual.viewportWidth}px)`,
+  ).toBeLessThanOrEqual(visual.viewportWidth + 1);
 
   expect(apiErrors.slice(before), `${route.sample} returned failing API responses`).toEqual([]);
 }
