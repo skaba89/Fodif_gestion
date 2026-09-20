@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, use, useCallback, useEffect, useState } from 'react';
+import { humanizeCode } from '../../../../_shared/displayLabels';
 import styles from '../../../portal.module.css';
 
 type Document = {
