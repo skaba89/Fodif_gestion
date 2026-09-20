@@ -127,7 +127,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
     try {
       // --- 1. Accueil institutionnel ---
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: /Piloter le financement des PME guinéennes de la demande jusqu’à l’impact/ })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Gérer le cycle de financement d’une PME, du dépôt de la demande au suivi du remboursement/ })).toBeVisible();
       await expect(page.locator('a[href="/connexion"]', { hasText: 'Accéder à la plateforme' })).toBeVisible();
 
       // --- 2. Connexion Direction + 3. MFA ---
