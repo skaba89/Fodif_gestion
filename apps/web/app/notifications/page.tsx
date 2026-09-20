@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
 import Breadcrumbs from '../_shared/Breadcrumbs';
-import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
-import ThemeToggle from '../_shared/ThemeToggle';
+import { humanizeCode } from '../_shared/displayLabels';
+import AccountPageHeader from '../_shared/AccountPageHeader';
 import portal from '../entrepreneur/portal.module.css';
 
 type Notification = {
@@ -54,11 +54,7 @@ export default function NotificationsPage() {
     }
   }
 
-  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
-    <Link href={returnPath} className={portal.brand} aria-label="FODIP — retour à mon espace"><FodipOfficialBrand subtitle="Centre de notifications" compact /></Link>
-    <nav className={portal.nav}><Link href={returnPath}>Retour à mon espace</Link></nav>
-    <ThemeToggle buttonClassName={portal.themeToggle} />
-  </header><main id="main-content" tabIndex={-1} className={portal.main}>
+  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><AccountPageHeader homeHref={returnPath} subtitle="Centre de notifications" /><main id="main-content" tabIndex={-1} className={portal.main}>
     <Breadcrumbs items={[{ label: 'Mon espace', href: returnPath }, { label: 'Notifications' }]} />
     <p className={portal.eyebrow}>Activité personnelle</p><h1 className={portal.title}>Notifications</h1>
     <p className={portal.lead}>{unread} notification{unread === 1 ? '' : 's'} non lue{unread === 1 ? '' : 's'}. Les événements sont enregistrés atomiquement avec les opérations métier.</p>
@@ -68,7 +64,7 @@ export default function NotificationsPage() {
     </div>
     {message && <div className={`${portal.notice} ${portal.section}`} role="alert">{message}</div>}
     <section className={portal.section}>{items.length === 0 ? <article className={portal.card}><p>Aucune notification dans ce périmètre.</p></article> : items.map((item) => <article className={`${portal.card} ${portal.section}`} key={item.id} style={{ opacity: item.luAt ? .68 : 1 }}>
-      <div className={portal.sectionHeader}><div><p className={portal.eyebrow}>{item.type.replaceAll('_', ' ')}</p><h2>{item.titre}</h2></div><time>{new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.createdAt))}</time></div>
+      <div className={portal.sectionHeader}><div><p className={portal.eyebrow}>{humanizeCode(item.type)}</p><h2>{item.titre}</h2></div><time>{new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.createdAt))}</time></div>
       <p className={portal.lead}>{item.message}</p><div className={portal.buttonRow}>
         {item.lien && <Link className={portal.primary} href={item.lien} onClick={() => markRead(item.id)}>Ouvrir</Link>}
         {!item.luAt && <button className={portal.secondary} type="button" onClick={() => markRead(item.id)}>Marquer comme lue</button>}

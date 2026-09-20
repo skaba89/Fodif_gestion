@@ -6,6 +6,7 @@ import Button from '../../../_shared/Button';
 import ConfirmDialog from '../../../_shared/ConfirmDialog';
 import Skeleton from '../../../_shared/Skeleton';
 import { DossierStatusBadge, GenericStatusBadge, RiskBadge } from '../../../_shared/StatusBadge';
+import { humanizeCode } from '../../../_shared/displayLabels';
 import { dossierStatusLabel } from '../../../_shared/dossierStatus';
 import portal from '../../../entrepreneur/portal.module.css';
 import workspace from '../../InstructionWorkspace.module.css';
@@ -146,6 +147,7 @@ export default function AgentDossierPage({ params }: { params: Promise<{ id: str
   const canInstruct = Boolean(dossier.agentResponsableId);
 
   return <main className={portal.main}>
+    <Breadcrumbs items={[{ label: 'Agent', href: '/agent/tableau-de-bord' }, { label: 'Dossiers', href: '/agent/dossiers' }, { label: dossier.numeroDossier }]} />
     <header className={workspace.header}>
       <div className={workspace.headerMain}>
         <p className={portal.eyebrow}>Poste d’instruction</p>
@@ -195,7 +197,7 @@ export default function AgentDossierPage({ params }: { params: Promise<{ id: str
             {dossier.documents.map((document) => (
               <article className={workspace.documentRow} key={document.id}>
                 <div className={workspace.documentInfo}>
-                  <strong>{document.typeDocument}</strong>
+                  <strong>{humanizeCode(document.typeDocument)}</strong>
                   <span title={document.nomFichier}>{document.nomFichier}</span>
                 </div>
                 <div className={workspace.documentActions}>
@@ -271,7 +273,7 @@ export default function AgentDossierPage({ params }: { params: Promise<{ id: str
     <ConfirmDialog
       open={pendingReview}
       title="Confirmer la décision d’instruction"
-      message={`Vous allez enregistrer « ${statut} » sur ${dossier.numeroDossier}. Cette action sera horodatée dans l’historique.`}
+      message={`Vous allez enregistrer « ${humanizeCode(statut)} » sur ${dossier.numeroDossier}. Cette action sera horodatée dans l’historique.`}
       confirmLabel="Confirmer la décision"
       onConfirm={() => void confirmReview()}
       onCancel={() => setPendingReview(false)}
