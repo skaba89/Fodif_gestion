@@ -120,12 +120,13 @@ export default function AuditeurDashboardPage() {
     <h1 className={portal.title}>Supervision et audit</h1>
     <p className={portal.lead}>Consultez en lecture seule le portefeuille de financements et les traces d’audit. Cet espace privilégie la lisibilité des preuves sans proposer aucune action de modification.</p>
 
-    <section className={styles.metrics} aria-label="Synthèse du périmètre audité">
-      <KpiCard label="Financements" value={String(financings.total)} definition="Nombre total de financements visibles dans le périmètre d’audit." />
-      <KpiCard label="Montant accordé" value={committed.toLocaleString('fr-FR')} unit="GNF" definition="Somme des montants accordés pour les financements de la page courante." />
-      <KpiCard label="Montant décaissé" value={disbursed.toLocaleString('fr-FR')} unit="GNF" definition="Somme des décaissements associés aux financements de la page courante." />
-      <KpiCard label="Impayés" value={impayes.toLocaleString('fr-FR')} unit="GNF" definition="Montant total des impayés pour les financements affichés sur la page courante." goodDirection="down" />
+    <section className={styles.metrics} aria-label="Synthèse de la page courante du périmètre audité">
+      <KpiCard label="Financements du périmètre" value={String(financings.total)} definition="Nombre total de financements visibles dans le périmètre d’audit, toutes pages confondues." />
+      <KpiCard label="Accordé affiché" value={committed.toLocaleString('fr-FR')} unit="GNF" definition="Somme des montants accordés pour les financements de la page courante." />
+      <KpiCard label="Décaissé affiché" value={disbursed.toLocaleString('fr-FR')} unit="GNF" definition="Somme des décaissements associés aux financements de la page courante." />
+      <KpiCard label="Impayés affichés" value={impayes.toLocaleString('fr-FR')} unit="GNF" definition="Montant total des impayés pour les financements affichés sur la page courante." goodDirection="down" />
     </section>
+    <p className={portal.lead}>Les montants accordés, décaissés et impayés ci-dessus sont calculés sur les financements visibles sur la page courante. Le nombre de financements correspond au total du périmètre audité.</p>
 
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
 

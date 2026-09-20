@@ -61,12 +61,13 @@ export default function PartnerFinancingsPage() {
     <h1 className={portal.title}>Vos financements FODIP</h1>
     <p className={portal.lead}>Suivez uniquement les financements relevant de votre périmètre bancaire, consultez les échéanciers et déclarez les opérations autorisées dans une vue cohérente avec celle de la Direction.</p>
 
-    <section className={styles.metrics} aria-label="Synthèse du portefeuille partenaire">
-      <KpiCard label="Financements" value={String(result.total)} definition="Nombre total de financements appartenant au périmètre de votre établissement." />
-      <KpiCard label="Montant accordé" value={pageAmount.toLocaleString('fr-FR')} unit="GNF" definition="Somme des montants accordés pour les financements affichés sur la page courante." />
-      <KpiCard label="Taux moyen" value={averageRate === null ? null : averageRate.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} unit="%" definition="Taux d’intérêt moyen calculé uniquement sur les financements de la page courante." />
-      <KpiCard label="Durée moyenne" value={averageDuration === null ? null : averageDuration.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} unit="mois" definition="Durée moyenne des financements affichés sur la page courante." />
+    <section className={styles.metrics} aria-label="Synthèse de la page courante du portefeuille partenaire">
+      <KpiCard label="Financements du périmètre" value={String(result.total)} definition="Nombre total de financements appartenant au périmètre de votre établissement, toutes pages confondues." />
+      <KpiCard label="Montant affiché" value={pageAmount.toLocaleString('fr-FR')} unit="GNF" definition="Somme des montants accordés pour les financements affichés sur la page courante." />
+      <KpiCard label="Taux moyen affiché" value={averageRate === null ? null : averageRate.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} unit="%" definition="Taux d’intérêt moyen calculé uniquement sur les financements de la page courante." />
+      <KpiCard label="Durée moyenne affichée" value={averageDuration === null ? null : averageDuration.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} unit="mois" definition="Durée moyenne des financements affichés sur la page courante." />
     </section>
+    <p className={portal.lead}>Les montants, taux et durées ci-dessus portent uniquement sur les financements visibles sur la page courante. Le nombre de financements correspond au total de votre périmètre bancaire.</p>
 
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
 
