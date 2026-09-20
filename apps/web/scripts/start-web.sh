@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 set -eu
 
-# Production safety gate: a PPD/PROD instance must never start with the presentation/demo flag.
-# Qualification (REC) may deliberately enable DEMO_MODE so synthetic data remains visibly marked.
+# Hosted environments use persistent APIs and databases. Pre-production and production must fail
+# closed rather than exposing a demo-labelled platform; local/CI may still opt into demo fixtures.
 case "${APP_ENV:-}" in
   PPD|PROD)
     if [ "${DEMO_MODE:-false}" = "true" ]; then

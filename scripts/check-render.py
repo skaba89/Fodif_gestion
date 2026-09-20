@@ -86,8 +86,8 @@ else:
     web_env = {item.get("key"): item for item in web.get("envVars", [])}
     if web_env.get("APP_ENV", {}).get("value") != "QUALIFICATION":
         errors.append("fodip-web: Render/Neon must stay explicitly labelled APP_ENV=QUALIFICATION")
-    if web_env.get("DEMO_MODE", {}).get("value") != "true":
-        errors.append("fodip-web: DEMO_MODE must remain true on the qualification environment")
+    if web_env.get("DEMO_MODE", {}).get("value") != "false":
+        errors.append("fodip-web: hosted environments must explicitly disable DEMO_MODE")
 
     web_start_script = Path("apps/web/scripts/start-web.sh")
     if not web_start_script.exists():
