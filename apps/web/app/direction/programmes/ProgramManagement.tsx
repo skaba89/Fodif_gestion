@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { clientApi } from '../../../lib/client-api';
 import Breadcrumbs from '../../_shared/Breadcrumbs';
 import Button from '../../_shared/Button';
+import { humanizeCode } from '../../_shared/displayLabels';
 import { useToast } from '../../_shared/Toast';
 import portal from '../../entrepreneur/portal.module.css';
 
@@ -94,7 +95,7 @@ export default function ProgramManagement() {
           {programs.map((program) => (
             <article className={`${portal.card} ${portal.program}`} key={program.id}>
               <span className={portal.programTag}>{program.code}</span><h3>{program.nom}</h3>
-              <p><strong>{program.statut}</strong> · V active {program.versionActive ?? '—'} · Brouillon {program.versionBrouillon ?? '—'}</p>
+              <p><strong>{humanizeCode(program.statut)}</strong> · V active {program.versionActive ?? '—'} · Brouillon {program.versionBrouillon ?? '—'}</p>
               <p>Enveloppe : {money(program.enveloppeTotale)} · {program.nombreDossiers} dossier(s)</p>
               <div className={portal.buttonRow}><Button variant="outline" onClick={() => void openProgram(program.id)}>Ouvrir le programme</Button></div>
             </article>
@@ -144,7 +145,7 @@ function ProgramPanel({ detail, busy, action, onUpdated, onError }: {
   return <section className={portal.section} data-testid="program-management-detail">
     <div className={portal.sectionHeader}><div><span className={portal.programTag}>{detail.code}</span><h2>{detail.nom}</h2><p>{detail.description || 'Aucune description.'}</p></div></div>
     <div className={portal.programs}>
-      <article className={`${portal.card} ${portal.program}`}><h3>{detail.statut}</h3><p>Statut · ouverture {date(detail.dateDebut)} → {date(detail.dateFin)}</p></article>
+      <article className={`${portal.card} ${portal.program}`}><h3>{humanizeCode(detail.statut)}</h3><p>Statut · ouverture {date(detail.dateDebut)} → {date(detail.dateFin)}</p></article>
       <article className={`${portal.card} ${portal.program}`}><h3>{money(detail.enveloppeTotale)}</h3><p>Enveloppe · {detail.nombreDossiers} dossier(s)</p></article>
       <article className={`${portal.card} ${portal.program}`}><h3>{active ? `V${active.version}` : 'Aucune'}</h3><p>Version active</p></article>
     </div>
@@ -155,7 +156,7 @@ function ProgramPanel({ detail, busy, action, onUpdated, onError }: {
     </div>
     {draft ? <DraftEditor key={draft.id} programId={detail.id} draft={draft} busy={busy} action={action} onUpdated={onUpdated} onError={onError} /> : null}
     <section className={`${portal.card} ${portal.formCard} ${portal.section}`}><h3>Historique des versions</h3>
-      {detail.versions.map((version) => <div className={portal.notice} key={version.id}><strong>V{version.version} · {version.statut}</strong><p>{money(version.montantMin)} → {money(version.montantMax)} · {version.documents.length} pièce(s) · {version.nombreDossiers} dossier(s)</p><p>Soumise {date(version.submittedAt)} {version.submittedByEmail ? `par ${version.submittedByEmail}` : ''} · Validée {date(version.approvedAt)} {version.approvedByEmail ? `par ${version.approvedByEmail}` : ''}</p></div>)}
+      {detail.versions.map((version) => <div className={portal.notice} key={version.id}><strong>V{version.version} · {humanizeCode(version.statut)}</strong><p>{money(version.montantMin)} → {money(version.montantMax)} · {version.documents.length} pièce(s) · {version.nombreDossiers} dossier(s)</p><p>Soumise {date(version.submittedAt)} {version.submittedByEmail ? `par ${version.submittedByEmail}` : ''} · Validée {date(version.approvedAt)} {version.approvedByEmail ? `par ${version.approvedByEmail}` : ''}</p></div>)}
     </section>
   </section>;
 }
@@ -193,7 +194,7 @@ function DraftEditor({ programId, draft, busy, action, onUpdated, onError }: {
     </div>
     <div className={portal.sectionHeader}><div><h3>Checklist documentaire</h3><p>Chaque type documentaire est unique dans une version.</p></div><Button variant="outline" onClick={() => setDocuments((rows) => [...rows, { code: '', libelle: '', typeDocument: 'AUTRE', obligatoire: true, validiteJours: '' }])}>Ajouter une pièce</Button></div>
     {documents.map((doc, index) => <div className={portal.formGrid} key={index}>
-      <div className={portal.field}><label htmlFor={`doc-type-${index}`}>Type</label><select id={`doc-type-${index}`} value={doc.typeDocument} onChange={(e) => updateDoc(index, { typeDocument: e.target.value, code: doc.code || e.target.value })}>{DOC_TYPES.map((type) => <option value={type} key={type}>{type}</option>)}</select></div>
+      <div className={portal.field}><label htmlFor={`doc-type-${index}`}>Type</label><select id={`doc-type-${index}`} value={doc.typeDocument} onChange={(e) => updateDoc(index, { typeDocument: e.target.value, code: doc.code || e.target.value })}>{DOC_TYPES.map((type) => <option value={type} key={type}>{humanizeCode(type)}</option>)}</select></div>
       <div className={portal.field}><label htmlFor={`doc-code-${index}`}>Code</label><input id={`doc-code-${index}`} value={doc.code} onChange={(e) => updateDoc(index, { code: e.target.value.toUpperCase() })} /></div>
       <div className={`${portal.field} ${portal.fieldFull}`}><label htmlFor={`doc-label-${index}`}>Libellé</label><input id={`doc-label-${index}`} value={doc.libelle} onChange={(e) => updateDoc(index, { libelle: e.target.value })} /></div>
       <div className={portal.field}><label htmlFor={`doc-valid-${index}`}>Validité (jours)</label><input id={`doc-valid-${index}`} type="number" min="1" value={doc.validiteJours} onChange={(e) => updateDoc(index, { validiteJours: e.target.value })} /></div>
