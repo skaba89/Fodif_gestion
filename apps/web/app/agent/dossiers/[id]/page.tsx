@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, use, useCallback, useEffect, useState } from 'react';
+import Breadcrumbs from '../../../_shared/Breadcrumbs';
 import Button from '../../../_shared/Button';
 import ConfirmDialog from '../../../_shared/ConfirmDialog';
 import Skeleton from '../../../_shared/Skeleton';
