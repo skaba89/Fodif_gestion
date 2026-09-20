@@ -16,10 +16,7 @@
   position: relative;
   isolation: isolate;
   min-height: calc(100vh - 128px);
-  background:
-    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--green-soft) 62%, transparent), transparent 34rem),
-    radial-gradient(circle at 94% 8%, color-mix(in srgb, var(--accent-100) 26%, transparent), transparent 31rem),
-    linear-gradient(180deg, color-mix(in srgb, var(--surface) 38%, var(--bg)), var(--bg) 22rem);
+  background: var(--bg);
 }
 
 :is(
@@ -30,9 +27,9 @@
   [data-portal-context="Partenaire bancaire"]
 ) #main-content > main {
   position: relative;
-  width: min(1240px, calc(100% - clamp(28px, 5vw, 72px)));
-  padding-top: clamp(40px, 6vw, 68px);
-  padding-bottom: clamp(64px, 8vw, 96px);
+  width: min(1180px, calc(100% - clamp(24px, 4vw, 52px)));
+  padding-top: clamp(22px, 3vw, 32px);
+  padding-bottom: clamp(48px, 6vw, 72px);
 }
 
 :is(
@@ -42,14 +39,8 @@
   [data-portal-context="Auditeur"],
   [data-portal-context="Partenaire bancaire"]
 ) #main-content > main > p:first-child {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  margin-bottom: 12px;
-  padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--green) 18%, var(--line));
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--green-soft) 72%, var(--surface));
+  display: block;
+  margin-bottom: 8px;
   color: var(--green-strong);
   font-size: 0.69rem;
   font-weight: 850;
@@ -67,10 +58,10 @@
   max-width: 930px;
   margin: 0;
   color: var(--ink);
-  font-size: clamp(2.05rem, 4.4vw, 3.45rem);
-  font-weight: 920;
-  line-height: 1.03;
-  letter-spacing: -0.052em;
+  font-size: clamp(1.8rem, 3vw, 2.45rem);
+  font-weight: 740;
+  line-height: 1.12;
+  letter-spacing: -0.026em;
   text-wrap: balance;
 }
 
@@ -82,10 +73,10 @@
   [data-portal-context="Partenaire bancaire"]
 ) #main-content > main > h1 + p {
   max-width: 820px;
-  margin-top: 16px;
+  margin-top: 10px;
   color: var(--muted);
   font-size: clamp(0.94rem, 1.7vw, 1.05rem);
-  line-height: 1.72;
+  line-height: 1.6;
 }
 
 /* Executive metrics and primary cards */
@@ -107,11 +98,8 @@
   [data-portal-context="Partenaire bancaire"]
 ) #main-content main section > article {
   border-color: color-mix(in srgb, var(--line) 88%, transparent);
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--surface) 98%, transparent), color-mix(in srgb, var(--surface-soft) 52%, var(--surface)));
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.32) inset,
-    0 18px 50px rgba(20, 35, 27, 0.065);
+  background: var(--surface);
+  box-shadow: none;
 }
 
 :is(
@@ -122,9 +110,7 @@
   [data-portal-context="Partenaire bancaire"]
 ) #main-content main section > article:hover {
   border-color: color-mix(in srgb, var(--green) 24%, var(--line));
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.34) inset,
-    0 22px 58px rgba(15, 107, 69, 0.085);
+  box-shadow: none;
 }
 
 /* Forms and filters */
@@ -160,10 +146,10 @@
 ) #main-content main :is(input, select, textarea) {
   min-height: 44px;
   border-color: color-mix(in srgb, var(--line) 92%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 98%, transparent);
+  border-radius: 8px;
+  background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.26) inset;
+  box-shadow: none;
 }
 
 :is(
@@ -197,9 +183,9 @@
   [data-portal-context="Partenaire bancaire"]
 ) #main-content main [role="region"] {
   border-color: color-mix(in srgb, var(--line) 86%, transparent);
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--surface) 98%, transparent);
-  box-shadow: 0 20px 58px rgba(20, 35, 27, 0.065);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: none;
 }
 
 :is(
@@ -272,7 +258,7 @@
   [data-portal-context="Partenaire bancaire"]
 ) #main-content main button {
   min-height: 42px;
-  border-radius: 11px;
+  border-radius: 8px;
   font: inherit;
   font-size: 0.82rem;
   font-weight: 800;
@@ -308,7 +294,7 @@
   [data-portal-context="Auditeur"],
   [data-portal-context="Partenaire bancaire"]
 ) #main-content main :is([role="status"], [role="alert"]) {
-  border-radius: 14px;
+  border-radius: 8px;
   line-height: 1.55;
 }
 
@@ -320,8 +306,8 @@
   [data-portal-context="Partenaire bancaire"]
 ) #main-content main h2 {
   color: var(--ink);
-  font-weight: 880;
-  letter-spacing: -0.025em;
+  font-weight: 720;
+  letter-spacing: -0.016em;
 }
 
 :is(
@@ -344,8 +330,8 @@
     [data-portal-context="Partenaire bancaire"]
   ) #main-content > main {
     width: min(100% - 24px, 1240px);
-    padding-top: 30px;
-    padding-bottom: 64px;
+    padding-top: 20px;
+    padding-bottom: 52px;
   }
 
   :is(
@@ -355,7 +341,7 @@
     [data-portal-context="Auditeur"],
     [data-portal-context="Partenaire bancaire"]
   ) #main-content > main > h1 {
-    font-size: clamp(1.82rem, 9vw, 2.5rem);
+    font-size: clamp(1.7rem, 7vw, 2.05rem);
   }
 
   :is(
@@ -365,7 +351,7 @@
     [data-portal-context="Auditeur"],
     [data-portal-context="Partenaire bancaire"]
   ) #main-content main [role="region"] {
-    border-radius: 16px;
+    border-radius: 10px;
   }
 
   :is(
