@@ -219,7 +219,6 @@ export default function AppShell({
           })}
         </nav>
         <div className={styles.sidebarMeta}>
-          <div className={styles.secureStatus}><span className={styles.secureDot} aria-hidden="true" />Session sécurisée</div>
           <div className={styles.sidebarAccount}>{accountMenu}</div>
         </div>
       </aside>
