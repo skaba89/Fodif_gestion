@@ -121,7 +121,7 @@ export default function ProgramProposalPanel() {
   }
 
   return (
-    <section className={`${styles.main} ${styles.section}`} aria-labelledby="program-proposal-title" data-testid="program-proposal-panel">
+    <section className={styles.section} aria-labelledby="program-proposal-title" data-testid="program-proposal-panel">
       <p className={styles.eyebrow}>Gouvernance des programmes</p>
       <h2 id="program-proposal-title">Proposer un nouveau programme</h2>
       <p className={styles.lead}>

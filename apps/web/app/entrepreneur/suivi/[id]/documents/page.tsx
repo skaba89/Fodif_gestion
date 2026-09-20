@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, use, useCallback, useEffect, useState } from 'react';
+import Breadcrumbs from '../../../../_shared/Breadcrumbs';
 import styles from '../../../portal.module.css';
 
 type Document = {
@@ -66,6 +67,7 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
   }
 
   return <main className={styles.main}>
+    <Breadcrumbs items={[{ label: 'PME', href: '/entrepreneur' }, { label: 'Mes dossiers', href: '/entrepreneur/suivi' }, { label: 'Documents' }]} />
     <p className={styles.eyebrow}>Pièces justificatives</p>
     <h1 className={styles.title}>Documents du dossier</h1>
     <p className={styles.lead}>Formats acceptés : PDF, JPG et PNG. Taille maximale : 10 Mo. Chaque fichier est contrôlé, stocké de manière privée et vérifié par checksum.</p>
