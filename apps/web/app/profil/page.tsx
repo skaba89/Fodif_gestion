@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
+import { roleLabel } from '../_shared/displayLabels';
 import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
 import styles from './profile.module.css';
 
@@ -109,7 +110,7 @@ export default function ProfilePage() {
                   <dt>Rôle et habilitation</dt>
                   <dd className={styles.roles} data-testid="profile-roles">
                     {profile.roles.length > 0
-                      ? profile.roles.map((role) => <span className={styles.role} key={role}>{formatRole(role)}</span>)
+                      ? profile.roles.map((role) => <span className={styles.role} key={role}>{roleLabel(role)}</span>)
                       : <span>Aucun rôle affichable</span>}
                   </dd>
                 </div>
