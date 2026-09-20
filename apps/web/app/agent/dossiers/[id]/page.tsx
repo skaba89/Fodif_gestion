@@ -5,6 +5,7 @@ import Button from '../../../_shared/Button';
 import ConfirmDialog from '../../../_shared/ConfirmDialog';
 import Skeleton from '../../../_shared/Skeleton';
 import { DossierStatusBadge, GenericStatusBadge, RiskBadge } from '../../../_shared/StatusBadge';
+import { dossierStatusLabel } from '../../../_shared/dossierStatus';
 import portal from '../../../entrepreneur/portal.module.css';
 import workspace from '../../InstructionWorkspace.module.css';
 
@@ -151,7 +152,6 @@ export default function AgentDossierPage({ params }: { params: Promise<{ id: str
         <div className={workspace.headerStatus}>
           <strong>{dossier.raisonSociale}</strong>
           <DossierStatusBadge status={dossier.statut} />
-          <span className={workspace.technicalStatus}>{dossier.statut}</span>
         </div>
       </div>
       <div className={workspace.headerActions}>
@@ -214,7 +214,7 @@ export default function AgentDossierPage({ params }: { params: Promise<{ id: str
           <div className={workspace.history}>
             {dossier.historique.map((item, index) => (
               <div className={workspace.historyItem} key={`${item.changedAt}-${index}`}>
-                <strong>{item.ancienStatut ?? 'CRÉATION'} → {item.nouveauStatut}</strong>
+                <strong title={item.ancienStatut ? `${item.ancienStatut} → ${item.nouveauStatut}` : item.nouveauStatut}>{item.ancienStatut ? dossierStatusLabel(item.ancienStatut) : 'Création'} → {dossierStatusLabel(item.nouveauStatut)}</strong>
                 <span>{item.commentaire ?? 'Sans commentaire'} · {new Date(item.changedAt).toLocaleString('fr-FR')}</span>
               </div>
             ))}
