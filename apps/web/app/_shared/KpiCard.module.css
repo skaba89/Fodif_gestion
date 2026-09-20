@@ -18,6 +18,10 @@
   transition: border-color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
 }
 
+.staticCard {
+  min-height: 118px;
+}
+
 .card:hover {
   border-color: color-mix(in srgb, var(--kpi-accent) 28%, var(--kpi-line));
   background: color-mix(in srgb, var(--kpi-surface) 94%, var(--surface-soft));
