@@ -45,7 +45,7 @@ const PORTAL_ROUTES: Record<PortalId, RouteCase[]> = {
     { source: '/agent/dossiers', sample: '/agent/dossiers' },
     {
       source: '/agent/dossiers/[id]',
-      sample: '/agent/dossiers/60000000-0000-4000-8000-000000000002',
+      sample: '/agent/dossiers/60000000-0000-4000-8000-000000000008',
     },
     { source: '/agent/programmes', sample: '/agent/programmes' },
   ],
