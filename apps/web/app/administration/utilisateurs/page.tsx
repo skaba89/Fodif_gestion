@@ -245,7 +245,7 @@ export default function UsersAdministrationPage() {
 
     <section className={`${portal.card} ${portal.section} ${styles.rbacSection}`}>
       <div className={styles.rbacHeader}><h2>Référentiel RBAC</h2><p>Consultez les rôles disponibles et les permissions directes associées.</p></div>
-      <div className={styles.roleGrid}>{roles.map((role) => <details className={styles.roleDetails} key={role.code}><summary><strong>{role.nom}</strong> · {role.code}</summary><div className={styles.roleBody}><p>{role.description}</p><p>{role.permissions.join(' · ') || 'Aucune permission directe'}</p></div></details>)}</div>
+      <div className={styles.roleGrid}>{roles.map((role) => <details className={styles.roleDetails} key={role.code}><summary><span><strong>{role.nom}</strong><code>{role.code}</code></span></summary><div className={styles.roleBody}><p>{role.description}</p>{role.permissions.length ? <ul className={styles.permissionList}>{role.permissions.map((permission) => <li key={permission}><code>{permission}</code></li>)}</ul> : <p>Aucune permission directe</p>}</div></details>)}</div>
     </section>
 
     <ConfirmDialog
