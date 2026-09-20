@@ -138,23 +138,6 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.secureStatus {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 8px 7px;
-  border: 0;
-  color: rgba(255, 255, 255, 0.58);
-  background: transparent;
-  font-size: 0.65rem;
-  font-weight: 650;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.secureDot,
 .connectionDot {
   width: 8px;
   height: 8px;
@@ -468,10 +451,6 @@
   .navItem,
   .navItemActive {
     min-height: 38px;
-  }
-
-  .secureStatus {
-    display: none;
   }
 
   .sidebarMeta {
