@@ -1,7 +1,7 @@
 .shell {
   min-height: 100svh;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 238px minmax(0, 1fr);
   background: var(--bg);
   color: var(--ink);
 }
@@ -10,7 +10,7 @@
   position: fixed;
   z-index: 80;
   top: 0;
-  left: 260px;
+  left: 238px;
   right: 0;
   min-height: 30px;
   display: grid;
@@ -33,13 +33,11 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px 18px 18px;
+  gap: 16px;
+  padding: 20px 14px 16px;
   overflow-y: auto;
   color: #f6fbf7;
-  background:
-    radial-gradient(circle at 50% -5%, rgba(245, 183, 0, 0.12), transparent 16rem),
-    linear-gradient(180deg, #14532d 0%, #0e4225 52%, #0a321c 100%);
+  background: #103f24;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -69,16 +67,16 @@
 
 .portalContext strong {
   color: #fff;
-  font-family: var(--font-display);
-  font-size: 1.02rem;
-  font-weight: 800;
+  font-family: var(--font-sans);
+  font-size: 0.94rem;
+  font-weight: 750;
   overflow-wrap: anywhere;
 }
 
 .nav {
   min-width: 0;
   display: grid;
-  gap: 5px;
+  gap: 3px;
 }
 
 .navItem,
@@ -91,23 +89,19 @@
   gap: 11px;
   padding: 0 12px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 7px;
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.82rem;
   font-weight: 650;
   text-decoration: none;
   overflow-wrap: anywhere;
-  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
 }
 
 .navItem:hover,
 .navItemActive {
   background: rgba(255, 255, 255, 0.09);
   color: #fff;
-}
-
-.navItem:hover {
-  transform: translateX(2px);
 }
 
 .navItemActive {
@@ -184,15 +178,15 @@
   top: 0;
   z-index: 25;
   min-width: 0;
-  min-height: 72px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 10px clamp(18px, 3vw, 38px);
+  padding: 8px clamp(16px, 2.5vw, 30px);
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg) 90%, transparent);
-  backdrop-filter: blur(18px) saturate(130%);
-  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .mobileBrand {
@@ -433,11 +427,11 @@
 
 @media (max-width: 1020px) {
   .shell {
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 210px minmax(0, 1fr);
   }
 
   .demoBanner {
-    left: 220px;
+    left: 210px;
   }
 
   .connectionStatus span:last-child {
@@ -519,7 +513,7 @@
     border-radius: 9px;
     background: transparent;
     color: var(--muted);
-    font-size: 0.59rem;
+    font-size: 0.66rem;
     font-weight: 700;
     line-height: 1.1;
     text-align: center;
@@ -553,7 +547,7 @@
   .bottomItem,
   .bottomItemActive,
   .bottomMore {
-    font-size: 0.54rem;
+    font-size: 0.62rem;
   }
 }
 
