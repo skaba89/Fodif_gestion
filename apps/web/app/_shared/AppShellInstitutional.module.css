@@ -523,7 +523,7 @@
     bottom: 0;
     min-height: calc(64px + env(safe-area-inset-bottom));
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     padding: 6px 6px env(safe-area-inset-bottom);
     border-top: 1px solid var(--line);
     background: color-mix(in srgb, var(--surface) 94%, transparent);

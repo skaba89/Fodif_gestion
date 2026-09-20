@@ -295,6 +295,13 @@ test.describe('Exhaustive route and role qualification', () => {
             (route.expected ?? route.sample) === roleCase.home || route.source === roleCase.mobileRoute)
         : PORTAL_ROUTES[roleCase.portal];
 
+      if (isMobileQualification) {
+        const mobileNav = page.locator('nav[aria-label^="Navigation mobile"]');
+        await expect(mobileNav).toBeVisible();
+        await expect(mobileNav.locator(':scope > a, :scope > button')).toHaveCount(4);
+        await expect(mobileNav.getByRole('button', { name: 'Plus de navigation' })).toBeVisible();
+      }
+
       for (const route of routes) await expectHealthyPage(page, route, apiErrors);
 
       await page.goto('/profil');
