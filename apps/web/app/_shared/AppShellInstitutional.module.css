@@ -445,6 +445,41 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+
+@media (max-height: 720px) and (min-width: 961px) {
+  .sidebar {
+    gap: 10px;
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+
+  .sidebarBrand {
+    padding-bottom: 12px;
+  }
+
+  .portalContext {
+    gap: 1px;
+  }
+
+  .nav {
+    gap: 1px;
+  }
+
+  .navItem,
+  .navItemActive {
+    min-height: 38px;
+  }
+
+  .secureStatus {
+    display: none;
+  }
+
+  .sidebarMeta {
+    gap: 2px;
+    padding-top: 8px;
+  }
+}
+
 @media (max-width: 1020px) {
   .shell {
     grid-template-columns: 210px minmax(0, 1fr);
