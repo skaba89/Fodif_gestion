@@ -101,6 +101,10 @@ L'API distingue désormais deux signaux publics, sans donnée sensible :
   `503` avec les seuls états `up`/`down` si une dépendance critique manque ; Kubernetes retire alors
   le pod du Service jusqu'au rétablissement.
 
+Les deux réponses portent aussi `environment` et `releaseSha`. La valeur vient en priorité de
+`FODIP_RELEASE_SHA`, puis des métadonnées natives Render/GitHub : une capture d'incident peut ainsi
+être reliée au commit réellement exécuté, sans publier de secret.
+
 `GET /api/v1/health` reste un alias de liveness pour la compatibilité avec le `HEALTHCHECK` OCI et
 les intégrations existantes. Le web conserve `GET /` pour ses deux probes.
 
@@ -113,6 +117,8 @@ les intégrations existantes. Le web conserve `GET /` pour ses deux probes.
   Linux supprimées, système de fichiers racine en lecture seule et jeton de ServiceAccount non
   monté ;
 - `DEMO_MODE: "false"` explicite dans la configuration de production ;
+- `METRICS_TOKEN` obligatoire et réservé au collecteur Prometheus privé ; aucun scrape anonyme
+  n'est accepté par un processus Node de production ;
 - `NetworkPolicy` en refus entrant par défaut, puis autorisation du contrôleur Ingress vers le web
   et du web vers l'API. La règle Ingress, volontairement indépendante du fournisseur, doit être
   resserrée sur le namespace et les labels du contrôleur choisi lors de la décision d'hébergement.

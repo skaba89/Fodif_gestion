@@ -9,5 +9,7 @@ global:
 scrape_configs:
   - job_name: fodip-api
     metrics_path: /api/v1/metrics
+    authorization:
+      credentials: fodip-local-metrics-token-not-for-hosting-123456
     static_configs:
       - targets: ["api:4000"]
