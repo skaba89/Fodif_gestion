@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import Button from '../_shared/Button';
 import InstitutionalIllustration from '../_shared/InstitutionalIllustration';
-import KpiCard from '../_shared/KpiCard';
 import Skeleton from '../_shared/Skeleton';
 import { DossierStatusBadge } from '../_shared/StatusBadge';
 import WorkflowStepper from '../_shared/WorkflowStepper';
@@ -160,22 +159,28 @@ export default function EntrepreneurDashboard() {
 
       {!loading ? (
         <section className={styles.section} aria-labelledby="pme-overview-title">
-          <div className={styles.sectionHeader}><div><h2 id="pme-overview-title">Vue d’ensemble</h2><p>Contexte utile après l’action prioritaire.</p></div></div>
-          <div className={role.kpiGrid}>
-            <KpiCard label="Dossiers actifs" value={String(active)} definition="Dossiers soumis et toujours en cours de traitement." detailHref="/entrepreneur/suivi" />
-            <KpiCard label="Brouillons" value={String(drafts)} definition="Demandes encore modifiables avant transmission au FODIP." detailHref="/entrepreneur/suivi" />
-            <KpiCard label="Montant demandé" value={totalRequested.toLocaleString('fr-FR')} unit="GNF" definition="Somme des montants demandés sur vos dossiers." detailHref="/entrepreneur/suivi" />
-            <KpiCard label="Programmes ouverts" value={String(programs.length)} definition="Programmes de financement actuellement proposés par la plateforme." detailHref="/entrepreneur/programmes" />
+          <div className={styles.sectionHeader}>
+            <div><h2 id="pme-overview-title">Votre activité</h2><p>Repères complémentaires après l’action prioritaire.</p></div>
+            <Button variant="outline" href="/entrepreneur/suivi">Voir tous mes dossiers</Button>
           </div>
+          <dl className={styles.pmeSummary}>
+            <div><dt>Dossiers actifs</dt><dd>{active}</dd></div>
+            <div><dt>Brouillons</dt><dd>{drafts}</dd></div>
+            <div><dt>Montant demandé</dt><dd>{totalRequested.toLocaleString('fr-FR')} GNF</dd></div>
+            <div><dt>Programmes ouverts</dt><dd>{programs.length}</dd></div>
+          </dl>
         </section>
       ) : null}
 
       {!loading && programs.length > 0 ? (
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}><div><h2>Programmes accessibles</h2><p>À consulter uniquement après votre situation en cours.</p></div></div>
-          <div className={styles.programs}>
+        <section className={styles.section} aria-labelledby="pme-programs-title">
+          <div className={styles.sectionHeader}>
+            <div><h2 id="pme-programs-title">Programmes accessibles</h2><p>À consulter après votre situation en cours.</p></div>
+            <Button variant="outline" href="/entrepreneur/programmes">Voir tous les programmes</Button>
+          </div>
+          <div className={styles.pmeProgramList}>
             {programs.slice(0, 3).map((program) => (
-              <article className={`${styles.card} ${styles.program}`} key={program.id}>
+              <article className={styles.pmeProgramRow} key={program.id}>
                 <h3>{program.nom}</h3>
                 <p>{program.description ?? 'Programme de financement FODIP.'}</p>
               </article>
