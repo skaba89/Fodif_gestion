@@ -507,3 +507,168 @@ Avant chaque PR :
 - comparer les fichiers modifiés par Work ;
 - abandonner ou réécrire tout patch qui entrerait en collision ;
 - conserver des PR petites et réversibles.
+
+
+## 13. Accessibilité et responsive
+
+### Garde-fous existants à conserver
+
+Le projet possède déjà :
+- un fichier Playwright `apps/web/e2e/accessibility.spec.ts` utilisant Axe ;
+- des contrôles WCAG A/AA incluant les règles WCAG 2.2 AA supportées par la version d’Axe installée ;
+- des tests sur la page d’accueil, la connexion, le design system et un parcours Auditeur authentifié ;
+- un test responsive dédié `responsive-overflow.spec.ts` couvrant 1366, 1024, 768, 430 et 375 px ;
+- un lien d’évitement « Aller au contenu principal » ;
+- des focus visibles globaux ;
+- `prefers-reduced-motion` ;
+- une navigation mobile dédiée ;
+- une transformation des tableaux en cartes sur petits écrans.
+
+Conclusion :
+- ne pas remplacer ces mécanismes lors de la refonte ;
+- toute modification du shell ou des composants partagés doit obligatoirement préserver ces tests et ajouter les cas manquants.
+
+### Contrastes
+
+Sur les tokens principaux examinés, les associations de texte structurantes disposent de contrastes théoriques satisfaisants :
+- texte secondaire `#59685e` sur fond ivoire `#faf9f6` : environ 5,59:1 ;
+- vert principal `#14532d` sur surface claire `#fffefa` : environ 9,03:1 ;
+- warning `#765900` sur `#fff5cf` : environ 6,01:1 ;
+- danger `#a62f2f` sur `#fbecec` : environ 5,97:1 ;
+- information `#1d5f8f` sur `#e9f3fa` : environ 6,05:1.
+
+Ces vérifications ne remplacent pas Axe/Playwright car les transparences, overlays, états hover/focus et le mode sombre doivent être testés dans le rendu réel.
+
+### Point de vigilance mobile
+
+Dans `AppShellInstitutional.module.css` :
+- les éléments de navigation mobile utilisent `0.59rem` ;
+- sous 390 px, la taille descend à `0.54rem`.
+
+Même si la cible tactile reste suffisamment grande, ce texte est très petit pour une interface institutionnelle et peut dégrader la lisibilité réelle.
+
+Recommandation :
+- conserver les cibles de 44 px minimum ;
+- relever la taille des libellés mobiles et, si nécessaire, raccourcir les intitulés plutôt que réduire la police ;
+- tester à 200 % de zoom et avec les tailles de texte système augmentées.
+
+### ResponsiveTable
+
+Points forts :
+- table sémantique sur écrans larges ;
+- caption accessible ;
+- région focusable pour le défilement ;
+- bascule vers une liste de cartes sur petits écrans ;
+- `dt/dd` pour conserver l’association libellé/valeur en mobile.
+
+Point de vigilance :
+- le composant mobile transforme chaque ligne en card. Il est approprié pour la lisibilité, mais contribue visuellement à l’effet « tout en cartes ».
+- aucune suppression fonctionnelle n’est recommandée ; le travail doit porter sur le style et la densité, pas sur la sémantique.
+
+## 14. Design system et dette de cohérence
+
+### Tokens
+
+`fodip-product-theme.css` fournit une base saine :
+- palette de marque centralisée ;
+- couleurs sémantiques ;
+- mode sombre ;
+- focus ring ;
+- typographie ;
+- motion ;
+- alias pour écrans historiques.
+
+À conserver.
+
+### Double couche typographique
+
+Deux couches coexistent :
+- `institutional-typography.css`
+- `fodip-product-theme.css`
+
+Le fichier `layout.tsx` charge `fodip-product-theme.css` après `institutional-typography.css`. Les variables et styles déclarés dans le thème produit peuvent donc remplacer certaines valeurs de la couche typographique.
+
+Exemple :
+- `institutional-typography.css` fixe le body à 1rem ;
+- le thème produit chargé ensuite redéfinit le body à `var(--text-body)`, actuellement 0.94rem.
+
+Ce n’est pas nécessairement un bug visuel, mais cela crée une dette de compréhension : les commentaires de la première couche ne décrivent pas toujours le résultat final de la cascade.
+
+Recommandation :
+- ne pas modifier ces fichiers pendant la PR Accueil si ce n’est pas nécessaire ;
+- prévoir ensuite un nettoyage dédié des responsabilités de chaque feuille ;
+- une variable = une source d’autorité ;
+- documenter explicitement l’ordre de cascade.
+
+### KpiCard
+
+Points forts :
+- état « donnée indisponible » ;
+- définition métier accessible au clavier ;
+- tendances ;
+- lien vers le détail ;
+- valeurs tabulaires ;
+- mode reduced motion.
+
+Constat :
+- le composant lui-même accentue fortement l’esthétique card : hauteur minimale, bord, ombre, barre gradient, hover avec élévation.
+- répété 10 à 15 fois sur un cockpit, il produit mécaniquement l’effet « dashboard généré/template ».
+
+Recommandation :
+- conserver `KpiCard` pour 3 à 5 indicateurs réellement exécutifs ;
+- créer des représentations secondaires plus sobres pour les autres métriques : lignes, groupes, tableaux ou synthèses ;
+- ne pas casser l’API publique du composant avant d’avoir réduit ses usages.
+
+### Button
+
+Points forts :
+- cible tactile de 44 px ;
+- variantes cohérentes ;
+- disabled/loading/success ;
+- reduced motion ;
+- focus global fourni par `globals.css`.
+
+À conserver.
+
+## 15. Tests à ajouter au moment de l’implémentation
+
+### Pour la PR Accueil
+- Axe desktop et 375 px après recomposition ;
+- absence de débordement horizontal à 1440 / 1024 / 768 / 430 / 375 ;
+- présence d’un seul accès principal à la connexion ;
+- absence de lien public vers `/design-system` en production ;
+- vérification que l’accueil ne contient aucun chiffre fictif ;
+- navigation clavier complète.
+
+### Pour la PR Direction
+- tests visuels/fonctionnels sur la conservation de tous les KPI existants ;
+- vérification des filtres ;
+- aucun changement des formules financières ;
+- aucun changement des endpoints ;
+- responsive des sections réorganisées.
+
+### Pour les composants partagés
+- ne modifier `KpiCard`, `ResponsiveTable`, `AppShell`, tokens ou typographie qu’avec tests de non-régression multi-portails ;
+- vérifier clair/sombre ;
+- vérifier reduced motion ;
+- vérifier focus clavier ;
+- vérifier 200 % de zoom.
+
+## 16. Go / No-Go avant première implémentation
+
+### GO
+Le **Lot A — Accueil public** peut être développé dans une branche séparée après une dernière synchronisation avec `main`, car :
+- son périmètre est limité ;
+- il ne nécessite aucune modification de règle métier ;
+- il peut éviter les composants partagés au premier passage ;
+- son impact sur les autres espaces est faible.
+
+### NO-GO pour l’instant
+Ne pas lancer simultanément :
+- une refonte du `AppShell` ;
+- une refonte globale de `KpiCard` ;
+- une refonte globale de la typographie ;
+- une modification du modèle RBAC ;
+- une modification des opérations financières Direction/Partenaire.
+
+Ces zones sont transverses et présentent un risque de conflit ou de régression nettement supérieur pendant que la session Work continue.
