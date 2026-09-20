@@ -91,13 +91,13 @@ export default function AppShell({
     if (navItems.length <= 4) return navItems;
     const selected: AppShellNavItem[] = [];
     const add = (item?: AppShellNavItem) => {
-      if (item && !selected.some((candidate) => candidate.href === item.href) && selected.length < 4) selected.push(item);
+      if (item && !selected.some((candidate) => candidate.href === item.href) && selected.length < 3) selected.push(item);
     };
     add(navItems[0]);
     add(navItems.find((item) => /(dossier|suivi|instruction)/i.test(item.label)));
     add(navItems.find((item) => /(nouvelle|opération|décision|portefeuille)/i.test(item.label)));
     navItems.forEach(add);
-    return selected.slice(0, 4);
+    return selected.slice(0, 3);
   }, [navItems]);
 
   const notificationsHref = navItems.find((item) => /notification/i.test(item.label))?.href ?? '/notifications';
