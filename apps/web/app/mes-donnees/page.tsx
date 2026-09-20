@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
+import Breadcrumbs from '../_shared/Breadcrumbs';
 import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
 import ThemeToggle from '../_shared/ThemeToggle';
 import portal from '../entrepreneur/portal.module.css';
@@ -44,7 +45,8 @@ export default function MesDonneesPage() {
     <nav className={portal.nav}><Link href={returnPath}>Retour à mon espace</Link></nav>
     <ThemeToggle buttonClassName={portal.themeToggle} />
   </header><main id="main-content" tabIndex={-1} className={portal.main}>
-    <p className={portal.eyebrow}>Droits des personnes (axe B6)</p><h1 className={portal.title}>Mes données personnelles</h1>
+    <Breadcrumbs items={[{ label: 'Mon espace', href: returnPath }, { label: 'Mes données' }]} />
+    <p className={portal.eyebrow}>Droits des personnes</p><h1 className={portal.title}>Mes données personnelles</h1>
     <p className={portal.lead}>
       Conformément au droit d’accès à vos données, vous pouvez télécharger une copie de tout ce que la plateforme
       détient sur votre compte : profil, et, pour un compte PME, les informations de votre entreprise, ses
