@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import Breadcrumbs from './Breadcrumbs';
 import Button from './Button';
@@ -43,6 +43,7 @@ export default function ProgramCatalog({
   homeLabel,
   actionHref,
   actionLabel,
+  children,
 }: {
   eyebrow: string;
   title: string;
@@ -50,6 +51,7 @@ export default function ProgramCatalog({
   homeLabel: string;
   actionHref?: string;
   actionLabel?: string;
+  children?: ReactNode;
 }) {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [message, setMessage] = useState('');
@@ -105,6 +107,7 @@ export default function ProgramCatalog({
           })}
         </div>
       </section>
+      {children}
     </main>
   );
 }
