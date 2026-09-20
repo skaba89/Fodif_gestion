@@ -1,4 +1,4 @@
-/* Premium Direction cockpit extras, layered on top of ../entrepreneur/portal.module.css. */
+/* Direction cockpit presentation, layered on top of ../entrepreneur/portal.module.css. */
 
 .cockpitHeader {
   display: flex;
@@ -38,12 +38,12 @@
   min-height: 40px;
   border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
   background: color-mix(in srgb, var(--surface) 88%, var(--surface-soft));
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .headerButtons button:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--green) 35%, var(--line));
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 .headerButtons svg {
@@ -69,7 +69,7 @@
   width: 4px;
   height: 18px;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--gold), var(--green));
+  background: var(--green);
   transform: translateY(-50%);
 }
 
@@ -99,8 +99,8 @@
 
 .executiveHeading h2 {
   margin: 0;
-  font-size: clamp(1.45rem, 2.4vw, 2rem);
-  letter-spacing: -0.035em;
+  font-size: clamp(1.3rem, 1.8vw, 1.6rem);
+  letter-spacing: -0.018em;
 }
 
 .executiveHeading > p {
@@ -193,9 +193,9 @@
   margin: 18px 0 24px;
   padding: 18px;
   border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
-  box-shadow: var(--shadow-card);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: none;
 }
 
 .filterField {
@@ -218,10 +218,10 @@
   min-height: 43px;
   padding: 0 12px;
   border: 1px solid color-mix(in srgb, var(--line) 92%, transparent);
-  border-radius: 11px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   font: inherit;
   font-size: var(--text-body-sm);
   transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
@@ -262,10 +262,10 @@
 .error {
   padding: 26px;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--muted);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .error {
@@ -347,18 +347,17 @@
   min-height: 43px;
   padding: 0 14px;
   border: 1px solid color-mix(in srgb, var(--green) 16%, var(--line));
-  border-radius: 11px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--green-soft) 64%, var(--surface));
   color: var(--green-strong);
   font-size: var(--text-body-sm);
   font-weight: 820;
-  transition: border-color var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+  transition: border-color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
 }
 
 .reset:hover {
   border-color: color-mix(in srgb, var(--green) 38%, var(--line));
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--green-soft) 82%, var(--surface));
 }
 
 @media (max-width: 1120px) {
