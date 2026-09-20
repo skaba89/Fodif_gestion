@@ -1,12 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
 import Breadcrumbs from '../_shared/Breadcrumbs';
-import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
-import ThemeToggle from '../_shared/ThemeToggle';
+import AccountPageHeader from '../_shared/AccountPageHeader';
 import portal from '../entrepreneur/portal.module.css';
 
 type SessionResponse = { roles?: string[] };
@@ -40,11 +38,7 @@ export default function MesDonneesPage() {
     }
   }, []);
 
-  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
-    <Link href={returnPath} className={portal.brand} aria-label="FODIP — retour à mon espace"><FodipOfficialBrand subtitle="Mes données" compact /></Link>
-    <nav className={portal.nav}><Link href={returnPath}>Retour à mon espace</Link></nav>
-    <ThemeToggle buttonClassName={portal.themeToggle} />
-  </header><main id="main-content" tabIndex={-1} className={portal.main}>
+  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><AccountPageHeader homeHref={returnPath} subtitle="Mes données" /><main id="main-content" tabIndex={-1} className={portal.main}>
     <Breadcrumbs items={[{ label: 'Mon espace', href: returnPath }, { label: 'Mes données' }]} />
     <p className={portal.eyebrow}>Droits des personnes</p><h1 className={portal.title}>Mes données personnelles</h1>
     <p className={portal.lead}>

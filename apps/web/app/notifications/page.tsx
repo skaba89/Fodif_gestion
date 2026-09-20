@@ -6,8 +6,7 @@ import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
 import Breadcrumbs from '../_shared/Breadcrumbs';
 import { humanizeCode } from '../_shared/displayLabels';
-import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
-import ThemeToggle from '../_shared/ThemeToggle';
+import AccountPageHeader from '../_shared/AccountPageHeader';
 import portal from '../entrepreneur/portal.module.css';
 
 type Notification = {
@@ -55,11 +54,7 @@ export default function NotificationsPage() {
     }
   }
 
-  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
-    <Link href={returnPath} className={portal.brand} aria-label="FODIP — retour à mon espace"><FodipOfficialBrand subtitle="Centre de notifications" compact /></Link>
-    <nav className={portal.nav}><Link href={returnPath}>Retour à mon espace</Link></nav>
-    <ThemeToggle buttonClassName={portal.themeToggle} />
-  </header><main id="main-content" tabIndex={-1} className={portal.main}>
+  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><AccountPageHeader homeHref={returnPath} subtitle="Centre de notifications" /><main id="main-content" tabIndex={-1} className={portal.main}>
     <Breadcrumbs items={[{ label: 'Mon espace', href: returnPath }, { label: 'Notifications' }]} />
     <p className={portal.eyebrow}>Activité personnelle</p><h1 className={portal.title}>Notifications</h1>
     <p className={portal.lead}>{unread} notification{unread === 1 ? '' : 's'} non lue{unread === 1 ? '' : 's'}. Les événements sont enregistrés atomiquement avec les opérations métier.</p>
