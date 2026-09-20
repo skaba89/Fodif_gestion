@@ -66,7 +66,7 @@ export default function NotificationsPage() {
     </div>
     {message && <div className={`${portal.notice} ${portal.section}`} role="alert">{message}</div>}
     <section className={portal.section}>{items.length === 0 ? <article className={portal.card}><p>Aucune notification dans ce périmètre.</p></article> : items.map((item) => <article className={`${portal.card} ${portal.section}`} key={item.id} style={{ opacity: item.luAt ? .68 : 1 }}>
-      <div className={portal.sectionHeader}><div><p className={portal.eyebrow}>{item.type.replaceAll('_', ' ')}</p><h2>{item.titre}</h2></div><time>{new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.createdAt))}</time></div>
+      <div className={portal.sectionHeader}><div><p className={portal.eyebrow}>{humanizeCode(item.type)}</p><h2>{item.titre}</h2></div><time>{new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.createdAt))}</time></div>
       <p className={portal.lead}>{item.message}</p><div className={portal.buttonRow}>
         {item.lien && <Link className={portal.primary} href={item.lien} onClick={() => markRead(item.id)}>Ouvrir</Link>}
         {!item.luAt && <button className={portal.secondary} type="button" onClick={() => markRead(item.id)}>Marquer comme lue</button>}
