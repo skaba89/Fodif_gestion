@@ -65,6 +65,15 @@
   --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --type-display: var(--font-display);
 
+  /* A restrained editorial scale: large enough for executive reading, compact enough for data. */
+  --type-display-xl: clamp(2.15rem, 4.35vw, 3.75rem);
+  --type-display-lg: clamp(1.55rem, 2.65vw, 2.25rem);
+  --type-display-md: clamp(1.12rem, 1.6vw, 1.35rem);
+  --type-display-line: 1.04;
+  --type-heading-line: 1.16;
+  --type-display-tracking: -0.048em;
+  --type-heading-tracking: -0.026em;
+
   --text-caption: 0.7rem;
   --text-body-sm: 0.8rem;
   --text-body: 0.94rem;
@@ -131,17 +140,21 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: var(--text-body);
+  font-optical-sizing: auto;
 }
 
 :where(h1, h2, [data-kpi-value], [data-display-number], .metric-value, .stat-value) {
   font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-optical-sizing: auto;
+  font-weight: 760;
+  letter-spacing: var(--type-display-tracking);
 }
 
 :where(h3, h4) {
   font-family: var(--font-display);
-  font-weight: 750;
+  font-optical-sizing: auto;
+  font-weight: 680;
+  letter-spacing: var(--type-heading-tracking);
 }
 
 :where(table, [role='table'], [role='grid'], [data-financial], [data-kpi-value], [data-display-number], .metric-value, .stat-value) {
