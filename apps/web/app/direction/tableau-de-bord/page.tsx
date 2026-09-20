@@ -250,22 +250,65 @@ export default function DirectionDashboardPage() {
             </section>
           )}
 
-          <section id="indicateurs" className={styles.kpiGrid} aria-label="Indicateurs clés">
-            <KpiCard label="PME accompagnées" value={formatNumber(dashboard.kpis.pmeEnregistrees)} definition="Nombre d’entreprises distinctes ayant au moins un dossier dans le périmètre filtré." detailHref="#pipeline" />
-            <KpiCard label="Dossiers déposés" value={formatNumber(dashboard.kpis.dossiersDeposes)} definition="Dossiers soumis (hors brouillons), tous statuts confondus." detailHref="#pipeline" />
-            <KpiCard label="Dossiers en instruction" value={formatNumber(dashboard.kpis.dossiersEnInstruction)} definition="Dossiers actuellement en instruction ou en attente de complément." detailHref="#pipeline" />
-            <KpiCard label="Dossiers approuvés" value={formatNumber(dashboard.kpis.dossiersApprouves)} definition="Dossiers ayant reçu une décision de comité APPROUVE." detailHref="#pipeline" />
-            <KpiCard label="Montant demandé" value={formatAmount(dashboard.kpis.montantDemande)} unit="GNF" definition="Somme des montants demandés sur les dossiers déposés (hors brouillons)." trend={dashboard.trends?.montantDemande} detailHref="/direction/financements" />
-            <KpiCard label="Montant accordé" value={formatAmount(dashboard.kpis.montantApprouve)} unit="GNF" definition="Somme des montants approuvés par le comité de financement." trend={dashboard.trends?.montantApprouve} detailHref="/direction/financements" />
-            <KpiCard label="Montant décaissé" value={formatAmount(dashboard.kpis.montantDecaisse)} unit="GNF" definition="Somme des décaissements effectivement exécutés." trend={dashboard.trends?.montantDecaisse} detailHref="/direction/financements" />
-            <KpiCard label="Montant remboursé" value={formatAmount(dashboard.kpis.montantRembourse)} unit="GNF" definition="Somme des remboursements enregistrés à ce jour." trend={dashboard.trends?.montantRembourse} detailHref="/direction/financements" />
-            <KpiCard label="Encours" value={formatAmount(dashboard.kpis.encours)} unit="GNF" definition="Montant décaissé restant dû (décaissé moins remboursé)." detailHref="/direction/financements" />
-            <KpiCard label="Impayés" value={formatAmount(dashboard.kpis.impayes)} unit="GNF" definition="Montant dû sur des échéances déjà passées et non intégralement remboursées." detailHref="/direction/financements" goodDirection="down" />
-            <KpiCard label="Taux de remboursement" value={dashboard.kpis.tauxRemboursement.toLocaleString('fr-FR')} unit="%" definition="Montant remboursé rapporté au montant dû sur échéances passées." detailHref="/direction/financements" />
-            <KpiCard label="Emplois créés" value={formatNumber(dashboard.impact.emploisCrees)} definition="Emplois créés déclarés dans le dernier suivi d’impact par PME." detailHref="#impact" />
-            <KpiCard label="Emplois maintenus" value={formatNumber(dashboard.impact.emploisMaintenus)} definition="Emplois maintenus déclarés dans le dernier suivi d’impact par PME." detailHref="#impact" />
-            <KpiCard label="Dirigeantes femmes" value={dashboard.kpis.tauxDirigeantesFemmes === null ? null : dashboard.kpis.tauxDirigeantesFemmes.toLocaleString('fr-FR')} unit="%" definition="Part des PME du périmètre dont le genre du dirigeant principal renseigné est féminin. Non disponible si aucun dirigeant du périmètre n'a de genre renseigné." detailHref="#impact" />
-            <KpiCard label="Dirigeants jeunes" value={dashboard.kpis.tauxDirigeantsJeunes === null ? null : dashboard.kpis.tauxDirigeantsJeunes.toLocaleString('fr-FR')} unit="%" definition="Part des PME du périmètre dont le dirigeant principal avait moins de 35 ans au dépôt du dossier. Non disponible si aucune date de naissance n'est renseignée." detailHref="#impact" />
+          <section id="indicateurs" className={styles.executiveSection} aria-labelledby="executive-summary-title">
+            <div className={styles.executiveHeading}>
+              <div>
+                <p className={portal.eyebrow}>Synthèse exécutive</p>
+                <h2 id="executive-summary-title">Position financière et niveau d’exposition</h2>
+              </div>
+              <p>Les indicateurs qui nécessitent une lecture immédiate sont isolés du détail opérationnel. Les métriques complémentaires restent disponibles juste en dessous.</p>
+            </div>
+            <div className={styles.executiveKpiGrid}>
+              <KpiCard label="Montant accordé" value={formatAmount(dashboard.kpis.montantApprouve)} unit="GNF" definition="Somme des montants approuvés par le comité de financement." trend={dashboard.trends?.montantApprouve} detailHref="/direction/financements" />
+              <KpiCard label="Montant décaissé" value={formatAmount(dashboard.kpis.montantDecaisse)} unit="GNF" definition="Somme des décaissements effectivement exécutés." trend={dashboard.trends?.montantDecaisse} detailHref="/direction/financements" />
+              <KpiCard label="Encours" value={formatAmount(dashboard.kpis.encours)} unit="GNF" definition="Montant décaissé restant dû (décaissé moins remboursé)." detailHref="/direction/financements" />
+              <KpiCard label="Impayés" value={formatAmount(dashboard.kpis.impayes)} unit="GNF" definition="Montant dû sur des échéances déjà passées et non intégralement remboursées." detailHref="/direction/financements" goodDirection="down" />
+              <KpiCard label="Taux de remboursement" value={dashboard.kpis.tauxRemboursement.toLocaleString('fr-FR')} unit="%" definition="Montant remboursé rapporté au montant dû sur échéances passées." detailHref="/direction/financements" />
+            </div>
+          </section>
+
+          <section className={styles.operationalSummary} aria-label="Indicateurs complémentaires du portefeuille">
+            <article className={styles.summaryGroup}>
+              <div className={styles.summaryHeader}>
+                <p className={portal.eyebrow}>Activité</p>
+                <h2>Dossiers et entreprises</h2>
+              </div>
+              <dl className={styles.summaryRows}>
+                <div><dt>PME accompagnées</dt><dd>{formatNumber(dashboard.kpis.pmeEnregistrees)}</dd></div>
+                <div><dt>Dossiers déposés</dt><dd>{formatNumber(dashboard.kpis.dossiersDeposes)}</dd></div>
+                <div><dt>En instruction</dt><dd>{formatNumber(dashboard.kpis.dossiersEnInstruction)}</dd></div>
+                <div><dt>Approuvés</dt><dd>{formatNumber(dashboard.kpis.dossiersApprouves)}</dd></div>
+              </dl>
+              <Link className={styles.summaryLink} href="#pipeline">Voir le pipeline</Link>
+            </article>
+
+            <article className={styles.summaryGroup}>
+              <div className={styles.summaryHeader}>
+                <p className={portal.eyebrow}>Flux financiers</p>
+                <h2>Demande et remboursement</h2>
+              </div>
+              <dl className={styles.summaryRows}>
+                <div><dt>Montant demandé</dt><dd>{formatAmount(dashboard.kpis.montantDemande)} GNF</dd></div>
+                <div><dt>Montant remboursé</dt><dd>{formatAmount(dashboard.kpis.montantRembourse)} GNF</dd></div>
+                <div><dt>Dossiers actifs</dt><dd>{formatNumber(dashboard.kpis.dossiersActifs)}</dd></div>
+                <div><dt>Dossiers rejetés</dt><dd>{formatNumber(dashboard.kpis.dossiersRejetes)}</dd></div>
+              </dl>
+              <Link className={styles.summaryLink} href="/direction/financements">Ouvrir les financements</Link>
+            </article>
+
+            <article className={styles.summaryGroup}>
+              <div className={styles.summaryHeader}>
+                <p className={portal.eyebrow}>Impact</p>
+                <h2>Emploi et inclusion</h2>
+              </div>
+              <dl className={styles.summaryRows}>
+                <div><dt>Emplois créés</dt><dd>{formatNumber(dashboard.impact.emploisCrees)}</dd></div>
+                <div><dt>Emplois maintenus</dt><dd>{formatNumber(dashboard.impact.emploisMaintenus)}</dd></div>
+                <div><dt>Dirigeantes femmes</dt><dd>{dashboard.kpis.tauxDirigeantesFemmes === null ? 'Indisponible' : `${dashboard.kpis.tauxDirigeantesFemmes.toLocaleString('fr-FR')} %`}</dd></div>
+                <div><dt>Dirigeants jeunes</dt><dd>{dashboard.kpis.tauxDirigeantsJeunes === null ? 'Indisponible' : `${dashboard.kpis.tauxDirigeantsJeunes.toLocaleString('fr-FR')} %`}</dd></div>
+              </dl>
+              <a className={styles.summaryLink} href="#impact">Voir les derniers suivis</a>
+            </article>
           </section>
 
           <DirectionTerritoryPanel
@@ -287,11 +330,11 @@ export default function DirectionDashboardPage() {
               </div>
             </article>
             <article className="panel impact-panel">
-              <div className="panel-heading"><div><p className="eyebrow">Synthèse financière</p><h3>Position du portefeuille</h3></div></div>
-              <div className={styles.secondaryMetric}><span>Montant accordé</span><strong>{formatAmount(dashboard.kpis.montantApprouve)} GNF</strong></div>
-              <div className={styles.secondaryMetric}><span>Montant décaissé</span><strong>{formatAmount(dashboard.kpis.montantDecaisse)} GNF</strong></div>
-              <div className={styles.secondaryMetric}><span>Encours</span><strong>{formatAmount(dashboard.kpis.encours)} GNF</strong></div>
-              <div className={styles.secondaryMetric}><span>Impayés</span><strong>{formatAmount(dashboard.kpis.impayes)} GNF</strong></div>
+              <div className="panel-heading"><div><p className="eyebrow">Décisions</p><h3>Flux du portefeuille</h3></div></div>
+              <div className={styles.secondaryMetric}><span>Montant demandé</span><strong>{formatAmount(dashboard.kpis.montantDemande)} GNF</strong></div>
+              <div className={styles.secondaryMetric}><span>Montant remboursé</span><strong>{formatAmount(dashboard.kpis.montantRembourse)} GNF</strong></div>
+              <div className={styles.secondaryMetric}><span>Dossiers approuvés</span><strong>{formatNumber(dashboard.kpis.dossiersApprouves)}</strong></div>
+              <div className={styles.secondaryMetric}><span>Dossiers rejetés</span><strong>{formatNumber(dashboard.kpis.dossiersRejetes)}</strong></div>
             </article>
           </section>
 

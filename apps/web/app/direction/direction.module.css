@@ -1,37 +1,14 @@
 /* Premium Direction cockpit extras, layered on top of ../entrepreneur/portal.module.css. */
 
 .cockpitHeader {
-  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 28px;
   flex-wrap: wrap;
-  margin-bottom: 22px;
-  padding: clamp(22px, 3vw, 32px);
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--green) 15%, var(--line));
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--gold) 13%, transparent), transparent 22rem),
-    radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--green) 10%, transparent), transparent 24rem),
-    var(--surface);
-  box-shadow: var(--shadow-card);
-  transition: transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
-}
-
-.cockpitHeader:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover);
-}
-
-.cockpitHeader::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--green), var(--gold), transparent 76%);
-  opacity: 0.72;
+  margin-bottom: 24px;
+  padding: 0 0 24px;
+  border-bottom: 1px solid var(--line);
 }
 
 .cockpitHeaderMeta {
@@ -108,31 +85,103 @@
   list-style: none;
 }
 
-/* First row = executive moment. Four KPI cards create one deep-green financial band. */
-.kpiGrid {
+.executiveSection {
+  margin: 28px 0 34px;
+}
+
+.executiveHeading {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 15px;
-  margin: 26px 0 30px;
-  padding: 14px;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 26rem),
-    linear-gradient(180deg, var(--primary-800) 0 220px, transparent 220px);
+  grid-template-columns: minmax(0, 0.8fr) minmax(280px, 0.55fr);
+  gap: 28px;
+  align-items: end;
+  margin-bottom: 18px;
 }
 
-.kpiGrid > :global([data-kpi-card]):nth-child(-n+4) {
-  --kpi-surface: color-mix(in srgb, var(--primary-800) 92%, var(--primary-900));
-  --kpi-ink: var(--fodip-ivory);
-  --kpi-muted: color-mix(in srgb, var(--fodip-ivory) 72%, transparent);
-  --kpi-line: color-mix(in srgb, var(--fodip-ivory) 18%, transparent);
-  --kpi-accent: var(--gold);
-  border-color: color-mix(in srgb, var(--fodip-ivory) 12%, transparent);
-  box-shadow: none;
+.executiveHeading h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  letter-spacing: -0.035em;
 }
 
-.kpiGrid > :global([data-kpi-card]):nth-child(-n+4):hover {
-  box-shadow: 0 16px 34px color-mix(in srgb, var(--primary-900) 24%, transparent);
+.executiveHeading > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-body-sm);
+  line-height: 1.6;
+}
+
+.executiveKpiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.operationalSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 34px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.summaryGroup {
+  min-width: 0;
+  padding: 24px 24px 22px 0;
+}
+
+.summaryGroup + .summaryGroup {
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+
+.summaryHeader {
+  margin-bottom: 16px;
+}
+
+.summaryHeader h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  letter-spacing: -0.025em;
+}
+
+.summaryRows {
+  margin: 0;
+}
+
+.summaryRows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 11px 0;
+  border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+}
+
+.summaryRows dt {
+  color: var(--muted);
+  font-size: var(--text-body-sm);
+}
+
+.summaryRows dd {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--text-body-sm);
+  font-weight: 760;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.summaryLink {
+  display: inline-flex;
+  margin-top: 14px;
+  color: var(--green-strong);
+  font-size: var(--text-body-sm);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.summaryLink:hover {
+  text-decoration: underline;
 }
 
 .filterBar {
@@ -313,9 +362,8 @@
 }
 
 @media (max-width: 1120px) {
-  .kpiGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    background: var(--primary-800);
+  .executiveKpiGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .filterBar {
@@ -324,6 +372,26 @@
 }
 
 @media (max-width: 820px) {
+  .executiveHeading,
+  .operationalSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .operationalSummary {
+    border-bottom: 0;
+  }
+
+  .summaryGroup,
+  .summaryGroup + .summaryGroup {
+    padding: 22px 0;
+    border-left: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .executiveKpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .cockpitHeaderMeta {
     align-items: flex-start;
   }
@@ -339,14 +407,11 @@
 
 @media (max-width: 620px) {
   .cockpitHeader {
-    padding: 20px;
-    border-radius: 18px;
+    padding-bottom: 20px;
   }
 
-  .kpiGrid {
+  .executiveKpiGrid {
     grid-template-columns: 1fr;
-    padding: 10px;
-    border-radius: 18px;
   }
 
   .filterBar {
@@ -380,9 +445,12 @@
     background: transparent;
   }
 
-  .kpiGrid {
-    padding: 0;
-    background: transparent;
+  .executiveKpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operationalSummary {
+    display: block;
   }
 }
 
