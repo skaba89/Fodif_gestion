@@ -1,12 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
 import { roleLabel } from '../_shared/displayLabels';
-import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
+import AccountPageHeader from '../_shared/AccountPageHeader';
+import Breadcrumbs from '../_shared/Breadcrumbs';
 import styles from './profile.module.css';
 
 type SessionProfile = {
@@ -30,7 +29,6 @@ function formatRole(role: string) {
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
   const [profile, setProfile] = useState<SessionProfile | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
 
@@ -53,19 +51,14 @@ export default function ProfilePage() {
     return () => controller.abort();
   }, []);
 
-  function goBack() {
-    router.push(resolveRoleHome(profile?.roles ?? []) ?? '/');
-  }
+
+  const homeHref = resolveRoleHome(profile?.roles ?? []) ?? '/';
 
   return (
-    <main className={styles.page}>
-      <div className={styles.container}>
-        <div className={styles.topbar}>
-          <Link href={resolveRoleHome(profile?.roles ?? []) ?? '/'} className={styles.brand} aria-label="FODIP — retour à mon espace">
-            <FodipOfficialBrand subtitle="Profil sécurisé" compact />
-          </Link>
-          <button type="button" className={styles.backButton} onClick={goBack}>Retour à mon espace</button>
-        </div>
+    <div className={styles.page}>
+      <AccountPageHeader homeHref={homeHref} subtitle="Profil sécurisé" />
+      <main className={styles.container}>
+        <Breadcrumbs items={[{ label: 'Mon espace', href: homeHref }, { label: 'Mon profil' }]} />
 
         <section className={styles.hero} aria-labelledby="profile-title">
           <p className={styles.eyebrow}>Compte sécurisé</p>
@@ -126,7 +119,7 @@ export default function ProfilePage() {
             </aside>
           </>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
