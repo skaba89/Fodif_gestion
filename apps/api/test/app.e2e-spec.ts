@@ -9,6 +9,7 @@ describe('FODIP API', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = 'test-secret-that-is-long-enough-for-ci-only-123456789';
+    process.env.FODIP_RELEASE_SHA = 'test-release';
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -19,6 +20,7 @@ describe('FODIP API', () => {
 
   afterAll(async () => {
     await app.close();
+    delete process.env.FODIP_RELEASE_SHA;
   });
 
   it('GET /api/v1/health remains public', async () => {
@@ -30,10 +32,11 @@ describe('FODIP API', () => {
   it('exposes separate public liveness and dependency-aware readiness endpoints', async () => {
     const live = await request(app.getHttpServer()).get('/api/v1/health/live').expect(200);
     expect(live.body.status).toBe('ok');
-    expect(live.body).toMatchObject({ environment: 'UNKNOWN', releaseSha: 'unknown' });
+    expect(live.body).toMatchObject({ environment: 'UNKNOWN', releaseSha: 'test-release' });
 
     const ready = await request(app.getHttpServer()).get('/api/v1/health/ready').expect(503);
     expect(ready.body.status).toBe('unavailable');
+    expect(ready.body).toMatchObject({ environment: 'UNKNOWN', releaseSha: 'test-release' });
     expect(ready.body.checks).toEqual({ database: 'down', objectStorage: 'down' });
   });
 
