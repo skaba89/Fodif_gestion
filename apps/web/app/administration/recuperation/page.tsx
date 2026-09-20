@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Breadcrumbs from '../../_shared/Breadcrumbs';
 import ConfirmDialog from '../../_shared/ConfirmDialog';
 import portal from '../../entrepreneur/portal.module.css';
 
@@ -79,6 +80,7 @@ export default function AccountRecoveryPage() {
 
   return (
     <main className={portal.main}>
+      <Breadcrumbs items={[{ label: 'Administration', href: '/administration/tableau-de-bord' }, { label: 'Récupération comptes' }]} />
       <p className={portal.eyebrow}>Super administration</p>
       <h1 className={portal.title}>Récupération et suppression des comptes</h1>
       <p className={portal.lead}>
