@@ -7,7 +7,6 @@ import {
   INTENTIONAL_LOGOUT_EVENT,
   LOGIN_HREF,
   resolvePortalFromPath,
-  resolveRoleHome,
 } from '../../lib/portal-access';
 import styles from './AccountMenu.module.css';
 
@@ -38,7 +37,6 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
   const pathname = usePathname();
   const loginHref = LOGIN_HREF;
   const [authenticated, setAuthenticated] = useState(false);
-  const [accountHome, setAccountHome] = useState<string | null>(null);
   const intentionalLogout = useRef(false);
   const portal = resolvePortalFromPath(pathname);
 
@@ -60,7 +58,6 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
   const checkSession = useCallback(async () => {
     if (pathname === loginHref) {
       setAuthenticated(false);
-      setAccountHome(null);
       return;
     }
 
@@ -68,17 +65,13 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
       const response = await fetch('/api/session/me', { cache: 'no-store' });
       if (response.ok) {
         const session = (await response.json().catch(() => ({}))) as SessionContext;
-        const roles = session.roles ?? [];
-        const roleHome = resolveRoleHome(roles) ?? null;
-
+        void session.roles;
         intentionalLogout.current = false;
-        setAccountHome(roleHome);
         setAuthenticated(true);
         return;
       }
 
       setAuthenticated(false);
-      setAccountHome(null);
       // Portal authentication and authorization are owned by AppShell. Only shared authenticated
       // pages without a portal shell need AccountMenu to perform the expired-session redirect.
       if (response.status === 401 && !portal) redirectExpiredSession();
@@ -86,7 +79,6 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
       // A network outage is not the same thing as an expired session. Keep the portal mounted and
       // let page-level error handling report connectivity problems instead of forcing logout.
       setAuthenticated(false);
-      setAccountHome(null);
     }
   }, [pathname, loginHref, portal, redirectExpiredSession]);
 
@@ -95,7 +87,6 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
 
     if (pathname === loginHref) {
       setAuthenticated(false);
-      setAccountHome(null);
       return;
     }
 
@@ -119,7 +110,6 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
     intentionalLogout.current = true;
     window.dispatchEvent(new Event(INTENTIONAL_LOGOUT_EVENT));
     setAuthenticated(false);
-    setAccountHome(null);
     await fetch('/api/session/logout', { method: 'POST' });
     router.replace(loginHref);
     router.refresh();
@@ -131,7 +121,6 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
 
   return (
     <div className={styles.actions} aria-label="Actions du compte">
-      {accountHome && <Link className={styles.profileAction} href={accountHome}>Mon espace</Link>}
       <Link className={styles.profileAction} href="/profil">Mon profil</Link>
       <Link className={styles.profileAction} href="/assistance">Assistance</Link>
       <button className={styles.secondaryAction} type="button" onClick={logout}>Déconnexion</button>
