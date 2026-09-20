@@ -1,6 +1,5 @@
-/* Shared portal shell + components, used by every authenticated area (PME, Agent, Comité,
-   Direction, Administration, Notifications) and the login flow. Consumes the design tokens
-   defined in app/globals.css so a palette or radius change there re-themes every portal. */
+/* Shared legacy portal primitives used by several authenticated pages.
+   AppShell owns the application chrome; these classes remain as content-level building blocks. */
 
 .shell {
   min-height: 100vh;
@@ -50,7 +49,7 @@
   width: 38px;
   height: 38px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--accent-300), var(--accent-600));
+  background: var(--gold);
   color: var(--primary-800);
   font-weight: 900;
 }
@@ -135,7 +134,7 @@
 .main {
   width: min(1180px, calc(100% - 36px));
   margin: 0 auto;
-  padding: 36px 0 64px;
+  padding: 28px 0 56px;
 }
 
 .eyebrow {
@@ -149,8 +148,8 @@
 
 .title {
   margin: 0;
-  font-size: clamp(1.8rem, 3vw, 2.7rem);
-  letter-spacing: -0.045em;
+  font-size: clamp(1.7rem, 2.6vw, 2.3rem);
+  letter-spacing: -0.024em;
 }
 
 .lead {
@@ -171,12 +170,12 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 .heroCard {
   padding: 26px;
-  background: linear-gradient(135deg, var(--primary-700), var(--primary-800));
+  background: var(--primary-800);
   color: white;
 }
 
@@ -187,8 +186,8 @@
 
 .heroCard h2 {
   margin: 0 0 10px;
-  font-size: clamp(1.5rem, 3vw, 2.2rem);
-  letter-spacing: -0.04em;
+  font-size: clamp(1.3rem, 2vw, 1.65rem);
+  letter-spacing: -0.018em;
 }
 
 .progress {
@@ -221,7 +220,7 @@
 .quick strong {
   display: block;
   margin-bottom: 6px;
-  font-size: 2rem;
+  font-size: 1.55rem;
 }
 
 .quick small {
@@ -247,7 +246,7 @@
   text-decoration: none;
   font-weight: 750;
   font-size: 0.88rem;
-  transition: filter var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
 }
 
 .primary {
@@ -257,10 +256,6 @@
 
 .primary:hover:not(:disabled) {
   filter: brightness(1.06);
-}
-
-.primary:active:not(:disabled) {
-  transform: translateY(1px);
 }
 
 .primary:disabled {
@@ -278,7 +273,7 @@
 }
 
 .section {
-  margin-top: 30px;
+  margin-top: 26px;
 }
 
 .sectionHeader {
@@ -291,8 +286,8 @@
 
 .sectionHeader h2 {
   margin: 0;
-  font-size: 1.25rem;
-  letter-spacing: -0.025em;
+  font-size: 1.12rem;
+  letter-spacing: -0.016em;
 }
 
 .sectionHeader p {
