@@ -1,18 +1,17 @@
 /*
  * FODIP Digital 2030 — institutional typography and visual rhythm.
  *
- * Public Sans carries long-form and operational content. Bricolage Grotesque is deliberately
- * limited to titles and key figures: enough personality for a national product without reducing
- * clarity in forms, tables or audit-heavy screens.
+ * Public Sans carries both operational content and headings. The hierarchy is intentionally
+ * compact and sober so dense institutional screens remain readable without oversized display text.
  */
 
 :root {
   --type-display: var(--font-sans);
   --type-body-size: 1rem;
-  --type-body-line: 1.62;
-  --type-tight-line: 1.14;
+  --type-body-line: 1.56;
+  --type-tight-line: 1.18;
   --type-measure: 72ch;
-  --page-section-gap: clamp(28px, 4vw, 44px);
+  --page-section-gap: clamp(24px, 3vw, 36px);
 }
 
 html {
@@ -102,26 +101,26 @@ body {
 }
 
 #main-content h1 {
-  max-width: 22ch;
+  max-width: 30ch;
   margin-bottom: 0;
   font-size: var(--type-display-xl);
-  font-weight: 760;
+  font-weight: 720;
   line-height: var(--type-display-line);
   letter-spacing: var(--type-display-tracking);
 }
 
 #main-content h2 {
-  max-width: 32ch;
+  max-width: 40ch;
   font-size: var(--type-display-lg);
   font-weight: 720;
   line-height: var(--type-heading-line);
-  letter-spacing: -0.036em;
+  letter-spacing: -0.018em;
 }
 
 #main-content h3 {
   font-size: var(--type-display-md);
-  font-weight: 680;
-  line-height: 1.24;
+  font-weight: 650;
+  line-height: 1.3;
   letter-spacing: var(--type-heading-tracking);
 }
 
@@ -130,7 +129,7 @@ body {
 }
 
 #main-content :where(p, li, dd) {
-  line-height: 1.62;
+  line-height: 1.56;
 }
 
 #main-content :where(p, li) {
@@ -206,25 +205,25 @@ body {
  * PME, Agent, Comité, Direction, Administration, Auditeur and Partenaire workspaces alike.
  */
 [data-portal-context] #main-content > main > h1 {
-  max-width: 22ch;
+  max-width: 30ch;
   font-size: var(--type-display-xl);
-  font-weight: 760;
+  font-weight: 720;
   line-height: var(--type-display-line);
   letter-spacing: var(--type-display-tracking);
 }
 
 [data-portal-context] #main-content main h2 {
-  max-width: 32ch;
+  max-width: 40ch;
   font-size: var(--type-display-lg);
   font-weight: 720;
   line-height: var(--type-heading-line);
-  letter-spacing: -0.036em;
+  letter-spacing: -0.018em;
 }
 
 [data-portal-context] #main-content main h3 {
   font-size: var(--type-display-md);
-  font-weight: 680;
-  line-height: 1.24;
+  font-weight: 650;
+  line-height: 1.3;
   letter-spacing: var(--type-heading-tracking);
 }
 
@@ -261,11 +260,11 @@ body {
 
 /* Shared top bar and content density. */
 .content {
-  padding-top: clamp(24px, 3vw, 34px);
+  padding-top: clamp(18px, 2vw, 24px);
 }
 
 .topbar {
-  margin-bottom: clamp(22px, 3vw, 32px);
+  margin-bottom: clamp(16px, 2vw, 22px);
 }
 
 .topbar-actions {
@@ -297,13 +296,13 @@ body {
 @media (max-width: 900px) {
   #main-content h1,
   [data-portal-context] #main-content > main > h1 {
-    max-width: 30ch;
-    font-size: clamp(1.95rem, 6vw, 2.8rem);
+    max-width: 34ch;
+    font-size: clamp(1.8rem, 4.8vw, 2.3rem);
   }
 
   #main-content h2,
   [data-portal-context] #main-content main h2 {
-    font-size: clamp(1.22rem, 4vw, 1.55rem);
+    font-size: clamp(1.18rem, 3vw, 1.42rem);
   }
 }
 
@@ -313,7 +312,7 @@ body {
   }
 
   .content {
-    padding-top: 20px;
+    padding-top: 16px;
   }
 
   #main-content {
@@ -322,14 +321,14 @@ body {
 
   #main-content h1,
   [data-portal-context] #main-content > main > h1 {
-    font-size: clamp(1.9rem, 9vw, 2.45rem);
-    line-height: 1.06;
-    letter-spacing: -0.042em;
+    font-size: clamp(1.7rem, 7vw, 2.1rem);
+    line-height: 1.12;
+    letter-spacing: -0.024em;
   }
 
   #main-content h2,
   [data-portal-context] #main-content main h2 {
-    line-height: 1.24;
+    line-height: 1.28;
   }
 
   #main-content main > section + section,

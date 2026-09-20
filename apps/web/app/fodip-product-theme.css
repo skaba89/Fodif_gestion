@@ -61,30 +61,30 @@
   --danger-soft: #fbecec;
 
   /* Public Sans stays the body family; Bricolage is a high-contrast display accent only. */
-  --font-display: var(--font-bricolage), var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-public-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --type-display: var(--font-display);
 
   /* A restrained editorial scale: large enough for executive reading, compact enough for data. */
-  --type-display-xl: clamp(2.15rem, 4.35vw, 3.75rem);
-  --type-display-lg: clamp(1.55rem, 2.65vw, 2.25rem);
-  --type-display-md: clamp(1.12rem, 1.6vw, 1.35rem);
-  --type-display-line: 1.04;
-  --type-heading-line: 1.16;
-  --type-display-tracking: -0.048em;
-  --type-heading-tracking: -0.026em;
+  --type-display-xl: clamp(1.9rem, 3vw, 2.6rem);
+  --type-display-lg: clamp(1.3rem, 2vw, 1.7rem);
+  --type-display-md: clamp(1.02rem, 1.25vw, 1.18rem);
+  --type-display-line: 1.1;
+  --type-heading-line: 1.22;
+  --type-display-tracking: -0.026em;
+  --type-heading-tracking: -0.014em;
 
   --text-caption: 0.7rem;
   --text-body-sm: 0.8rem;
   --text-body: 0.94rem;
-  --kpi-size: clamp(2.2rem, 3vw, 3rem);
+  --kpi-size: clamp(1.65rem, 2.2vw, 2.15rem);
 
   --duration-fast: 220ms;
   --duration-count: 800ms;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --focus-ring: 0 0 0 3px rgba(22, 163, 74, 0.28);
-  --shadow-card: var(--shadow-sm);
-  --shadow-card-hover: var(--shadow-md);
+  --shadow-card: none;
+  --shadow-card-hover: var(--shadow-sm);
 }
 
 :root[data-theme='dark'] {

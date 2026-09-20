@@ -63,7 +63,7 @@
   align-items: start;
   width: min(1280px, calc(100% - 40px));
   margin: 0 auto;
-  padding: clamp(56px, 7vw, 92px) 0 clamp(48px, 6vw, 72px);
+  padding: clamp(44px, 5vw, 64px) 0 clamp(36px, 4vw, 52px);
 }
 
 .heroCopy {
@@ -84,9 +84,9 @@
 .title {
   max-width: 18ch;
   margin: 0;
-  font-size: clamp(2.25rem, 4.8vw, 3.9rem);
-  line-height: 1.02;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.028em;
   text-wrap: balance;
 }
 
@@ -94,8 +94,8 @@
   max-width: 68ch;
   margin: 24px 0 0;
   color: var(--muted);
-  font-size: clamp(1rem, 1.25vw, 1.12rem);
-  line-height: 1.68;
+  font-size: clamp(0.96rem, 1.05vw, 1.04rem);
+  line-height: 1.6;
 }
 
 .heroActions {
@@ -141,9 +141,9 @@
 .sectionHeader h2,
 .trustIntro h2 {
   margin: 0;
-  font-size: clamp(1.55rem, 2.5vw, 2.2rem);
-  line-height: 1.15;
-  letter-spacing: -0.035em;
+  font-size: clamp(1.22rem, 1.6vw, 1.5rem);
+  line-height: 1.24;
+  letter-spacing: -0.018em;
 }
 
 .cycleList {
@@ -187,14 +187,14 @@
 .trustSection {
   width: min(1280px, calc(100% - 40px));
   margin: 0 auto;
-  padding: clamp(48px, 6vw, 72px) 0;
+  padding: clamp(36px, 4vw, 52px) 0;
   border-top: 1px solid var(--line);
 }
 
 .sectionHeader {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(300px, 0.62fr);
-  gap: clamp(28px, 5vw, 70px);
+  gap: clamp(24px, 4vw, 52px);
   align-items: end;
 }
 
@@ -322,7 +322,7 @@
   }
 
   .hero {
-    gap: 40px;
+    gap: 30px;
   }
 
   .cyclePanel {
@@ -358,12 +358,12 @@
   }
 
   .hero {
-    padding-top: 44px;
+    padding-top: 34px;
   }
 
   .title {
     max-width: none;
-    font-size: clamp(2rem, 10vw, 2.9rem);
+    font-size: clamp(1.72rem, 7vw, 2.1rem);
   }
 
   .heroActions {
