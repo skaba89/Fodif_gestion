@@ -72,7 +72,8 @@
   font-family: var(--font-sans);
   font-size: 0.94rem;
   font-weight: 750;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .nav {
@@ -96,7 +97,8 @@
   font-size: 0.82rem;
   font-weight: 650;
   text-decoration: none;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
   transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
 }
 
@@ -130,27 +132,12 @@
 .sidebarMeta {
   min-width: 0;
   display: grid;
-  gap: 10px;
+  gap: 5px;
   margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.secureStatus {
-  min-width: 0;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0 11px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.045);
-  font-size: 0.7rem;
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-
-.secureDot,
 .connectionDot {
   width: 8px;
   height: 8px;
@@ -162,10 +149,16 @@
 
 .sidebarAccount {
   min-width: 0;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.055);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  --account-link-color: rgba(255, 255, 255, 0.78);
+  --account-link-hover-bg: rgba(255, 255, 255, 0.08);
+  --account-link-hover-color: #ffffff;
+  --account-secondary-color: rgba(255, 255, 255, 0.58);
+  --account-secondary-hover-bg: rgba(255, 255, 255, 0.07);
+  --account-secondary-hover-color: #ffffff;
+  --account-divider: rgba(255, 255, 255, 0.11);
 }
 
 .workspace {
@@ -400,7 +393,8 @@
   font-size: 0.86rem;
   font-weight: 680;
   text-decoration: none;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .drawerNavItemActive {
@@ -420,11 +414,49 @@
   margin-top: 22px;
   padding-top: 18px;
   border-top: 1px solid var(--line);
+  --account-link-color: var(--ink);
+  --account-link-hover-bg: var(--surface-soft);
+  --account-link-hover-color: var(--green-strong);
+  --account-secondary-color: var(--muted);
+  --account-secondary-hover-bg: var(--surface-soft);
+  --account-secondary-hover-color: var(--ink);
+  --account-divider: var(--line);
 }
 
 @keyframes contentIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+
+@media (max-height: 720px) and (min-width: 961px) {
+  .sidebar {
+    gap: 10px;
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+
+  .sidebarBrand {
+    padding-bottom: 12px;
+  }
+
+  .portalContext {
+    gap: 1px;
+  }
+
+  .nav {
+    gap: 1px;
+  }
+
+  .navItem,
+  .navItemActive {
+    min-height: 38px;
+  }
+
+  .sidebarMeta {
+    gap: 2px;
+    padding-top: 8px;
+  }
 }
 
 @media (max-width: 1020px) {
@@ -520,7 +552,8 @@
     line-height: 1.1;
     text-align: center;
     text-decoration: none;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   .bottomItemActive {
@@ -549,7 +582,7 @@
   .bottomItem,
   .bottomItemActive,
   .bottomMore {
-    font-size: 0.62rem;
+    font-size: 0.64rem;
   }
 }
 

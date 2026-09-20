@@ -2,65 +2,61 @@
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 2px;
 }
 
 .profileAction,
 .secondaryAction {
   width: 100%;
   min-width: 0;
-  display: inline-flex;
+  min-height: 38px;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 7px 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
-  border-radius: 8px;
+  justify-content: flex-start;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--account-link-color, var(--ink));
   font: inherit;
   font-size: 0.76rem;
-  font-weight: 780;
-  line-height: 1.15;
-  text-align: center;
+  font-weight: 680;
+  line-height: 1.2;
+  text-align: left;
   text-decoration: none;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   cursor: pointer;
-  /* Theme tokens change synchronously. Do not interpolate foreground/background between the light
-     and dark palettes: an intermediate color can momentarily fall below WCAG AA contrast. Keep
-     only non-color affordances animated. */
-  transition: border-color var(--duration-fast) var(--ease);
-}
-
-.profileAction {
-  border-color: color-mix(in srgb, var(--green) 24%, var(--line));
-  background: color-mix(in srgb, var(--green-soft) 72%, var(--surface));
-  color: var(--green-strong);
-}
-
-.secondaryAction {
-  background: color-mix(in srgb, var(--surface) 95%, transparent);
-  color: var(--muted);
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .profileAction:hover,
-.secondaryAction:hover {
-  border-color: color-mix(in srgb, var(--green) 45%, var(--line));
-  color: var(--green-strong);
+.profileAction:focus-visible {
+  background: var(--account-link-hover-bg, var(--surface-soft));
+  color: var(--account-link-hover-color, var(--green-strong));
+}
 
+.secondaryAction {
+  min-height: 40px;
+  margin-top: 7px;
+  padding-top: 8px;
+  border-top: 1px solid var(--account-divider, var(--line));
+  border-radius: 0 0 6px 6px;
+  color: var(--account-secondary-color, var(--muted));
+}
+
+.secondaryAction:hover,
+.secondaryAction:focus-visible {
+  background: var(--account-secondary-hover-bg, var(--surface-soft));
+  color: var(--account-secondary-hover-color, var(--ink));
 }
 
 .profileAction:focus-visible,
 .secondaryAction:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-}
-
-@media (max-width: 360px) {
-  .actions {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
