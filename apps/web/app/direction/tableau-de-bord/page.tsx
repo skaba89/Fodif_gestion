@@ -6,6 +6,7 @@ import Link from 'next/link';
 import KpiCard, { KpiTrend } from '../../_shared/KpiCard';
 import ExecutiveAlert, { ExecutiveAlertData } from '../../_shared/ExecutiveAlert';
 import { DownloadIcon, RefreshIcon } from '../../_shared/Icons';
+import { humanizeCode } from '../../_shared/displayLabels';
 import DirectionTerritoryPanel from '../DirectionTerritoryPanel';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from '../direction.module.css';
@@ -325,7 +326,7 @@ export default function DirectionDashboardPage() {
               <div className="pipeline-total"><strong>{formatNumber(dashboard.kpis.dossiersActifs)}</strong><span>dossiers actifs</span></div>
               <div className="pipeline-list">
                 {dashboard.pipeline.map((item) => (
-                  <div className="pipeline-row" key={item.statut}><span>{statusLabels[item.statut] ?? item.statut}</span><strong>{item.total}</strong></div>
+                  <div className="pipeline-row" key={item.statut}><span>{statusLabels[item.statut] ?? humanizeCode(item.statut)}</span><strong>{item.total}</strong></div>
                 ))}
               </div>
             </article>
@@ -399,7 +400,7 @@ export default function DirectionDashboardPage() {
                         <td><strong>{item.numeroDossier}</strong></td>
                         <td>{item.raisonSociale}</td>
                         <td>{item.region}</td>
-                        <td><span className="status-pill">{statusLabels[item.statut] ?? item.statut}</span></td>
+                        <td><span className="status-pill">{statusLabels[item.statut] ?? humanizeCode(item.statut)}</span></td>
                         <td>{item.scoreTotal ?? '—'}</td>
                         <td>{formatAmount(item.montantDemande)} GNF</td>
                       </tr>
