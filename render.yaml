@@ -92,6 +92,8 @@ services:
       - key: SESSION_COOKIE_MAX_AGE_SECONDS
         value: "900"
       - key: DEMO_MODE
-        value: "true"
+        # Hosted qualification uses the real API and database. Synthetic fixtures remain
+        # restricted to local/CI environments and must never be presented by this service.
+        value: "false"
       - key: API_BASE_URL
         sync: false # the api service's public URL - see docs/15 étape 3

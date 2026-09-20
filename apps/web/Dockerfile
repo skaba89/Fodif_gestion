@@ -63,8 +63,8 @@ COPY --chown=node:node --from=build /app/apps/web/next.config.ts ./next.config.t
 # `next start` from that stripped directory.
 COPY --chown=node:node --from=build /app/deploy/public ./public
 # Startup policy is kept outside the Docker CMD so it can fail closed before Next.js starts when
-# a PPD/PROD deployment is accidentally configured with DEMO_MODE=true. The qualification
-# environment remains allowed to show its explicit synthetic-data banner.
+# a PPD/PROD deployment is accidentally configured with DEMO_MODE=true. Hosted qualification also
+# disables it in render.yaml; synthetic-data mode is restricted to local/CI use.
 COPY --chown=node:node --from=build /app/apps/web/scripts/start-web.sh ./scripts/start-web.sh
 USER node
 EXPOSE 3000
