@@ -1,0 +1,106 @@
+# FODIP national production Blueprint.
+#
+# This file intentionally creates resources distinct from render.yaml (qualification). Database,
+# object-storage and identity-provider credentials must come from dedicated production resources;
+# never copy qualification values into this environment.
+
+services:
+  - type: web
+    name: fodip-api-prod
+    runtime: docker
+    plan: standard
+    region: frankfurt
+    branch: main
+    numInstances: 2
+    maxShutdownDelaySeconds: 120
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    dockerCommand: /bin/bash scripts/start-render.sh
+    healthCheckPath: /api/v1/health/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: PROD
+      - key: DATABASE_URL
+        sync: false # dedicated production pooled connection string
+      - key: DATABASE_URL_UNPOOLED
+        sync: false # dedicated production direct connection string
+      - key: DATABASE_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: METRICS_TOKEN
+        generateValue: true
+      - key: PII_ENCRYPTION_KEY
+        generateValue: true
+      - key: MFA_SECRET_ENCRYPTION_KEY
+        generateValue: true
+      - key: MFA_CHALLENGE_SECRET
+        generateValue: true
+      - key: OIDC_FLOW_SECRET
+        generateValue: true
+      - key: OIDC_DELIVERY_SECRET
+        generateValue: true
+      - key: JWT_ISSUER
+        value: fodip-digital-2030
+      - key: JWT_AUDIENCE
+        value: fodip-web
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: WEB_BASE_URL
+        sync: false # final HTTPS institutional domain
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_REGION
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: STORAGE_ACCESS_KEY
+        sync: false
+      - key: STORAGE_SECRET_KEY
+        sync: false
+      - key: CLAMAV_HOST
+        sync: false # production/private ClamAV endpoint; uploads fail closed if unavailable
+      - key: CLAMAV_PORT
+        value: "3310"
+      - key: OIDC_ISSUER_URL
+        sync: false
+      - key: OIDC_CLIENT_ID
+        sync: false
+      - key: OIDC_CLIENT_SECRET
+        sync: false
+      - key: OIDC_REDIRECT_URI
+        sync: false
+
+  - type: web
+    name: fodip-web-prod
+    runtime: docker
+    plan: standard
+    region: frankfurt
+    branch: main
+    numInstances: 2
+    maxShutdownDelaySeconds: 120
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: PROD
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: SESSION_COOKIE_MAX_AGE_SECONDS
+        value: "900"
+      - key: DEMO_MODE
+        value: "false"
+      - key: API_BASE_URL
+        sync: false # production API URL or private service endpoint
+
+previews:
+  generation: "off"
