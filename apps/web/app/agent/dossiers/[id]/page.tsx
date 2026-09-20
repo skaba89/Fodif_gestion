@@ -147,6 +147,7 @@ export default function AgentDossierPage({ params }: { params: Promise<{ id: str
   const canInstruct = Boolean(dossier.agentResponsableId);
 
   return <main className={portal.main}>
+    <Breadcrumbs items={[{ label: 'Agent', href: '/agent/tableau-de-bord' }, { label: 'Dossiers', href: '/agent/dossiers' }, { label: dossier.numeroDossier }]} />
     <header className={workspace.header}>
       <div className={workspace.headerMain}>
         <p className={portal.eyebrow}>Poste d’instruction</p>
