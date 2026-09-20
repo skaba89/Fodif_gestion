@@ -12,6 +12,16 @@ test.describe('Espace Administration institutionnel', () => {
     await expect(page.getByRole('heading', { name: 'Tableau de bord Administration' })).toBeVisible();
     await expect(page.getByText('Comptes actifs', { exact: true })).toBeVisible();
 
+    const workspaceWidth = await page.locator('#main-content > main').evaluate((main) => {
+      const parent = main.parentElement;
+      return {
+        main: main.getBoundingClientRect().width,
+        parent: parent?.getBoundingClientRect().width ?? 0,
+      };
+    });
+    const expectedWorkspaceWidth = Math.min(Math.max(0, workspaceWidth.parent - 48), 1520);
+    expect(workspaceWidth.main, 'Administration should use the available desktop workspace width').toBeGreaterThanOrEqual(expectedWorkspaceWidth - 2);
+
     const email = `qualification-admin-workspace-${Date.now()}@fodip.local`;
     const created = await page.request.post('/api/administration/users', { data: {
       email, nom: 'Qualification', prenom: 'Administration', password: 'Qualification2026!', roles: ['ANALYSTE'],
@@ -24,6 +34,13 @@ test.describe('Espace Administration institutionnel', () => {
       await page.getByLabel('Rechercher un compte').fill(email);
       const row = page.getByRole('row', { name: new RegExp(email) });
       await expect(row).toContainText('Jamais connecté');
+
+      const accountTableRegion = page.getByRole('region', { name: 'Tableau, défilement horizontal sur petit écran' });
+      const tableOverflow = await accountTableRegion.evaluate((region) => ({
+        clientWidth: region.clientWidth,
+        scrollWidth: region.scrollWidth,
+      }));
+      expect(tableOverflow.scrollWidth, 'Desktop account governance table should fit without persistent horizontal scrolling').toBeLessThanOrEqual(tableOverflow.clientWidth + 1);
 
       await page.goto('/administration/journal');
       await page.getByLabel('Action', { exact: true }).selectOption('CREATE_USER');
