@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import Breadcrumbs from '../../_shared/Breadcrumbs';
 import ConfirmDialog from '../../_shared/ConfirmDialog';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from './administration.module.css';
@@ -129,6 +130,7 @@ export default function UsersAdministrationPage() {
   const mfaUsers = users.filter((user) => user.mfaRequired).length;
 
   return <main className={`${portal.main} ${styles.adminPage}`}>
+    <Breadcrumbs items={[{ label: 'Administration', href: '/administration/tableau-de-bord' }, { label: 'Utilisateurs et rôles' }]} />
     <div className={styles.pageHeader}>
       <div className={styles.headerCopy}>
         <p className={portal.eyebrow}>Super administration</p>
