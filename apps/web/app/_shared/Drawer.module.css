@@ -23,25 +23,22 @@
   flex-direction: column;
   width: min(390px, 94vw);
   height: 100%;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(229, 182, 56, 0.09), transparent 22rem),
-    radial-gradient(circle at 100% 100%, rgba(15, 107, 69, 0.08), transparent 24rem),
-    color-mix(in srgb, var(--surface) 98%, transparent);
-  box-shadow: 0 0 80px rgba(5, 23, 15, 0.24);
+  background: var(--surface);
+  box-shadow: 0 0 28px rgba(5, 23, 15, 0.16);
   animation: slide-in-right 220ms var(--ease, ease-out);
 }
 
 .panelRight {
   margin-left: auto;
   border-left: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  box-shadow: -24px 0 80px rgba(5, 23, 15, 0.24);
+  box-shadow: -8px 0 24px rgba(5, 23, 15, 0.14);
 }
 
 .panelLeft {
   margin-right: auto;
   border-right: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   animation-name: slide-in-left;
-  box-shadow: 24px 0 80px rgba(5, 23, 15, 0.24);
+  box-shadow: 8px 0 24px rgba(5, 23, 15, 0.14);
 }
 
 /* Keep the drawer text fully opaque throughout its entrance. Animating the parent opacity makes
@@ -82,28 +79,23 @@
   width: 42px;
   height: 42px;
   border: 1px solid color-mix(in srgb, var(--line) 92%, transparent);
-  border-radius: 12px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 95%, transparent);
   color: var(--ink);
-  box-shadow: 0 5px 16px rgba(20, 35, 27, 0.04);
+
   cursor: pointer;
-  transition:
-    border-color var(--duration-fast) var(--ease),
-    background var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease),
-    transform var(--duration-fast) var(--ease);
+  transition: border-color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
 }
 
 .closeButton:hover {
   border-color: color-mix(in srgb, var(--green) 46%, var(--line));
   background: color-mix(in srgb, var(--green-soft) 42%, var(--surface));
-  box-shadow: 0 8px 20px rgba(15, 107, 69, 0.08);
-  transform: translateY(-1px);
+
 }
 
 .closeButton:focus-visible {
   outline: none;
-  box-shadow: var(--focus-ring), 0 8px 20px rgba(15, 107, 69, 0.08);
+  box-shadow: var(--focus-ring);
 }
 
 .panelBody {
