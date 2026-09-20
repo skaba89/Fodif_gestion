@@ -27,7 +27,7 @@
   [data-portal-context="Partenaire bancaire"]
 ) #main-content > main {
   position: relative;
-  width: min(1180px, calc(100% - clamp(24px, 4vw, 52px)));
+  width: min(1440px, calc(100% - clamp(32px, 4vw, 56px)));
   padding-top: clamp(22px, 3vw, 32px);
   padding-bottom: clamp(48px, 6vw, 72px);
 }
@@ -329,7 +329,7 @@
     [data-portal-context="Auditeur"],
     [data-portal-context="Partenaire bancaire"]
   ) #main-content > main {
-    width: min(100% - 24px, 1240px);
+    width: min(100% - 24px, 1440px);
     padding-top: 20px;
     padding-bottom: 52px;
   }
@@ -373,7 +373,7 @@
     [data-portal-context="Auditeur"],
     [data-portal-context="Partenaire bancaire"]
   ) #main-content > main {
-    width: min(100% - 20px, 1240px);
+    width: min(100% - 20px, 1440px);
   }
 
   :is(
