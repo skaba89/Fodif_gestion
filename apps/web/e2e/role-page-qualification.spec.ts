@@ -168,20 +168,40 @@ async function login(page: Page, roleCase: RoleCase) {
   await expect(page).toHaveURL(pathPattern(roleCase.home));
 }
 
+async function expectAccountPageVisuals(page: Page, routeLabel: string) {
+  const headings = page.getByRole('heading', { level: 1 });
+  await expect(headings.first()).toBeVisible();
+  await expect(headings, `${routeLabel} must expose one clear page title`).toHaveCount(1);
+
+  const visual = await headings.first().evaluate((heading) => {
+    const style = window.getComputedStyle(heading);
+    const main = heading.closest('main');
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      mainWidth: main?.getBoundingClientRect().width ?? 0,
+      viewportWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+
+  const maxTitleSize = visual.viewportWidth <= 620 ? 34 : 42;
+  expect(
+    visual.fontSize,
+    `${routeLabel} H1 is too large for the institutional hierarchy (${visual.fontSize}px > ${maxTitleSize}px)`,
+  ).toBeLessThanOrEqual(maxTitleSize);
+  expect(visual.mainWidth, `${routeLabel} main content must stay inside the viewport`).toBeLessThanOrEqual(visual.viewportWidth + 1);
+  expect(
+    visual.scrollWidth,
+    `${routeLabel} must not create page-level horizontal overflow (${visual.scrollWidth}px > ${visual.viewportWidth}px)`,
+  ).toBeLessThanOrEqual(visual.viewportWidth + 1);
+}
+
 async function expectHealthyPage(page: Page, route: RouteCase, apiErrors: string[]) {
   const before = apiErrors.length;
   await page.goto(route.sample);
   await expect(page).toHaveURL(pathPattern(route.expected ?? route.sample));
-  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
 
-  const viewport = await page.evaluate(() => ({
-    clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }));
-  expect(
-    viewport.scrollWidth,
-    `${route.sample} must not create page-level horizontal overflow (${viewport.scrollWidth}px > ${viewport.clientWidth}px)`,
-  ).toBeLessThanOrEqual(viewport.clientWidth + 1);
+  await expectAccountPageVisuals(page, route.sample);
 
   expect(apiErrors.slice(before), `${route.sample} returned failing API responses`).toEqual([]);
 }
@@ -282,17 +302,20 @@ test.describe('Exhaustive route and role qualification', () => {
       await expect(page.getByRole('heading', { name: 'Mon profil' })).toBeVisible();
       await expect(page.getByTestId('profile-email')).toHaveText(roleCase.email);
       await expect(page.getByTestId('profile-roles')).toContainText(roleCase.roleLabel);
+      await expectAccountPageVisuals(page, '/profil');
 
       if (roleCase.canReadNotifications !== false) {
         await page.goto('/notifications');
         await expect(page).toHaveURL(/\/notifications$/);
         await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+        await expectAccountPageVisuals(page, '/notifications');
       }
 
       if (!isMobileQualification) {
         await page.goto('/mes-donnees');
         await expect(page).toHaveURL(/\/mes-donnees$/);
         await expect(page.getByRole('heading', { name: 'Mes données personnelles' })).toBeVisible();
+        await expectAccountPageVisuals(page, '/mes-donnees');
       }
 
       expect(apiErrors, `${roleCase.role} must not receive failing API responses on authorized/shared pages`).toEqual([]);
