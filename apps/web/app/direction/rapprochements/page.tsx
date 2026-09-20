@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import Breadcrumbs from '../../_shared/Breadcrumbs';
 import Pagination from '../../_shared/Pagination';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from '../../agent/agent.module.css';
@@ -102,6 +103,7 @@ export default function BankReconciliationsPage() {
   }
 
   return <main className={portal.main}>
+    <Breadcrumbs items={[{ label: 'Direction', href: '/direction/tableau-de-bord' }, { label: 'Rapprochement' }]} />
     <p className={portal.eyebrow}>Intégrité financière</p>
     <h1 className={portal.title}>Rapprochement bancaire</h1>
     <p className={portal.lead}>Contrôlez que chaque décaissement et remboursement enregistré dans FODIP correspond à un mouvement réellement constaté par la banque partenaire.</p>
