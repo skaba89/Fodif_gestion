@@ -130,24 +130,26 @@
 .sidebarMeta {
   min-width: 0;
   display: grid;
-  gap: 10px;
+  gap: 5px;
   margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .secureStatus {
   min-width: 0;
-  min-height: 40px;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 0 11px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.045);
-  font-size: 0.7rem;
+  gap: 8px;
+  padding: 0 8px 7px;
+  border: 0;
+  color: rgba(255, 255, 255, 0.58);
+  background: transparent;
+  font-size: 0.65rem;
   font-weight: 650;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .secureDot,
@@ -162,10 +164,16 @@
 
 .sidebarAccount {
   min-width: 0;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.055);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  --account-link-color: rgba(255, 255, 255, 0.78);
+  --account-link-hover-bg: rgba(255, 255, 255, 0.08);
+  --account-link-hover-color: #ffffff;
+  --account-secondary-color: rgba(255, 255, 255, 0.58);
+  --account-secondary-hover-bg: rgba(255, 255, 255, 0.07);
+  --account-secondary-hover-color: #ffffff;
+  --account-divider: rgba(255, 255, 255, 0.11);
 }
 
 .workspace {
@@ -420,6 +428,13 @@
   margin-top: 22px;
   padding-top: 18px;
   border-top: 1px solid var(--line);
+  --account-link-color: var(--ink);
+  --account-link-hover-bg: var(--surface-soft);
+  --account-link-hover-color: var(--green-strong);
+  --account-secondary-color: var(--muted);
+  --account-secondary-hover-bg: var(--surface-soft);
+  --account-secondary-hover-color: var(--ink);
+  --account-divider: var(--line);
 }
 
 @keyframes contentIn {
