@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, use, useCallback, useEffect, useState } from 'react';
+import Breadcrumbs from '../../../_shared/Breadcrumbs';
 import portal from '../../../entrepreneur/portal.module.css';
 import styles from '../../../agent/agent.module.css';
 
@@ -111,6 +112,7 @@ export default function FinancingDetailPage({ params }: { params: Promise<{ id: 
   const openInstallments = financing.installments.filter((item) => item.resteAPayer > 0);
 
   return <main className={portal.main}>
+    <Breadcrumbs items={[{ label: 'Direction', href: '/direction/tableau-de-bord' }, { label: 'Financements', href: '/direction/financements' }, { label: financing.numeroFinancement }]} />
     <p className={portal.eyebrow}>Cycle post-comité</p><h1 className={portal.title}>{financing.numeroFinancement}</h1>
     <p className={portal.lead}>{financing.raisonSociale} · {financing.numeroDossier} · <span className={portal.pill}>{financing.statut}</span></p>
     <div className={portal.buttonRow}><Link className={portal.secondary} href="/direction/financements">Retour aux financements</Link><Link className={portal.secondary} href="/direction/tableau-de-bord">Cockpit</Link></div>
