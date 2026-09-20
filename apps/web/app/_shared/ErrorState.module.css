@@ -3,11 +3,11 @@
   justify-items: center;
   gap: 10px;
   width: min(560px, calc(100% - 36px));
-  margin: 60px auto;
-  padding: 32px;
+  margin: 42px auto;
+  padding: 24px;
   text-align: center;
   border: 1px solid var(--danger);
-  border-radius: var(--radius-lg);
+  border-radius: 10px;
   background: var(--danger-soft);
   color: var(--danger-strong);
 }

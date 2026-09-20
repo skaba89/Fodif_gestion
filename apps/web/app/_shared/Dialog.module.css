@@ -21,10 +21,10 @@
   max-height: min(86vh, 46rem);
   overflow: auto;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: 12px;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .header {
@@ -54,7 +54,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   background: var(--surface);
   color: var(--ink);
   font-size: 1.2rem;
@@ -86,7 +86,7 @@
   .panel {
     width: 100%;
     max-height: 90vh;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: 12px 12px 0 0;
   }
 
   .footer > * {
