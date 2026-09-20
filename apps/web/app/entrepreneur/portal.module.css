@@ -131,8 +131,8 @@
   font-weight: 800;
 }
 
-.main {
-  width: min(1180px, calc(100% - 36px));
+ .main {
+  width: min(1360px, calc(100% - 40px));
   margin: 0 auto;
   padding: 28px 0 56px;
 }
@@ -797,7 +797,7 @@
      320px-wide Drawer below it (also plenty of room for an email address). */
 
   .main {
-    width: min(100% - 24px, 1180px);
+    width: min(100% - 24px, 1360px);
     padding-top: 24px;
   }
 
