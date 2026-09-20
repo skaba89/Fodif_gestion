@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, use, useCallback, useEffect, useState } from 'react';
+import { humanizeCode } from '../../../_shared/displayLabels';
 import portal from '../../../entrepreneur/portal.module.css';
 import styles from '../../../agent/agent.module.css';
 
@@ -116,6 +117,6 @@ export default function PartnerFinancingDetailPage({ params }: { params: Promise
       </div><div className={portal.buttonRow}><button className={portal.primary}>Déclarer le remboursement</button></div></form> : <p className={portal.lead}>Toutes les échéances sont soldées.</p>}
     </section>
 
-    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran"><div className={portal.formCard}><h2>Échéancier</h2></div><table className={portal.table}><thead><tr><th>N°</th><th>Échéance</th><th>Total</th><th>Payé</th><th>Reste</th><th>Statut</th></tr></thead><tbody>{financing.installments.map((item) => <tr key={item.id}><td>{item.numeroEcheance}</td><td>{displayDate(item.dateEcheance)}</td><td>{amount(item.montantTotalDu)}</td><td>{amount(item.montantPaye)}</td><td>{amount(item.resteAPayer)}</td><td><span className={portal.pill}>{item.statut}</span></td></tr>)}</tbody></table></section>
+    <section className={`${portal.card} ${portal.tableCard} ${portal.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran"><div className={portal.formCard}><h2>Échéancier</h2></div><table className={portal.table}><thead><tr><th>N°</th><th>Échéance</th><th>Total</th><th>Payé</th><th>Reste</th><th>Statut</th></tr></thead><tbody>{financing.installments.map((item) => <tr key={item.id}><td>{item.numeroEcheance}</td><td>{displayDate(item.dateEcheance)}</td><td>{amount(item.montantTotalDu)}</td><td>{amount(item.montantPaye)}</td><td>{amount(item.resteAPayer)}</td><td><span className={portal.pill}>{humanizeCode(item.statut)}</span></td></tr>)}</tbody></table></section>
   </main>;
 }
