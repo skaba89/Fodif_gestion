@@ -83,7 +83,7 @@ export default function AccountRecoveryPage() {
       <p className={portal.eyebrow}>Super administration</p>
       <h1 className={portal.title}>Récupération et suppression des comptes</h1>
       <p className={portal.lead}>
-        Réinitialisez un mot de passe sans connaître l’ancien, ou supprimez définitivement l’accès d’un utilisateur par anonymisation contrôlée. Les opérations sont réservées aux SUPER_ADMIN et journalisées.
+        Réinitialisez un mot de passe sans connaître l’ancien, ou supprimez définitivement l’accès d’un utilisateur par anonymisation contrôlée. Les opérations sont réservées aux super administrateurs et journalisées.
       </p>
 
       {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
@@ -150,7 +150,7 @@ export default function AccountRecoveryPage() {
       <ConfirmDialog
         open={Boolean(pendingDelete)}
         title="Supprimer définitivement cet accès ?"
-        message={pendingDelete ? `Le compte ${pendingDelete.email} sera désactivé et anonymisé. Cette action est irréversible. La suppression de votre propre compte et du dernier SUPER_ADMIN reste interdite.` : ''}
+        message={pendingDelete ? `Le compte ${pendingDelete.email} sera désactivé et anonymisé. Cette action est irréversible. La suppression de votre propre compte et du dernier super administrateur reste interdite.` : ''}
         confirmLabel="Supprimer l’accès"
         danger
         onConfirm={() => { const user = pendingDelete; setPendingDelete(null); if (user) void deleteAccess(user); }}
