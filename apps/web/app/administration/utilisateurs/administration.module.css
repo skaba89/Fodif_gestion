@@ -244,7 +244,17 @@
 .accountActions {
   display: grid;
   gap: 6px;
-  min-width: 126px;
+  min-width: 110px;
+}
+
+
+.usersSection th,
+.usersSection td {
+  padding-inline: 10px;
+}
+
+.usersSection td:nth-child(2) {
+  min-width: 112px;
 }
 
 .usersSection th {
@@ -262,7 +272,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  min-width: 180px;
+  min-width: 160px;
 }
 
 .userAvatar {
@@ -287,18 +297,20 @@
 
 .userEmail {
   display: block;
+  max-width: 190px;
   margin-top: 3px;
   color: var(--muted);
   font-size: 0.72rem;
+  overflow-wrap: anywhere;
 }
 
 .usersSection td select {
-  min-width: 132px;
+  min-width: 118px;
 }
 
 .roleEditor {
   position: relative;
-  min-width: 150px;
+  min-width: 132px;
 }
 
 .roleEditor summary {
@@ -323,7 +335,7 @@
 
 .roleOptions {
   width: 100%;
-  min-width: 210px;
+  min-width: 190px;
   max-height: 240px;
   overflow: auto;
   display: grid;
