@@ -109,21 +109,49 @@
 }
 
 .empty {
-  padding: 24px 0;
+  min-height: 150px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 30px 0;
   border-bottom: 1px solid var(--line);
+}
+
+.emptyMark {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border: 1px solid color-mix(in srgb, var(--green) 28%, var(--line));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--green-soft) 64%, var(--surface));
+}
+
+.emptyMark::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 9px;
+  width: 9px;
+  height: 15px;
+  border-right: 2px solid var(--green-strong);
+  border-bottom: 2px solid var(--green-strong);
+  transform: rotate(42deg);
 }
 
 .empty h2 {
   margin: 0;
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 1.08rem;
   font-weight: 720;
 }
 
 .empty p {
   margin: 6px 0 0;
   color: var(--muted);
-  font-size: 0.82rem;
+  max-width: 58ch;
+  font-size: 0.84rem;
+  line-height: 1.55;
 }
 
 @media (max-width: 720px) {

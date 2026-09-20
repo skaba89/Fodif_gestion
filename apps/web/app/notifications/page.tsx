@@ -58,15 +58,18 @@ export default function NotificationsPage() {
   return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><AccountPageHeader homeHref={returnPath} subtitle="Centre de notifications" /><main id="main-content" tabIndex={-1} className={portal.main}>
     <Breadcrumbs items={[{ label: 'Mon espace', href: returnPath }, { label: 'Notifications' }]} />
     <p className={portal.eyebrow}>Activité personnelle</p><h1 className={portal.title}>Notifications</h1>
-    <p className={portal.lead}>{unread} notification{unread === 1 ? '' : 's'} non lue{unread === 1 ? '' : 's'}. Les événements sont enregistrés atomiquement avec les opérations métier.</p>
-    <div className={styles.toolbar}>
+    <p className={portal.lead}>{unread === 0 ? 'Vous êtes à jour. ' : `${unread} notification${unread === 1 ? '' : 's'} non lue${unread === 1 ? '' : 's'}. `}Les événements sont enregistrés atomiquement avec les opérations métier.</p>
+    {(items.length > 0 || unreadOnly) && <div className={styles.toolbar}>
       <button className={portal.secondary} type="button" onClick={() => setUnreadOnly((value) => !value)}>{unreadOnly ? 'Afficher tout' : 'Afficher les non lues'}</button>
-      <button className={portal.primary} type="button" onClick={markAll} disabled={unread === 0}>Tout marquer comme lu</button>
-    </div>
+      {unread > 0 && <button className={portal.primary} type="button" onClick={markAll}>Tout marquer comme lu</button>}
+    </div>}
     {message && <div className={`${portal.notice} ${portal.section}`} role="alert">{message}</div>}
     <section className={`${portal.section} ${styles.activity}`} aria-label="Historique des notifications">
       {items.length === 0 ? (
-        <div className={styles.empty}><h2>Aucune notification</h2><p>Aucune notification n’est disponible dans ce périmètre.</p></div>
+        <div className={styles.empty}>
+          <span className={styles.emptyMark} aria-hidden="true" />
+          <div><h2>{unreadOnly ? 'Aucune notification non lue' : 'Vous êtes à jour'}</h2><p>{unreadOnly ? 'Toutes les notifications disponibles ont déjà été consultées.' : 'Aucune nouvelle activité ne nécessite votre attention pour le moment.'}</p></div>
+        </div>
       ) : items.map((item) => (
         <article className={item.luAt ? styles.item : `${styles.item} ${styles.unread}`} key={item.id}>
           <div className={styles.marker} aria-hidden="true" />
