@@ -1,5 +1,6 @@
 import { dossierStatusLabel, dossierStatusTone } from './dossierStatus';
 import { humanizeCode } from './displayLabels';
+export { humanizeCode } from './displayLabels';
 import styles from './StatusBadge.module.css';
 
 export type StatusTone = 'neutral' | 'info' | 'warning' | 'success' | 'danger';
