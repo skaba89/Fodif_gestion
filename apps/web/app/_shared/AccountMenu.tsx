@@ -13,9 +13,6 @@ import styles from './AccountMenu.module.css';
 const SESSION_CHECK_INTERVAL_MS = 60_000;
 const LAST_PORTAL_STORAGE_KEY = 'fodip:last-portal';
 
-interface SessionContext {
-  roles?: string[];
-}
 
 /**
  * Shared authenticated account controls for every portal.
@@ -64,8 +61,6 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
     try {
       const response = await fetch('/api/session/me', { cache: 'no-store' });
       if (response.ok) {
-        const session = (await response.json().catch(() => ({}))) as SessionContext;
-        void session.roles;
         intentionalLogout.current = false;
         setAuthenticated(true);
         return;
