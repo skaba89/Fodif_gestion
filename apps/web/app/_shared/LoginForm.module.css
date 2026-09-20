@@ -400,6 +400,8 @@
 }
 
 .missionBrand {
+  --brand-title-color: #ffffff;
+  --brand-subtitle-color: #d7eadc;
   color: #fff;
 }
 
