@@ -5,8 +5,8 @@ import { ToastProvider } from './_shared/Toast';
 import './globals.css';
 import './fodip-official-theme.css';
 import './_shared/business-workspaces.css';
-import './institutional-typography.css';
 import './fodip-product-theme.css';
+import './institutional-typography.css';
 
 // Public Sans is the single product typeface for body copy, navigation, headings and KPI values.
 const publicSans = Public_Sans({
@@ -14,7 +14,6 @@ const publicSans = Public_Sans({
   variable: '--font-public-sans',
   display: 'swap',
 });
-
 
 export const metadata: Metadata = {
   title: 'FODIP Digital 2030',
