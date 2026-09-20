@@ -44,9 +44,9 @@
   display: block;
 }
 
-.copy strong {
+ .copy strong {
   overflow: hidden;
-  color: var(--fodip-green-dark);
+  color: var(--brand-title-color, var(--fodip-green-dark));
   font-size: 0.92rem;
   font-weight: 900;
   letter-spacing: 0.105em;
@@ -57,7 +57,7 @@
 .copy span {
   margin-top: 3px;
   overflow: hidden;
-  color: var(--muted);
+  color: var(--brand-subtitle-color, var(--muted));
   font-size: 0.68rem;
   font-weight: 650;
   letter-spacing: 0.018em;
@@ -81,12 +81,12 @@
 }
 
 :global(:root[data-theme='dark']) .copy strong {
-  color: var(--primary-200);
+  color: var(--brand-title-color, var(--primary-200));
 }
 
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme='light'])) .copy strong {
-    color: var(--primary-200);
+    color: var(--brand-title-color, var(--primary-200));
   }
 }
 
