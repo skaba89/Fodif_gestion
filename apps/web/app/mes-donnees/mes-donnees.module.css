@@ -1,0 +1,51 @@
+.rights {
+  border-top: 1px solid var(--line);
+}
+
+.right {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.right > div {
+  min-width: 0;
+}
+
+.index {
+  margin: 0 0 6px;
+  color: var(--green-strong);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.right h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 720;
+  letter-spacing: -0.014em;
+}
+
+.right p:not(.index) {
+  max-width: 72ch;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.58;
+}
+
+@media (max-width: 680px) {
+  .right {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .right > button {
+    width: 100%;
+  }
+}
