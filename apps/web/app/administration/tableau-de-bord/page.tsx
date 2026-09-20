@@ -39,7 +39,7 @@ export default function AdministrationDashboardPage() {
     </div></div>
     {message ? <div className={portal.notice} role="status">{message}</div> : null}
     <section className={role.kpiGrid} aria-label="Synthèse de l’administration">
-      <KpiCard label="Comptes actifs" value={String(summary.activeUsers)} definition={`${summary.totalUsers} comptes enregistrés au total.`} />
+      <KpiCard label="Comptes actifs" value={String(summary.activeUsers)} showTrend={false} definition={`${summary.totalUsers} comptes enregistrés au total.`} />
       <KpiCard label="Comptes inactifs" value={String(summary.inactiveUsers)} definition="Comptes désactivés, sans accès à la plateforme." goodDirection="down" />
       <KpiCard label="MFA exigé" value={String(summary.mfaRequiredUsers)} definition="Comptes soumis à la double authentification institutionnelle." />
       <KpiCard label="Jamais connectés" value={String(summary.neverLoggedInUsers)} definition="Comptes actifs dont la première connexion reste à effectuer." goodDirection="down" />
