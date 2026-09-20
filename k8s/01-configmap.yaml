@@ -10,6 +10,7 @@ metadata:
 data:
   NODE_ENV: production
   APP_ENV: PROD
+  FODIP_RELEASE_SHA: CHANGE_ME_RELEASE_SHA
   # The local synthetic-data experience is explicitly forbidden in an institutional runtime.
   DEMO_MODE: "false"
   JWT_ISSUER: fodip-digital-2030

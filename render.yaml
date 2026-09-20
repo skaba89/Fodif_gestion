@@ -29,6 +29,8 @@ services:
         value: "true"
       - key: JWT_SECRET
         generateValue: true
+      - key: METRICS_TOKEN
+        generateValue: true
       # Independent roots for PII, MFA and OIDC. Render generates each value once and keeps it
       # across Blueprint syncs; they must never be copied into one another.
       - key: PII_ENCRYPTION_KEY

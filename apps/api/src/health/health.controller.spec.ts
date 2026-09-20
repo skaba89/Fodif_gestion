@@ -2,6 +2,7 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { DocumentStorageService } from '../documents/document-storage.service';
 import { HealthController } from './health.controller';
+import { ConfigService } from '@nestjs/config';
 
 describe('HealthController', () => {
   const database = { ping: jest.fn() };
@@ -9,6 +10,7 @@ describe('HealthController', () => {
   const controller = new HealthController(
     database as unknown as DatabaseService,
     documentStorage as unknown as DocumentStorageService,
+    new ConfigService({ APP_ENV: 'TEST', FODIP_RELEASE_SHA: 'test-release' }),
   );
 
   beforeEach(() => jest.resetAllMocks());
@@ -20,6 +22,8 @@ describe('HealthController', () => {
     await expect(controller.ready()).resolves.toMatchObject({
       status: 'ready',
       checks: { database: 'up', objectStorage: 'up' },
+      environment: 'TEST',
+      releaseSha: 'test-release',
     });
   });
 
