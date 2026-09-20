@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import ConfirmDialog from '../../_shared/ConfirmDialog';
+import { roleLabel } from '../../_shared/displayLabels';
 import portal from '../../entrepreneur/portal.module.css';
 
 type User = {
