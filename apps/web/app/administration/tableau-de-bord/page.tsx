@@ -39,10 +39,10 @@ export default function AdministrationDashboardPage() {
     </div></div>
     {message ? <div className={portal.notice} role="status">{message}</div> : null}
     <section className={role.kpiGrid} aria-label="Synthèse de l’administration">
-      <KpiCard label="Comptes actifs" value={String(summary.activeUsers)} definition={`${summary.totalUsers} comptes enregistrés au total.`} />
-      <KpiCard label="Comptes inactifs" value={String(summary.inactiveUsers)} definition="Comptes désactivés, sans accès à la plateforme." goodDirection="down" />
-      <KpiCard label="MFA exigé" value={String(summary.mfaRequiredUsers)} definition="Comptes soumis à la double authentification institutionnelle." />
-      <KpiCard label="Jamais connectés" value={String(summary.neverLoggedInUsers)} definition="Comptes actifs dont la première connexion reste à effectuer." goodDirection="down" />
+      <KpiCard label="Comptes actifs" value={String(summary.activeUsers)} showTrend={false} definition={`${summary.totalUsers} comptes enregistrés au total.`} />
+      <KpiCard label="Comptes inactifs" value={String(summary.inactiveUsers)} showTrend={false} definition="Comptes désactivés, sans accès à la plateforme." goodDirection="down" />
+      <KpiCard label="MFA exigé" value={String(summary.mfaRequiredUsers)} showTrend={false} definition="Comptes soumis à la double authentification institutionnelle." />
+      <KpiCard label="Jamais connectés" value={String(summary.neverLoggedInUsers)} showTrend={false} definition="Comptes actifs dont la première connexion reste à effectuer." goodDirection="down" />
     </section>
     <section className={`${role.sectionGrid} ${portal.section}`} aria-label="Actions d’administration">
       <article className={role.contextCard}><h2>Cycle de vie des comptes</h2><p>{summary.enterprises} PME et {summary.partnerBanks} banques partenaires sont disponibles pour les rattachements.</p><div className={portal.buttonRow}><Link className={portal.primary} href="/administration/utilisateurs">Gérer les utilisateurs</Link><Link className={portal.secondary} href="/administration/recuperation">Récupérer un compte</Link></div></article>

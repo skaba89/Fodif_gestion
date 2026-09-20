@@ -15,6 +15,7 @@ export default function KpiCard({
   detailHref,
   goodDirection = 'up',
   tone = 'default',
+  showTrend = true,
 }: {
   label: string;
   value: string | null;
@@ -24,10 +25,11 @@ export default function KpiCard({
   detailHref?: string;
   goodDirection?: 'up' | 'down';
   tone?: 'default' | 'inverse';
+  showTrend?: boolean;
 }) {
   const trendIsGood = trend?.direction && (trend.direction === goodDirection || trend.direction === 'flat');
   return (
-    <article className={`${styles.card} ${tone === 'inverse' ? styles.inverse : ''}`} data-kpi-card>
+    <article className={`${styles.card} ${tone === 'inverse' ? styles.inverse : ''} ${!showTrend && !detailHref ? styles.staticCard : ''}`} data-kpi-card>
       <div className={styles.headRow}>
         <span className={styles.label}>{label}</span>
         <span className={styles.definitionWrap} tabIndex={0} aria-label={definition}>
@@ -46,19 +48,21 @@ export default function KpiCard({
           {unit && <span className={styles.unit}>{unit}</span>}
         </div>
       )}
-      <div className={styles.footRow}>
-        {trend && trend.direction && trend.deltaPct !== null ? (
-          <span className={`${styles.trend} ${trendIsGood ? styles.trendGood : styles.trendBad}`}>
-            {trend.direction === 'up' && <TrendUpIcon aria-hidden />}
-            {trend.direction === 'down' && <TrendDownIcon aria-hidden />}
-            {trend.direction === 'flat' && <TrendFlatIcon aria-hidden />}
-            {trend.deltaPct > 0 ? '+' : ''}{trend.deltaPct} % vs période précédente
-          </span>
-        ) : (
-          <span className={styles.trendMuted}>Tendance non disponible</span>
-        )}
-        {detailHref && <Link href={detailHref} className={styles.detailLink}>Détail</Link>}
-      </div>
+      {(showTrend || detailHref) && (
+        <div className={styles.footRow}>
+          {showTrend ? (
+            trend && trend.direction && trend.deltaPct !== null ? (
+              <span className={`${styles.trend} ${trendIsGood ? styles.trendGood : styles.trendBad}`}>
+                {trend.direction === 'up' && <TrendUpIcon aria-hidden />}
+                {trend.direction === 'down' && <TrendDownIcon aria-hidden />}
+                {trend.direction === 'flat' && <TrendFlatIcon aria-hidden />}
+                {trend.deltaPct > 0 ? '+' : ''}{trend.deltaPct} % vs période précédente
+              </span>
+            ) : <span className={styles.trendMuted}>Tendance non disponible</span>
+          ) : <span />}
+          {detailHref && <Link href={detailHref} className={styles.detailLink}>Détail</Link>}
+        </div>
+      )}
     </article>
   );
 }

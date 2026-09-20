@@ -238,14 +238,23 @@
 }
 
 .usersSection table {
-  min-width: 1080px;
+  min-width: 960px;
 }
 
 .accountActions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 7px;
+  display: grid;
+  gap: 6px;
+  min-width: 110px;
+}
+
+
+.usersSection th,
+.usersSection td {
+  padding-inline: 10px;
+}
+
+.usersSection td:nth-child(2) {
+  min-width: 112px;
 }
 
 .usersSection th {
@@ -263,7 +272,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  min-width: 210px;
+  min-width: 160px;
 }
 
 .userAvatar {
@@ -288,27 +297,101 @@
 
 .userEmail {
   display: block;
+  max-width: 190px;
   margin-top: 3px;
   color: var(--muted);
   font-size: 0.72rem;
+  overflow-wrap: anywhere;
 }
 
 .usersSection td select {
-  min-width: 150px;
+  min-width: 118px;
 }
 
-.usersSection td select[multiple] {
-  min-height: 70px;
+.roleEditor {
+  position: relative;
+  min-width: 132px;
 }
 
-.toggleCell {
-  text-align: center;
+.roleEditor summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-.toggleCell input[type='checkbox'] {
-  width: 18px;
-  height: 18px;
+.roleEditor[open] summary {
+  border-color: color-mix(in srgb, var(--green) 34%, var(--line));
+  background: var(--surface-soft);
+}
+
+.roleOptions {
+  width: 100%;
+  min-width: 190px;
+  max-height: 240px;
+  overflow: auto;
+  display: grid;
+  gap: 2px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.roleOptions label {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.roleOptions label:hover {
+  background: var(--surface-soft);
+}
+
+.roleOptions input,
+.securityControls input {
+  width: 16px;
+  height: 16px;
   accent-color: var(--green);
+}
+
+.assignmentStack,
+.securityControls {
+  display: grid;
+  gap: 6px;
+}
+
+.assignmentStack select {
+  width: 100%;
+}
+
+.securityControls {
+  min-width: 82px;
+}
+
+.securityControls label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 650;
 }
 
 .actionButton {
@@ -357,6 +440,20 @@
   font-size: 0.8rem;
 }
 
+.roleDetails summary span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.roleDetails summary code {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 650;
+  letter-spacing: 0.035em;
+}
+
 .roleDetails[open] summary {
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--green-soft) 38%, var(--surface));
@@ -375,6 +472,27 @@
 
 .roleBody p + p {
   margin-top: 8px;
+}
+
+.permissionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.permissionList code {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.64rem;
 }
 
 @media (max-width: 900px) {
@@ -436,5 +554,37 @@
 @media (prefers-reduced-motion: reduce) {
   .usersSection tbody tr {
     transition: none;
+  }
+}
+
+
+.recoveryPage,
+.auditPage {
+  padding-top: 28px;
+}
+
+.recoveryGrid {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.82fr) minmax(0, 1.18fr);
+  gap: 22px;
+  align-items: start;
+  margin-top: 28px;
+}
+
+.recoveryGrid > section {
+  margin-top: 0 !important;
+}
+
+.recoveryGrid .tableScroller {
+  overflow-x: auto;
+}
+
+.recoveryGrid table {
+  min-width: 620px;
+}
+
+@media (max-width: 1120px) {
+  .recoveryGrid {
+    grid-template-columns: 1fr;
   }
 }

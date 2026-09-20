@@ -5,6 +5,7 @@ import Breadcrumbs from '../../_shared/Breadcrumbs';
 import ConfirmDialog from '../../_shared/ConfirmDialog';
 import { roleLabel } from '../../_shared/displayLabels';
 import portal from '../../entrepreneur/portal.module.css';
+import styles from '../utilisateurs/administration.module.css';
 
 type User = {
   id: string;
@@ -80,7 +81,7 @@ export default function AccountRecoveryPage() {
   }
 
   return (
-    <main className={portal.main}>
+    <main className={`${portal.main} ${styles.recoveryPage}`}>
       <Breadcrumbs items={[{ label: 'Administration', href: '/administration/tableau-de-bord' }, { label: 'Récupération comptes' }]} />
       <p className={portal.eyebrow}>Super administration</p>
       <h1 className={portal.title}>Récupération et suppression des comptes</h1>
@@ -90,6 +91,7 @@ export default function AccountRecoveryPage() {
 
       {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
 
+      <div className={styles.recoveryGrid}>
       <section className={`${portal.card} ${portal.formCard} ${portal.section}`}>
         <div className={portal.sectionHeader}>
           <div>
@@ -148,6 +150,8 @@ export default function AccountRecoveryPage() {
           </table>
         </div>
       </section>
+
+      </div>
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

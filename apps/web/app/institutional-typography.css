@@ -97,7 +97,8 @@ body {
 }
 
 #main-content > main {
-  width: min(100%, 1280px);
+  width: min(1520px, calc(100% - 48px));
+  margin-inline: auto;
 }
 
 #main-content h1 {
@@ -317,6 +318,10 @@ body {
 
   #main-content {
     font-size: 0.94rem;
+  }
+
+  #main-content > main {
+    width: min(100% - 24px, 1520px);
   }
 
   #main-content h1,
