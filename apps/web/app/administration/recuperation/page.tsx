@@ -101,7 +101,7 @@ export default function AccountRecoveryPage() {
               <select id="recovery-user" required value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
                 <option value="">Sélectionner un compte</option>
                 {users.filter((user) => !user.anonymizedAt).map((user) => (
-                  <option key={user.id} value={user.id}>{user.prenom ? `${user.prenom} ` : ''}{user.nom} · {user.email} · {user.roles.join(', ')}</option>
+                  <option key={user.id} value={user.id}>{user.prenom ? `${user.prenom} ` : ''}{user.nom} · {user.email} · {user.roles.map(roleLabel).join(', ')}</option>
                 ))}
               </select>
             </div>
@@ -133,7 +133,7 @@ export default function AccountRecoveryPage() {
             <tbody>{users.map((user) => (
               <tr key={user.id}>
                 <td><strong>{user.prenom} {user.nom}</strong><br /><small>{user.email}</small></td>
-                <td>{user.roles.join(' · ') || '—'}</td>
+                <td>{user.roles.map(roleLabel).join(' · ') || '—'}</td>
                 <td>{user.anonymizedAt ? 'Supprimé / anonymisé' : user.actif ? 'Actif' : 'Inactif'}</td>
                 <td>
                   <button className={portal.secondary} type="button" disabled={loading || Boolean(user.anonymizedAt)} onClick={() => setPendingDelete(user)}>
