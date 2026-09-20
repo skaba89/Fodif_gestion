@@ -132,8 +132,8 @@ export function AccountMenu({ loginLabel = 'Connexion' }: { loginHref?: string; 
   return (
     <div className={styles.actions} aria-label="Actions du compte">
       {accountHome && <Link className={styles.profileAction} href={accountHome}>Mon espace</Link>}
-      <Link className={styles.profileAction} href="/assistance">Assistance</Link>
       <Link className={styles.profileAction} href="/profil">Mon profil</Link>
+      <Link className={styles.profileAction} href="/assistance">Assistance</Link>
       <button className={styles.secondaryAction} type="button" onClick={logout}>Déconnexion</button>
     </div>
   );
