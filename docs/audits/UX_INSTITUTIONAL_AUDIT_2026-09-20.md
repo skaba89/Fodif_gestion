@@ -263,3 +263,247 @@ Le projet n'a pas besoin d'être reconstruit. La profondeur métier, la sécurit
 Le principal chantier UX est de faire correspondre l'apparence à cette profondeur : moins de codes visuels de landing SaaS, moins de répétition de cards, davantage de hiérarchie métier et un vocabulaire propre au FODIP.
 
 Aucune implémentation visuelle ne doit commencer dans cette branche avant synchronisation avec les changements actuellement produits en parallèle et validation du découpage des lots.
+
+
+## 10. Audit détaillé par espace métier
+
+### 10.1 Agent — tableau de bord et file d’instruction
+
+Fichiers examinés :
+- `apps/web/app/agent/tableau-de-bord/page.tsx`
+- `apps/web/app/agent/dossiers/page.tsx`
+- `apps/web/app/agent/dossiers/[id]/page.tsx`
+
+État actuel : **fonctionnellement très solide**.
+
+Points à conserver :
+- séparation explicite entre « À prendre », « Mes dossiers », « Compléments », « Prêts comité » et « Historique » ;
+- filtrage du périmètre Agent côté serveur ;
+- prise en charge d’un dossier avant instruction ;
+- vue prioritaire avec prochaine action ;
+- fiche dossier 360° ;
+- vérification des pièces sans quitter la fiche ;
+- journal d’instruction ;
+- scoring explicable avec justification par critère ;
+- rappel explicite que le score n’est qu’une aide et ne décide pas à la place du comité ;
+- confirmation avant décision d’instruction ;
+- gestion explicite de l’absence de connectivité pour les actions sensibles.
+
+Constats UX :
+- le dashboard Agent est déjà mieux orienté « travail à faire » qu’un dashboard SaaS générique ;
+- la fiche 360° est l’un des écrans les plus différenciants du produit et ne doit pas être simplifiée en grille de cartes ;
+- la répétition de composants visuels génériques doit rester secondaire par rapport à la logique de poste d’instruction ;
+- le statut technique brut affiché à côté du badge métier dans la fiche dossier peut être utile au support, mais doit être réévalué pour l’utilisateur métier s’il duplique l’information sans valeur opérationnelle.
+
+Évolution recommandée :
+- préserver l’architecture actuelle ;
+- renforcer la hiérarchie « action à faire → informations nécessaires → scoring → décision → historique » ;
+- transformer les informations secondaires en zones compactes plutôt qu’en nouvelles cartes ;
+- conserver la fiche dossier comme référence UX pour les autres espaces opérationnels.
+
+### 10.2 Comité — ordre du jour et décision
+
+Fichiers examinés :
+- `apps/web/app/comite/tableau-de-bord/page.tsx`
+- `apps/web/app/comite/dossiers/page.tsx`
+- `apps/web/app/comite/dossiers/[id]/page.tsx`
+
+État actuel : **bonne séparation métier et bonne gouvernance de la décision humaine**.
+
+Points à conserver :
+- ordre du jour distinct de l’historique ;
+- priorité par ancienneté, score ou montant sans transformer ce tri en décision automatique ;
+- mise en avant des dossiers à risque élevé ;
+- score détaillé et explicable ;
+- modèle et version de scoring visibles ;
+- pièces et chronologie visibles avant la décision ;
+- décision finale explicitement humaine ;
+- confirmation explicite avant enregistrement irréversible ;
+- décision auditée ;
+- possibilité d’imprimer une synthèse.
+
+Constats UX :
+- le tableau de bord est pertinent mais reste construit avec le même langage KPI/card que les autres portails ;
+- la page décisionnelle contient l’information nécessaire mais peut être hiérarchisée davantage comme un « dossier de séance » ;
+- les éléments les plus importants avant décision sont : synthèse PME, montant demandé, apport, risque, justification du score, pièces, historique d’instruction, puis formulaire de décision ;
+- l’impression de synthèse est cohérente avec un usage institutionnel et doit être conservée.
+
+Évolution recommandée :
+- faire de la fiche Comité un véritable dossier décisionnel lisible de haut en bas ;
+- distinguer visuellement « faits », « analyse », « traçabilité » et « décision » ;
+- limiter les cartes décoratives ;
+- ne jamais mettre le score dans une position qui pourrait suggérer une décision automatique.
+
+### 10.3 PME — portail entrepreneur
+
+Fichier examiné :
+- `apps/web/app/entrepreneur/page.tsx`
+
+État actuel : **très bonne orientation utilisateur**.
+
+Points à conserver :
+- dossier courant visible immédiatement ;
+- statut actuel ;
+- workflow Dossier → Instruction → Décision → Financement → Suivi ;
+- prochaine action explicite ;
+- nombre de pièces manquantes ;
+- accès direct aux documents manquants ;
+- historique et tous les dossiers disponibles sans polluer l’action principale ;
+- absence de faux KPI marketing.
+
+Constats UX :
+- le portail répond déjà aux questions essentielles d’une PME ;
+- « Vue d’ensemble » et « Programmes accessibles » sont secondaires par rapport au dossier courant, ce qui est la bonne hiérarchie ;
+- les programmes ouverts sont encore présentés sous forme de cards et peuvent évoluer vers une présentation plus sobre si leur nombre augmente.
+
+Évolution recommandée :
+- ne pas refondre la logique principale ;
+- simplifier encore les éléments secondaires ;
+- conserver un langage non administratif lorsque ce n’est pas nécessaire ;
+- maintenir la prochaine action comme premier élément décisionnel.
+
+### 10.4 Direction — cockpit et gestion des financements
+
+Fichiers examinés :
+- `apps/web/app/direction/tableau-de-bord/page.tsx`
+- `apps/web/app/direction/financements/page.tsx`
+- `apps/web/app/direction/financements/[id]/page.tsx`
+
+État actuel : **profondeur métier élevée, hiérarchie exécutive à améliorer**.
+
+Points à conserver :
+- indicateurs financiers calculés à partir de données réelles ;
+- définitions des KPI ;
+- filtres et périmètres ;
+- lecture territoriale ;
+- ventilation par programmes, secteurs et banques ;
+- suivi des décaissements, remboursements, échéances et impact ;
+- journal d’audit ;
+- idempotence sur les opérations financières sensibles.
+
+Constats UX :
+- trop d’indicateurs sont placés au même niveau dans la première lecture ;
+- la Direction a besoin d’une lecture « situation → risques/alertes → décisions → détail », plutôt que d’un catalogue de KPI ;
+- la fiche financement mélange volontairement beaucoup de fonctions opérationnelles : contrat, décaissements, remboursements, impact, historique et audit ;
+- cette richesse est utile, mais la composition doit distinguer clairement pilotage, exécution financière et preuve d’audit.
+
+Point de gouvernance à valider avant toute évolution :
+- la Direction peut actuellement déclencher certaines opérations financières dans sa fiche financement. Ne modifier ni étendre cette capacité sans validation des règles métier et RBAC existantes ; l’audit UX n’en déduit aucune règle nouvelle.
+
+Évolution recommandée :
+- un bandeau exécutif court : montant accordé, décaissé, encours, impayés/taux de remboursement et alertes ;
+- sections séparées pour pipeline, territoires, programmes/secteurs, partenaires et impact ;
+- la vue détaillée d’un financement doit privilégier d’abord la position financière et les échéances, puis les actions autorisées et enfin l’historique.
+
+### 10.5 Banque partenaire
+
+Fichiers examinés :
+- `apps/web/app/partenaire/financements/page.tsx`
+- `apps/web/app/partenaire/financements/[id]/page.tsx`
+
+État actuel : **périmètre bancaire distinct et contrôlé**.
+
+Points à conserver :
+- uniquement les financements du périmètre de l’établissement ;
+- accès à l’échéancier ;
+- déclaration des opérations autorisées ;
+- idempotence des déclarations sensibles ;
+- tableau opérationnel plutôt qu’un dashboard décoratif.
+
+Constat important :
+- les KPI « Montant accordé », « Taux moyen » et « Durée moyenne » sont calculés sur les éléments de la **page courante**, et leurs définitions l’indiquent.
+- visuellement, un décideur peut toutefois les interpréter comme des totaux du portefeuille si la mention « page courante » n’est pas immédiatement visible.
+
+Évolution recommandée :
+- soit fournir de vrais agrégats de portefeuille via l’API si le besoin métier existe ;
+- soit renommer visiblement les métriques pour indiquer qu’elles portent uniquement sur la page affichée ;
+- ne jamais présenter un sous-total paginé comme un KPI global.
+
+### 10.6 Administration
+
+Fichiers examinés :
+- `apps/web/app/administration/tableau-de-bord/page.tsx`
+- `apps/web/app/administration/utilisateurs/page.tsx`
+- `apps/web/app/administration/journal/page.tsx`
+
+État actuel : **fonctionnel, sécurisé, mais dense**.
+
+Points à conserver :
+- comptes actifs/inactifs ;
+- MFA exigé ;
+- comptes jamais connectés ;
+- rattachement PME / banque partenaire ;
+- journal d’audit ;
+- protections contre certaines actions critiques ;
+- confirmations sur opérations sensibles.
+
+Constats UX :
+- la page utilisateurs rassemble création des référentiels, création de comptes, rôles, rattachements, MFA et actions de cycle de vie : cela peut devenir très dense ;
+- le badge « Accès SUPER_ADMIN · actions journalisées » expose un code de rôle technique dans l’en-tête de contenu ;
+- cette information doit être réévaluée au regard de la règle produit qui réserve l’identité/les rôles de compte à l’espace profil et évite d’exposer inutilement des codes techniques dans l’interface principale.
+
+Évolution recommandée :
+- séparer visuellement « Organisations », « Comptes & habilitations », « Sécurité/MFA » et « Journal » ;
+- remplacer les codes techniques visibles par des libellés métier lorsqu’ils n’apportent rien à l’administrateur ;
+- ne jamais masquer les contrôles de sécurité réels : seul leur rendu doit être humanisé.
+
+### 10.7 Auditeur
+
+Fichier examiné :
+- `apps/web/app/auditeur/tableau-de-bord/page.tsx`
+
+État actuel : **bonne séparation lecture seule**.
+
+Points à conserver :
+- aucune action de création/modification ;
+- portefeuille de financements ;
+- journal d’audit ;
+- filtres par type d’entité ;
+- auteur, action, entité et date ;
+- présentation explicite du caractère « contrôle indépendant ».
+
+Constat important :
+- comme pour la Banque partenaire, les montants accordés/décaissés/impayés affichés en synthèse sont calculés sur la **page courante** des financements.
+- la définition l’indique, mais le traitement visuel reste celui d’un KPI de synthèse.
+
+Évolution recommandée :
+- privilégier les preuves, la traçabilité et les écarts plutôt qu’une esthétique de cockpit ;
+- rendre extrêmement explicite tout agrégat basé sur une page paginée ;
+- si des agrégats globaux sont nécessaires, les calculer côté serveur et les distinguer des données de la page.
+
+## 11. Matrice de priorité issue de l’audit détaillé
+
+| Priorité | Zone | Action recommandée | Risque fonctionnel |
+| --- | --- | --- | --- |
+| P0 | Accueil public | Recomposition institutionnelle + textes métier + retrait du lien public design system | Faible si routes conservées |
+| P0 | Direction | Hiérarchie exécutive des KPI et alertes | Moyen : préserver calculs/filtres |
+| P1 | Administration | Dé-densifier et humaniser les codes de rôle visibles | Moyen : ne pas toucher aux contrôles RBAC |
+| P1 | Banque partenaire | Clarifier agrégats « page courante » vs portefeuille | Faible à moyen selon évolution API |
+| P1 | Auditeur | Clarifier agrégats paginés et renforcer lecture preuve/audit | Faible à moyen selon évolution API |
+| P2 | Comité | Hiérarchiser le dossier de séance, sans changer la décision | Faible |
+| P2 | Agent | Polir la fiche 360° sans changer le workflow | Faible |
+| P2 | PME | Simplification secondaire uniquement | Faible |
+
+## 12. Découpage recommandé pour le travail parallèle
+
+Pour limiter les conflits avec la session Work, ne pas démarrer plusieurs lots touchant les mêmes primitives partagées.
+
+Ordre sûr recommandé :
+
+1. **PR A — Accueil public uniquement**  
+   `page.tsx` + `home.module.css` + condition d’exposition du lien design system.
+
+2. **PR B — Direction uniquement**  
+   cockpit et hiérarchie des vues ; aucune modification des règles financières.
+
+3. **PR C — Administration + Auditeur + Banque partenaire**  
+   uniquement après relecture des changements Work éventuels sur composants partagés.
+
+4. **PR D — Agent + Comité + PME**  
+   polissage ciblé, car leurs logiques métier sont déjà convaincantes.
+
+Avant chaque PR :
+- récupérer le dernier `main` ;
+- comparer les fichiers modifiés par Work ;
+- abandonner ou réécrire tout patch qui entrerait en collision ;
+- conserver des PR petites et réversibles.
