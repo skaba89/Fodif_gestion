@@ -1,13 +1,7 @@
 .page {
   min-height: 100vh;
-  padding: 40px 20px 64px;
-  background:
-    radial-gradient(
-      circle at top left,
-      color-mix(in srgb, var(--green) 9%, transparent),
-      transparent 34rem
-    ),
-    var(--bg);
+  padding: 32px 20px 52px;
+  background: var(--bg);
   color: var(--ink);
 }
 
@@ -29,8 +23,9 @@
   margin: 4px 0 10px;
   max-width: 720px;
   color: var(--ink);
-  font-size: clamp(1.8rem, 4vw, 2.7rem);
-  line-height: 1.08;
+  font-size: clamp(1.65rem, 3vw, 2.15rem);
+  line-height: 1.14;
+  letter-spacing: -0.022em;
 }
 
 .eyebrow {
@@ -111,14 +106,12 @@
   cursor: pointer;
   transition:
     border-color var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease),
-    transform var(--duration-fast) var(--ease);
+    color var(--duration-fast) var(--ease);
 }
 
 .quickActions button:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--green) 55%, var(--line));
   color: var(--green-strong);
-  transform: translateY(-1px);
 }
 
 .quickActions button:disabled,
@@ -136,9 +129,9 @@
   gap: 14px;
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: 10px;
   background: var(--surface);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 .assistantMessage,
@@ -199,9 +192,9 @@
   gap: 8px;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: 10px;
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .form label {
@@ -250,14 +243,12 @@
   cursor: pointer;
   transition:
     background var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease),
-    transform var(--duration-fast) var(--ease);
+    border-color var(--duration-fast) var(--ease);
 }
 
 .form button:hover:not(:disabled) {
   border-color: var(--green-strong);
   background: var(--green-strong);
-  transform: translateY(-1px);
 }
 
 @media (prefers-color-scheme: dark) {
