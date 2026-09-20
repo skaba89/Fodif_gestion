@@ -387,6 +387,67 @@
   line-height: 1.5;
 }
 
+.pmeSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.pmeSummary > div {
+  min-width: 0;
+  padding: 17px 18px 17px 0;
+}
+
+.pmeSummary > div + div {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+
+.pmeSummary dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.pmeSummary dd {
+  margin: 6px 0 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums lining-nums;
+  overflow-wrap: anywhere;
+}
+
+.pmeProgramList {
+  border-top: 1px solid var(--line);
+}
+
+.pmeProgramRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pmeProgramRow h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  letter-spacing: -0.018em;
+}
+
+.pmeProgramRow p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
 .meta {
   display: flex;
   justify-content: space-between;
@@ -719,6 +780,20 @@
   .programs {
     grid-template-columns: 1fr 1fr;
   }
+
+  .pmeSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pmeSummary > div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .pmeSummary > div:nth-child(4) {
+    border-top: 1px solid var(--line);
+  }
 }
 
 @media (max-width: 620px) {
@@ -736,6 +811,26 @@
   .programs,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .pmeSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .pmeSummary > div,
+  .pmeSummary > div + div {
+    padding: 14px 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .pmeSummary > div:first-child {
+    border-top: 0;
+  }
+
+  .pmeProgramRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .fieldFull {
