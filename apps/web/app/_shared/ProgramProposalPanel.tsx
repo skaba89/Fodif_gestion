@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import Button from './Button';
+import { humanizeCode } from './displayLabels';
 import { useToast } from './Toast';
 import styles from '../entrepreneur/portal.module.css';
 
@@ -176,7 +177,7 @@ export default function ProgramProposalPanel() {
             <article className={`${styles.card} ${styles.program}`} key={proposal.id} data-testid="program-proposal-card">
               <span className={styles.programTag}>{proposal.code}</span>
               <h3>{proposal.nom}</h3>
-              <p><strong>État :</strong> {proposal.workflowStatus}</p>
+              <p><strong>État :</strong> {humanizeCode(proposal.workflowStatus)}</p>
               {proposal.workflowStatus === 'SOUMIS' ? <p>En attente de validation par la Direction FODIP.</p> : null}
               {proposal.workflowStatus === 'VALIDE' ? <p>Validé par la Direction. L’activation/publication reste contrôlée par la Direction.</p> : null}
               {proposal.workflowStatus === 'BROUILLON' && proposal.versionBrouillon ? (
