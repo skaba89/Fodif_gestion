@@ -368,11 +368,11 @@ function LoginFormInner({
           <h2>Financer la croissance des PME guinéennes avec rigueur, transparence et impact.</h2>
           <p>Une même chaîne de confiance, de la demande au décaissement puis au suivi du remboursement et des emplois créés.</p>
         </div>
-        <dl className={premium.trustStats}>
-          <div><dt>PME financées</dt><dd>200+</dd></div>
-          <div><dt>GNF décaissés</dt><dd>45 Mds</dd></div>
-          <div><dt>Couverture</dt><dd>8 régions</dd></div>
-        </dl>
+        <ul className={premium.trustList} aria-label="Garanties de la plateforme">
+          <li><strong>Accès contrôlés</strong><span>Chaque compte est limité aux espaces et actions autorisés.</span></li>
+          <li><strong>Traçabilité</strong><span>Les opérations sensibles restent journalisées pour le contrôle.</span></li>
+          <li><strong>Authentification renforcée</strong><span>La double authentification s’applique lorsqu’elle est requise pour le compte.</span></li>
+        </ul>
         <p className={premium.panelFoot}>Dossier → Instruction → Décision → Financement → Suivi</p>
       </aside>
     </main>
