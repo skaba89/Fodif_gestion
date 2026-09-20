@@ -3,6 +3,7 @@ import { AccountMenu } from '../_shared/AccountMenu';
 
 const navItems = [
   { label: 'Portefeuille', href: '/partenaire/financements' },
+  { label: 'Notifications', href: '/notifications' },
   { label: 'Mes données', href: '/mes-donnees' },
 ];
 
