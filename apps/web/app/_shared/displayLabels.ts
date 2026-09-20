@@ -53,7 +53,7 @@ function sentenceCase(value: string) {
 }
 
 export function humanizeCode(value?: string | null) {
-  if (!value) return '—';
+  if (!value) return 'Non renseigné';
   return CODE_LABELS[value] ?? sentenceCase(value);
 }
 
