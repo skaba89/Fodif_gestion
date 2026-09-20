@@ -1,16 +1,10 @@
 import { dossierStatusLabel, dossierStatusTone } from './dossierStatus';
+import { humanizeCode } from './displayLabels';
+export { humanizeCode } from './displayLabels';
 import styles from './StatusBadge.module.css';
 
 export type StatusTone = 'neutral' | 'info' | 'warning' | 'success' | 'danger';
 
-export function humanizeCode(value?: string | null): string {
-  if (!value) return 'Non renseigné';
-  return value
-    .trim()
-    .replace(/[_-]+/g, ' ')
-    .toLocaleLowerCase('fr-FR')
-    .replace(/^./, (letter) => letter.toLocaleUpperCase('fr-FR'));
-}
 
 export function getGenericStatusTone(value?: string | null): StatusTone {
   const normalized = (value ?? '').trim().toLocaleUpperCase('fr-FR');
