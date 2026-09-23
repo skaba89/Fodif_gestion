@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import { resolveRoleHome } from '../../lib/portal-access';
-import FodipOfficialBrand from '../_shared/FodipOfficialBrand';
-import ThemeToggle from '../_shared/ThemeToggle';
+import Breadcrumbs from '../_shared/Breadcrumbs';
+import AccountPageHeader from '../_shared/AccountPageHeader';
 import portal from '../entrepreneur/portal.module.css';
+import styles from './mes-donnees.module.css';
 
 type SessionResponse = { roles?: string[] };
 
@@ -39,12 +39,9 @@ export default function MesDonneesPage() {
     }
   }, []);
 
-  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><header className={portal.header}>
-    <Link href={returnPath} className={portal.brand} aria-label="FODIP — retour à mon espace"><FodipOfficialBrand subtitle="Mes données" compact /></Link>
-    <nav className={portal.nav}><Link href={returnPath}>Retour à mon espace</Link></nav>
-    <ThemeToggle buttonClassName={portal.themeToggle} />
-  </header><main id="main-content" tabIndex={-1} className={portal.main}>
-    <p className={portal.eyebrow}>Droits des personnes (axe B6)</p><h1 className={portal.title}>Mes données personnelles</h1>
+  return <div className={portal.shell}><a href="#main-content" className="skip-link">Aller au contenu principal</a><AccountPageHeader homeHref={returnPath} subtitle="Mes données" /><main id="main-content" tabIndex={-1} className={portal.main}>
+    <Breadcrumbs items={[{ label: 'Mon espace', href: returnPath }, { label: 'Mes données' }]} />
+    <p className={portal.eyebrow}>Droits des personnes</p><h1 className={portal.title}>Mes données personnelles</h1>
     <p className={portal.lead}>
       Conformément au droit d’accès à vos données, vous pouvez télécharger une copie de tout ce que la plateforme
       détient sur votre compte : profil, et, pour un compte PME, les informations de votre entreprise, ses
@@ -52,12 +49,22 @@ export default function MesDonneesPage() {
       de texte.
     </p>
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
-    <section className={`${portal.card} ${portal.section}`}>
-      <div className={portal.sectionHeader}><div><h2>Export de mes données</h2><p>Chaque export est journalisé dans le registre d’audit de votre compte.</p></div></div>
-      <div className={portal.buttonRow}><button className={portal.primary} type="button" onClick={download} disabled={downloading}>{downloading ? 'Préparation…' : 'Télécharger mes données (JSON)'}</button></div>
-    </section>
-    <section className={`${portal.card} ${portal.section}`}>
-      <div className={portal.sectionHeader}><div><h2>Droit à l’effacement</h2><p>Pour demander la suppression de votre compte, contactez votre administrateur FODIP : la demande est traitée manuellement et votre compte est anonymisé (identité effacée, dossiers et historique financier conservés tels qu’exigés par la réglementation).</p></div></div>
-    </section>
+    <div className={`${portal.section} ${styles.rights}`}>
+      <section className={styles.right}>
+        <div>
+          <p className={styles.index}>01</p>
+          <h2>Accéder à mes données</h2>
+          <p>Téléchargez une copie structurée des données rattachées à votre compte. Chaque export est journalisé dans le registre d’audit.</p>
+        </div>
+        <button className={portal.primary} type="button" onClick={download} disabled={downloading}>{downloading ? 'Préparation…' : 'Télécharger mes données (JSON)'}</button>
+      </section>
+      <section className={styles.right}>
+        <div>
+          <p className={styles.index}>02</p>
+          <h2>Demander l’effacement</h2>
+          <p>Contactez votre administrateur FODIP pour demander la suppression du compte. La demande est traitée manuellement ; l’identité peut être anonymisée tandis que les éléments devant être conservés pour la traçabilité restent dans les historiques concernés.</p>
+        </div>
+      </section>
+    </div>
   </main><footer className={portal.footer}>FODIP Digital 2030 · Droits des personnes</footer></div>;
 }

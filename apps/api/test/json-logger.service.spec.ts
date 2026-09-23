@@ -36,6 +36,18 @@ describe('JsonLoggerService', () => {
     expect(entry).toMatchObject({ level: 'warn', message: '{"code":"X"}' });
   });
 
+  it('preserves the message, name and stack of Error instances', () => {
+    const error = new Error('METRICS_TOKEN is missing');
+    const [entry] = captureWrites(() => new JsonLoggerService().error(error, 'ExceptionHandler'));
+    expect(entry).toMatchObject({
+      level: 'error',
+      message: 'METRICS_TOKEN is missing',
+      errorName: 'Error',
+      context: 'ExceptionHandler',
+    });
+    expect((entry as { stack: string }).stack).toContain('Error: METRICS_TOKEN is missing');
+  });
+
   it('omits context/stack/trace fields entirely when absent, rather than writing null', () => {
     const [entry] = captureWrites(() => new JsonLoggerService().log('no context here'));
     expect(entry).not.toHaveProperty('context');

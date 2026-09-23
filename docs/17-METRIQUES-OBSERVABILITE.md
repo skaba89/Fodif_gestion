@@ -14,8 +14,10 @@ uniquement sur demande.
 ## Le mécanisme
 
 - **`apps/api/src/metrics/`** — `GET /api/v1/metrics` expose les métriques au format
-  d'exposition Prometheus (`prom-client`), en accès public comme `/health` (Prometheus ne porte
-  jamais de jeton d'authentification). Un histogramme unique,
+  d'exposition Prometheus (`prom-client`). Dès que `NODE_ENV=production`, un
+  `METRICS_TOKEN` d'au moins 32 caractères est obligatoire au démarrage et le collecteur envoie
+  `Authorization: Bearer <METRICS_TOKEN>`. Les tests et le développement peuvent rester sans
+  jeton ; le profil Compose emploie une valeur locale explicitement impropre à l'hébergement. Un histogramme unique,
   `fodip_api_http_request_duration_seconds`, étiqueté par méthode, route (le **motif** de route
   associé par Nest, jamais l'URL brute — sinon chaque identifiant/UUID créerait sa propre série,
   l'erreur de cardinalité que la documentation Prometheus met explicitement en garde) et code de

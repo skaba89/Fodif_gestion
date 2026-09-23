@@ -31,8 +31,8 @@ export class AgentApplicationsController {
 
   @Get(':id')
   @RequirePermissions('application.read')
-  get(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.applications.get(id);
+  get(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.applications.get(request.user, id);
   }
 
   @Post(':id/claim')

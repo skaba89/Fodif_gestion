@@ -4,7 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as client from 'openid-client';
 import { DatabaseService } from '../../database/database.service';
-import { deriveSecret, resolveJwtSecret } from '../../security-policy';
+import {
+  createPurposeKeyring,
+  PurposeKeyring,
+  resolveJwtSecret,
+  resolvePurposeSecret,
+} from '../../security-policy';
 
 // `connexion` is now the canonical browser entry point. The historical portal values remain
 // valid so an authorization flow started before the rollout can still complete safely.
@@ -51,7 +56,7 @@ interface DeliveryPayload {
  * This is a second AUTHENTICATION method for an EXISTING account, never a provisioning path: the
  * IdP only ever proves "this email belongs to whoever is signing in" (via its verified ID token),
  * it never creates an account or grants a role - those still come exclusively from
- * /administration/utilisateurs. An OIDC sign-in for an email with no matching active local
+ * /administration/tableau-de-bord. An OIDC sign-in for an email with no matching active local
  * account is rejected. Accounts flagged mfa_required (see admin-policy.js#PRIVILEGED_ROLES,
  * enforced regardless of login method by AdministrationRepository) still go through our own TOTP
  * check after OIDC identity is established - the IdP is not trusted to have enforced that itself.
@@ -59,16 +64,15 @@ interface DeliveryPayload {
  * Entirely opt-in: every method throws/no-ops unless OIDC_ISSUER_URL, OIDC_CLIENT_ID,
  * OIDC_CLIENT_SECRET and OIDC_REDIRECT_URI are all configured.
  *
- * Axe E4 (durcissement OIDC) - the delivery token issueDeliveryToken() hands the browser (via a
- * redirect URL query string - an exposure-prone channel: history, access logs, a shared computer)
- * is single-use: resolveDeliveryToken() claims its jti in oidc_delivery_tokens_used on first use
- * and rejects a second attempt, rather than accepting it repeatedly until its own 2-minute expiry.
+ * Axe E4 (durcissement OIDC) - the delivery token is single-use: resolveDeliveryToken() claims its
+ * jti in oidc_delivery_tokens_used on first use. The web BFF immediately moves it from the callback
+ * query into a short-lived HttpOnly cookie before loading React, then redeems it server-to-server.
  */
 @Injectable()
 export class OidcService {
   private readonly logger = new Logger(OidcService.name);
-  private readonly flowSecret: Buffer;
-  private readonly deliverySecret: Buffer;
+  private readonly flowKeys: PurposeKeyring;
+  private readonly deliveryKeys: PurposeKeyring;
   private readonly issuerUrl?: string;
   private readonly clientId?: string;
   private readonly clientSecret?: string;
@@ -80,13 +84,62 @@ export class OidcService {
     private readonly jwtService: JwtService,
     private readonly db: DatabaseService,
   ) {
-    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV'));
-    this.flowSecret = deriveSecret(jwtSecret, 'fodip-oidc-flow-v1');
-    this.deliverySecret = deriveSecret(jwtSecret, 'fodip-oidc-delivery-v1');
     this.issuerUrl = config.get<string>('OIDC_ISSUER_URL') || undefined;
     this.clientId = config.get<string>('OIDC_CLIENT_ID') || undefined;
     this.clientSecret = config.get<string>('OIDC_CLIENT_SECRET') || undefined;
     this.redirectUri = config.get<string>('OIDC_REDIRECT_URI') || undefined;
+
+    const nodeEnvironment = config.get<string>('NODE_ENV');
+    const appEnvironment = config.get<string>('APP_ENV');
+    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), nodeEnvironment);
+    const jwtPreviousSecret = config.get<string>('JWT_SECRET_PREVIOUS');
+    const requireDedicatedOidcKeys = this.isEnabled();
+
+    const flowSecret = resolvePurposeSecret(
+      config.get<string>('OIDC_FLOW_SECRET'),
+      jwtSecret,
+      nodeEnvironment,
+      appEnvironment,
+      'OIDC_FLOW_SECRET',
+      requireDedicatedOidcKeys,
+    );
+    const previousFlowSecret = resolvePurposeSecret(
+      config.get<string>('OIDC_FLOW_SECRET_PREVIOUS'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'OIDC_FLOW_SECRET_PREVIOUS',
+      false,
+    );
+    this.flowKeys = createPurposeKeyring(
+      flowSecret,
+      previousFlowSecret,
+      [jwtSecret, jwtPreviousSecret],
+      'fodip-oidc-flow-v1',
+    );
+
+    const deliverySecret = resolvePurposeSecret(
+      config.get<string>('OIDC_DELIVERY_SECRET'),
+      jwtSecret,
+      nodeEnvironment,
+      appEnvironment,
+      'OIDC_DELIVERY_SECRET',
+      requireDedicatedOidcKeys,
+    );
+    const previousDeliverySecret = resolvePurposeSecret(
+      config.get<string>('OIDC_DELIVERY_SECRET_PREVIOUS'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'OIDC_DELIVERY_SECRET_PREVIOUS',
+      false,
+    );
+    this.deliveryKeys = createPurposeKeyring(
+      deliverySecret,
+      previousDeliverySecret,
+      [jwtSecret, jwtPreviousSecret],
+      'fodip-oidc-delivery-v1',
+    );
   }
 
   isEnabled(): boolean {
@@ -124,7 +177,7 @@ export class OidcService {
 
     const payload: FlowPayload = { state, nonce, codeVerifier, portal };
     const flowCookie = await this.jwtService.signAsync(payload, {
-      secret: this.flowSecret,
+      secret: this.flowKeys.currentKey,
       expiresIn: FLOW_TTL_SECONDS,
       audience: FLOW_AUDIENCE,
     });
@@ -141,15 +194,12 @@ export class OidcService {
   async completeAuthorization(currentUrl: URL, flowCookieValue: string | undefined): Promise<{ email: string; portal: OidcPortal }> {
     if (!flowCookieValue) throw new UnauthorizedException('OIDC_FLOW_MISSING');
 
-    let flow: FlowPayload;
-    try {
-      flow = await this.jwtService.verifyAsync<FlowPayload>(flowCookieValue, {
-        secret: this.flowSecret,
-        audience: FLOW_AUDIENCE,
-      });
-    } catch {
-      throw new UnauthorizedException('OIDC_FLOW_INVALID');
-    }
+    const flow = await this.verifyWithKeys<FlowPayload>(
+      flowCookieValue,
+      this.flowKeys,
+      FLOW_AUDIENCE,
+      'OIDC_FLOW_INVALID',
+    );
 
     const configuration = await this.getConfiguration();
     const tokens = await client.authorizationCodeGrant(configuration, currentUrl, {
@@ -177,22 +227,19 @@ export class OidcService {
   issueDeliveryToken(userId: string): Promise<string> {
     const payload: DeliveryPayload = { sub: userId, jti: randomUUID() };
     return this.jwtService.signAsync(payload, {
-      secret: this.deliverySecret,
+      secret: this.deliveryKeys.currentKey,
       expiresIn: DELIVERY_TTL_SECONDS,
       audience: DELIVERY_AUDIENCE,
     });
   }
 
   async resolveDeliveryToken(token: string): Promise<string> {
-    let payload: DeliveryPayload;
-    try {
-      payload = await this.jwtService.verifyAsync<DeliveryPayload>(token, {
-        secret: this.deliverySecret,
-        audience: DELIVERY_AUDIENCE,
-      });
-    } catch {
-      throw new UnauthorizedException('Invalid or expired sign-in session');
-    }
+    const payload = await this.verifyWithKeys<DeliveryPayload>(
+      token,
+      this.deliveryKeys,
+      DELIVERY_AUDIENCE,
+      'Invalid or expired sign-in session',
+    );
 
     // A token from before this axis (no jti - only possible for the handful of in-flight
     // requests spanning a deploy, given the 2-minute TTL) has nothing to claim: fail closed
@@ -213,6 +260,22 @@ export class OidcService {
     await this.db.query('DELETE FROM oidc_delivery_tokens_used WHERE expires_at < NOW()');
 
     return payload.sub;
+  }
+
+  private async verifyWithKeys<T extends object>(
+    token: string,
+    keyring: PurposeKeyring,
+    audience: string,
+    errorMessage: string,
+  ): Promise<T> {
+    for (const secret of Object.values(keyring.keys)) {
+      try {
+        return await this.jwtService.verifyAsync<T>(token, { secret, audience });
+      } catch {
+        // Continue with the explicitly configured previous/legacy verification key.
+      }
+    }
+    throw new UnauthorizedException(errorMessage);
   }
 
   private async getConfiguration(): Promise<client.Configuration> {

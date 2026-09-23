@@ -29,12 +29,28 @@ services:
         value: "true"
       - key: JWT_SECRET
         generateValue: true
+      - key: METRICS_TOKEN
+        generateValue: true
+      # Independent roots for PII, MFA and OIDC. Render generates each value once and keeps it
+      # across Blueprint syncs; they must never be copied into one another.
+      - key: PII_ENCRYPTION_KEY
+        generateValue: true
+      - key: MFA_SECRET_ENCRYPTION_KEY
+        generateValue: true
+      - key: MFA_CHALLENGE_SECRET
+        generateValue: true
+      - key: OIDC_FLOW_SECRET
+        generateValue: true
+      - key: OIDC_DELIVERY_SECRET
+        generateValue: true
       - key: JWT_ISSUER
         value: fodip-digital-2030
       - key: JWT_AUDIENCE
         value: fodip-web
       - key: JWT_ACCESS_TTL
         value: 15m
+      - key: COOKIE_SECURE
+        value: "true"
       - key: BOOTSTRAP_ADMIN_EMAIL
         sync: false # remove all BOOTSTRAP_* values immediately after first successful deploy
       - key: BOOTSTRAP_ADMIN_NOM
@@ -73,7 +89,11 @@ services:
         value: QUALIFICATION
       - key: COOKIE_SECURE
         value: "true"
+      - key: SESSION_COOKIE_MAX_AGE_SECONDS
+        value: "900"
       - key: DEMO_MODE
-        value: "true"
+        # Hosted qualification uses the real API and database. Synthetic fixtures remain
+        # restricted to local/CI environments and must never be presented by this service.
+        value: "false"
       - key: API_BASE_URL
         sync: false # the api service's public URL - see docs/15 étape 3

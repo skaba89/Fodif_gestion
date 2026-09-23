@@ -92,6 +92,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-fodip}:${POSTGRES_PASSWORD:-fodip_local_dev}@postgres:5432/${POSTGRES_DB:-fodip}
       DATABASE_SSL: "false"
       JWT_SECRET: ${JWT_SECRET:-fodip-local-docker-jwt-secret-change-before-hosting}
+      METRICS_TOKEN: ${METRICS_TOKEN:-fodip-local-metrics-token-not-for-hosting-123456}
       # Optional, axis E4 (key rotation) - set to JWT_SECRET's previous value while rotating so
       # tokens already handed out keep verifying; unset once the rotation window is over. See
       # .env.example.
@@ -99,6 +100,7 @@ services:
       JWT_ISSUER: fodip-digital-2030
       JWT_AUDIENCE: fodip-web
       JWT_ACCESS_TTL: 15m
+      COOKIE_SECURE: "false"
       STORAGE_ENDPOINT: http://minio:9000
       STORAGE_REGION: us-east-1
       STORAGE_BUCKET: fodip-documents
@@ -135,12 +137,14 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      APP_ENV: ${APP_ENV:-DEV}
       API_BASE_URL: http://api:4000
       # Browser-reachable API URL, distinct from the Docker-internal API_BASE_URL above: needed
       # so the OIDC "sign in with SSO" link can redirect the browser straight to the API (which
       # the browser cannot reach via the `api` service name). Only used when OIDC is enabled.
       API_PUBLIC_URL: http://localhost:${API_PORT:-4000}
       COOKIE_SECURE: "false"
+      SESSION_COOKIE_MAX_AGE_SECONDS: 900
       # Mission "présentation Directeur général", axe 9 (mode présentation) - a runtime env var,
       # not a NEXT_PUBLIC_ build-time one: this same `web` image serves both the plain local demo
       # and the presentation profile unmodified, read via GET /api/config

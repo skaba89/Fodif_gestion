@@ -55,6 +55,22 @@ describe('OidcService', () => {
     it('is true when all four are set', () => {
       expect(makeService().isEnabled()).toBe(true);
     });
+
+    it('requires independent OIDC roots when SSO is enabled in PROD', () => {
+      expect(() => makeService({
+        ...ENABLED_ENV,
+        NODE_ENV: 'production',
+        APP_ENV: 'PROD',
+      })).toThrow(/OIDC_FLOW_SECRET is required in PROD/);
+    });
+
+    it('does not require OIDC roots in PROD while SSO is disabled', () => {
+      expect(makeService({
+        JWT_SECRET: 'x'.repeat(48),
+        NODE_ENV: 'production',
+        APP_ENV: 'PROD',
+      }).isEnabled()).toBe(false);
+    });
   });
 
   describe('beginAuthorization', () => {
@@ -82,6 +98,26 @@ describe('OidcService', () => {
         audience: 'fodip-oidc-flow',
       });
       expect(decoded).toMatchObject({ state: 'state-value', nonce: 'nonce-value', codeVerifier: 'verifier', portal: 'connexion' });
+    });
+
+    it('signs new flow cookies with the dedicated OIDC root when configured', async () => {
+      (client.discovery as jest.Mock).mockResolvedValue({ __configuration: true });
+      const dedicatedFlowSecret = 'f'.repeat(48);
+      const service = makeService({
+        ...ENABLED_ENV,
+        OIDC_FLOW_SECRET: dedicatedFlowSecret,
+        OIDC_DELIVERY_SECRET: 'd'.repeat(48),
+      });
+
+      const { flowCookie } = await service.beginAuthorization('connexion');
+      await expect(new JwtService().verifyAsync(flowCookie, {
+        secret: deriveSecret(dedicatedFlowSecret, 'fodip-oidc-flow-v1'),
+        audience: 'fodip-oidc-flow',
+      })).resolves.toMatchObject({ portal: 'connexion' });
+      await expect(new JwtService().verifyAsync(flowCookie, {
+        secret: deriveSecret(ENABLED_ENV.JWT_SECRET, 'fodip-oidc-flow-v1'),
+        audience: 'fodip-oidc-flow',
+      })).rejects.toBeDefined();
     });
   });
 
@@ -140,6 +176,25 @@ describe('OidcService', () => {
       const service = makeService();
       const token = await service.issueDeliveryToken('user-42');
       await expect(service.resolveDeliveryToken(token)).resolves.toBe('user-42');
+    });
+
+    it('accepts an in-flight token signed with the configured previous delivery root', async () => {
+      const previous = 'p'.repeat(48);
+      const current = 'n'.repeat(48);
+      const oldService = makeService({
+        ...ENABLED_ENV,
+        OIDC_FLOW_SECRET: 'f'.repeat(48),
+        OIDC_DELIVERY_SECRET: previous,
+      });
+      const token = await oldService.issueDeliveryToken('user-42');
+      const rotatedService = makeService({
+        ...ENABLED_ENV,
+        OIDC_FLOW_SECRET: 'f'.repeat(48),
+        OIDC_DELIVERY_SECRET: current,
+        OIDC_DELIVERY_SECRET_PREVIOUS: previous,
+      });
+
+      await expect(rotatedService.resolveDeliveryToken(token)).resolves.toBe('user-42');
     });
 
     it('rejects a token that was not issued as a delivery token', async () => {

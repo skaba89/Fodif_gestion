@@ -50,6 +50,10 @@ WORKDIR /app
 COPY --from=build /app/deploy/node_modules ./node_modules
 COPY --from=build /app/deploy/package.json ./package.json
 COPY --chown=node:node --from=build /app/deploy/.next ./.next
+# `pnpm deploy` intentionally packages dependencies and build output only. Next still reads
+# runtime options such as `poweredByHeader` from this file when `next start` boots; without it,
+# the container silently falls back to defaults even though local production starts do not.
+COPY --chown=node:node --from=build /app/apps/web/next.config.ts ./next.config.ts
 # Unlike .next, Next.js reads public/ straight off disk at request time rather than bundling it
 # into the build output - omitting this copy step made every file under apps/web/public/ (axe D2:
 # manifest.webmanifest, sw.js, the icons) 404 in the actual container while working fine outside
@@ -59,8 +63,8 @@ COPY --chown=node:node --from=build /app/deploy/.next ./.next
 # `next start` from that stripped directory.
 COPY --chown=node:node --from=build /app/deploy/public ./public
 # Startup policy is kept outside the Docker CMD so it can fail closed before Next.js starts when
-# a PPD/PROD deployment is accidentally configured with DEMO_MODE=true. The qualification
-# environment remains allowed to show its explicit synthetic-data banner.
+# a PPD/PROD deployment is accidentally configured with DEMO_MODE=true. Hosted qualification also
+# disables it in render.yaml; synthetic-data mode is restricted to local/CI use.
 COPY --chown=node:node --from=build /app/apps/web/scripts/start-web.sh ./scripts/start-web.sh
 USER node
 EXPOSE 3000

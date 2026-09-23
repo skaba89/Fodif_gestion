@@ -3,17 +3,53 @@ import { ConfigService } from '@nestjs/config';
 import { PoolClient } from 'pg';
 import { canDeactivateUser } from '../admin-policy';
 import { DatabaseService } from '../database/database.service';
-import { decryptWithKey, deriveSecret, resolveJwtSecret } from '../security-policy';
+import {
+  createPurposeKeyring,
+  decryptVersionedWithKeyring,
+  PurposeKeyring,
+  resolveJwtSecret,
+  resolvePurposeSecret,
+} from '../security-policy';
 
 @Injectable()
 export class DataRightsRepository {
   // Axe B5: same derived key as AdministrationRepository - identical HMAC context of the same
   // base secret always yields the same key, so either repository can decrypt what the other wrote.
-  private readonly piiEncryptionKey: Buffer;
+  private readonly piiEncryptionKeys: PurposeKeyring;
 
   constructor(private readonly db: DatabaseService, config: ConfigService) {
-    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV'));
-    this.piiEncryptionKey = deriveSecret(jwtSecret, 'fodip-pii-telephone-encryption-v1');
+    const nodeEnvironment = config.get<string>('NODE_ENV');
+    const appEnvironment = config.get<string>('APP_ENV');
+    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), nodeEnvironment);
+    const currentSecret = resolvePurposeSecret(
+      config.get<string>('PII_ENCRYPTION_KEY'),
+      jwtSecret,
+      nodeEnvironment,
+      appEnvironment,
+      'PII_ENCRYPTION_KEY',
+    );
+    const previousSecret = resolvePurposeSecret(
+      config.get<string>('PII_ENCRYPTION_KEY_PREVIOUS'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'PII_ENCRYPTION_KEY_PREVIOUS',
+      false,
+    );
+    const legacyDataSecret = resolvePurposeSecret(
+      config.get<string>('LEGACY_DATA_ENCRYPTION_SECRET'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'LEGACY_DATA_ENCRYPTION_SECRET',
+      false,
+    );
+    this.piiEncryptionKeys = createPurposeKeyring(
+      currentSecret,
+      previousSecret,
+      [legacyDataSecret, jwtSecret, config.get<string>('JWT_SECRET_PREVIOUS')],
+      'fodip-pii-telephone-encryption-v1',
+    );
   }
 
   async exportProfile(userId: string) {
@@ -30,7 +66,7 @@ export class DataRightsRepository {
     );
     const row = result.rows[0];
     if (!row) return null;
-    return { ...row, telephone: row.telephone ? decryptWithKey(row.telephone, this.piiEncryptionKey) : null };
+    return { ...row, telephone: row.telephone ? decryptVersionedWithKeyring(row.telephone, this.piiEncryptionKeys) : null };
   }
 
   async exportEnterprise(entrepriseId: string) {
@@ -113,7 +149,8 @@ export class DataRightsRepository {
         `UPDATE utilisateurs SET
           nom = 'Compte anonymisé', prenom = NULL, telephone = NULL,
           email = 'anonymise+' || id || '@fodip.invalid',
-          actif = FALSE, anonymized_at = NOW(), updated_at = NOW()
+          actif = FALSE, anonymized_at = NOW(),
+          session_version = session_version + 1, updated_at = NOW()
          WHERE id = $1`,
         [targetId],
       );

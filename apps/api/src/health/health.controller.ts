@@ -3,6 +3,8 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
 import { DatabaseService } from '../database/database.service';
 import { DocumentStorageService } from '../documents/document-storage.service';
+import { ConfigService } from '@nestjs/config';
+import { releaseMetadata } from '../release-metadata';
 
 interface DependencyChecks {
   database: 'up' | 'down';
@@ -15,6 +17,7 @@ export class HealthController {
   constructor(
     private readonly database: DatabaseService,
     private readonly documentStorage: DocumentStorageService,
+    private readonly config: ConfigService,
   ) {}
 
   @Public()
@@ -31,6 +34,7 @@ export class HealthController {
     return {
       status: 'ok',
       service: 'fodip-api',
+      ...releaseMetadata(this.config),
       timestamp: new Date().toISOString(),
     };
   }
@@ -51,6 +55,7 @@ export class HealthController {
     const response = {
       status: databaseUp && objectStorageUp ? 'ready' : 'unavailable',
       service: 'fodip-api',
+      ...releaseMetadata(this.config),
       checks,
       timestamp: new Date().toISOString(),
     };

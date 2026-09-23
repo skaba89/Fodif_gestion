@@ -22,6 +22,9 @@ export class SessionTokenService {
       email: user.email,
       roles: user.roles,
       permissions: user.permissions,
+      // Every authorization-sensitive account change increments this value. The global guard
+      // compares it with PostgreSQL on every protected request, invalidating all older tokens.
+      sessionVersion: user.sessionVersion,
       entrepriseId: user.entrepriseId,
       partenaireBancaireId: user.partenaireBancaireId,
       // Axe E4 (session revocation, docs/14-ROADMAP-SAAS-PREMIUM.md) - identifies this specific

@@ -6,6 +6,7 @@ import { AuthenticatedUser } from '../../auth/auth-user.interface';
 import { JwtKeyResolverService } from '../../auth/jwt-key-resolver.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { RevocationService } from '../revocation/revocation.service';
+import { UsersRepository } from '../../users/users.repository';
 
 interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
@@ -18,6 +19,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     private readonly revocation: RevocationService,
     private readonly jwtKeys: JwtKeyResolverService,
+    private readonly users: UsersRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -53,6 +55,17 @@ export class JwtAuthGuard implements CanActivate {
     // simply not revocable, same as before - never blocked on that basis alone.
     if (user.jti && (await this.revocation.isRevoked(user.jti))) {
       throw new UnauthorizedException('Token has been revoked');
+    }
+
+    // A signed token is not sufficient for an institutional system: role changes, password
+    // resets, deactivation and anonymization must take effect immediately. Tokens without the
+    // version claim predate this control and deliberately fail closed, forcing one new login.
+    if (!user.sub || !Number.isInteger(user.sessionVersion)) {
+      throw new UnauthorizedException('Session is no longer valid');
+    }
+    const sessionState = await this.users.findSessionStateById(user.sub);
+    if (!sessionState || !sessionState.actif || sessionState.sessionVersion !== user.sessionVersion) {
+      throw new UnauthorizedException('Session is no longer valid');
     }
 
     request.user = user;

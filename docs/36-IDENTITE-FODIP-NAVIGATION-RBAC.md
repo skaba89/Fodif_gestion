@@ -67,7 +67,7 @@ Exemples :
 - `AGENT_FODIP` -> `/agent/dossiers` ;
 - `COMITE_FINANCEMENT` -> `/comite/dossiers` ;
 - `DIRECTION_FODIP` / `ANALYSTE` -> `/direction/tableau-de-bord` ;
-- `SUPER_ADMIN` -> `/administration/utilisateurs` ;
+- `SUPER_ADMIN` -> `/administration/tableau-de-bord` ;
 - `AUDITEUR` -> `/auditeur/tableau-de-bord` ;
 - `PARTENAIRE_BANCAIRE` -> `/partenaire/financements` ;
 - `PME` -> `/entrepreneur`.

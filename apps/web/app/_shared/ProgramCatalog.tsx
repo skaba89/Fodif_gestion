@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { clientApi } from '../../lib/client-api';
 import Breadcrumbs from './Breadcrumbs';
 import Button from './Button';
 import styles from '../entrepreneur/portal.module.css';
+import catalog from './ProgramCatalog.module.css';
 
 type ProgramDocument = {
   code: string;
@@ -43,6 +44,7 @@ export default function ProgramCatalog({
   homeLabel,
   actionHref,
   actionLabel,
+  children,
 }: {
   eyebrow: string;
   title: string;
@@ -50,6 +52,7 @@ export default function ProgramCatalog({
   homeLabel: string;
   actionHref?: string;
   actionLabel?: string;
+  children?: ReactNode;
 }) {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [message, setMessage] = useState('');
@@ -74,27 +77,29 @@ export default function ProgramCatalog({
 
       <section className={styles.section} aria-label="Programmes ouverts">
         {programs.length === 0 && !message ? (
-          <div className={`${styles.card} ${styles.program}`}><h2>Aucun programme ouvert</h2><p>Aucun programme n’est actuellement publié pour de nouvelles demandes.</p></div>
+          <div className={catalog.empty}><h2>Aucun programme ouvert</h2><p>Aucun programme n’est actuellement publié pour de nouvelles demandes.</p></div>
         ) : null}
-        <div className={styles.programs}>
+        <div className={catalog.list}>
           {programs.map((program) => {
             const mandatory = (program.documentsRequis ?? []).filter((document) => document.obligatoire);
             return (
-              <article className={`${styles.card} ${styles.program}`} key={program.id} data-testid="program-card">
-                <span className={styles.programTag}>{program.code}{program.regleVersion ? ` · V${program.regleVersion}` : ''}</span>
-                <h3>{program.nom}</h3>
-                {program.description ? <p>{program.description}</p> : null}
-                <p><strong>Financement :</strong> {money(program.montantMin)} → {money(program.montantMax)}</p>
-                {program.enveloppeTotale != null ? <p><strong>Enveloppe indicative :</strong> {money(program.enveloppeTotale)}</p> : null}
-                <p>
-                  <strong>Conditions :</strong>{' '}
-                  {program.apportMinPct != null ? `apport ≥ ${Number(program.apportMinPct).toLocaleString('fr-FR')} %` : 'apport non paramétré'}
-                  {program.ancienneteMinMois != null ? ` · ancienneté ≥ ${program.ancienneteMinMois} mois` : ''}
-                  {program.rccmRequis ? ' · RCCM requis' : ''}
-                  {program.nifRequis ? ' · NIF requis' : ''}
-                </p>
-                {program.slaInstructionJours ? <p><strong>SLA d’instruction :</strong> {program.slaInstructionJours} jours</p> : null}
-                <div>
+              <article className={catalog.program} key={program.id} data-testid="program-card">
+                <div className={catalog.identity}>
+                  <span className={catalog.code}>{program.code}{program.regleVersion ? ` · V${program.regleVersion}` : ''}</span>
+                  <h2>{program.nom}</h2>
+                  {program.description ? <p>{program.description}</p> : null}
+                </div>
+
+                <dl className={catalog.facts}>
+                  <div><dt>Financement</dt><dd>{money(program.montantMin)} → {money(program.montantMax)}</dd></div>
+                  {program.enveloppeTotale != null ? <div><dt>Enveloppe indicative</dt><dd>{money(program.enveloppeTotale)}</dd></div> : null}
+                  <div><dt>Apport minimum</dt><dd>{program.apportMinPct != null ? `${Number(program.apportMinPct).toLocaleString('fr-FR')} %` : 'Non paramétré'}</dd></div>
+                  <div><dt>Ancienneté</dt><dd>{program.ancienneteMinMois != null ? `${program.ancienneteMinMois} mois minimum` : 'Non paramétrée'}</dd></div>
+                  <div><dt>RCCM / NIF</dt><dd>{program.rccmRequis ? 'RCCM requis' : 'RCCM non requis'} · {program.nifRequis ? 'NIF requis' : 'NIF non requis'}</dd></div>
+                  <div><dt>Délai indicatif</dt><dd>{program.slaInstructionJours ? `${program.slaInstructionJours} jours` : 'Non défini'}</dd></div>
+                </dl>
+
+                <div className={catalog.documents}>
                   <strong>Pièces obligatoires</strong>
                   {mandatory.length ? (
                     <ul>{mandatory.map((document) => <li key={document.code}>{document.libelle}{document.validiteJours ? ` · validité ${document.validiteJours} jours` : ''}</li>)}</ul>
@@ -105,6 +110,7 @@ export default function ProgramCatalog({
           })}
         </div>
       </section>
+      {children}
     </main>
   );
 }

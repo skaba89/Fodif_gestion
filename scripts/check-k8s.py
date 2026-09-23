@@ -35,6 +35,8 @@ expected = {
     ],
     "01-configmap.yaml": [
         'NODE_ENV: production',
+        'APP_ENV: PROD',
+        'FODIP_RELEASE_SHA: CHANGE_ME_RELEASE_SHA',
         'DEMO_MODE: "false"',
         'DATABASE_SSL: "true"',
         'COOKIE_SECURE: "true"',

@@ -11,6 +11,7 @@ type RoleCase = {
   portal: PortalId;
   home: string;
   forbidden: string;
+  mobileRoute?: string;
   canReadNotifications?: boolean;
 };
 
@@ -34,6 +35,8 @@ const LEGACY_LOGIN_ROUTES = [
 
 const PORTAL_ROUTES: Record<PortalId, RouteCase[]> = {
   administration: [
+    { source: '/administration/tableau-de-bord', sample: '/administration/tableau-de-bord' },
+    { source: '/administration/journal', sample: '/administration/journal' },
     { source: '/administration/recuperation', sample: '/administration/recuperation' },
     { source: '/administration/utilisateurs', sample: '/administration/utilisateurs' },
   ],
@@ -43,7 +46,7 @@ const PORTAL_ROUTES: Record<PortalId, RouteCase[]> = {
     { source: '/agent/dossiers', sample: '/agent/dossiers' },
     {
       source: '/agent/dossiers/[id]',
-      sample: '/agent/dossiers/60000000-0000-4000-8000-000000000002',
+      sample: '/agent/dossiers/60000000-0000-4000-8000-000000000008',
     },
     { source: '/agent/programmes', sample: '/agent/programmes' },
   ],
@@ -96,35 +99,36 @@ const PORTAL_ROUTES: Record<PortalId, RouteCase[]> = {
 const ROLE_CASES: RoleCase[] = [
   {
     role: 'PME', roleLabel: 'PME', email: 'qualification-pme@fodip.local', portal: 'entrepreneur',
-    home: '/entrepreneur', forbidden: '/direction/tableau-de-bord',
+    home: '/entrepreneur', forbidden: '/direction/tableau-de-bord', mobileRoute: '/entrepreneur/suivi',
   },
   {
     role: 'AGENT_FODIP', roleLabel: 'Agent FODIP', email: 'qualification-agent@fodip.local', portal: 'agent',
-    home: '/agent/tableau-de-bord', forbidden: '/partenaire/financements',
+    home: '/agent/tableau-de-bord', forbidden: '/partenaire/financements', mobileRoute: '/agent/dossiers',
   },
   {
     role: 'COMITE_FINANCEMENT', roleLabel: 'Comité de financement', email: 'qualification-comite@fodip.local', portal: 'comite',
-    home: '/comite/tableau-de-bord', forbidden: '/administration/utilisateurs',
+    home: '/comite/tableau-de-bord', forbidden: '/administration/utilisateurs', mobileRoute: '/comite/dossiers',
   },
   {
     role: 'DIRECTION_FODIP', roleLabel: 'Direction FODIP', email: 'qualification-direction@fodip.local', portal: 'direction',
-    home: '/direction/tableau-de-bord', forbidden: '/entrepreneur',
+    home: '/direction/tableau-de-bord', forbidden: '/entrepreneur', mobileRoute: '/direction/financements',
   },
   {
     role: 'ANALYSTE', roleLabel: 'Analyste', email: 'qualification-analyste@fodip.local', portal: 'direction',
-    home: '/direction/tableau-de-bord', forbidden: '/administration/utilisateurs',
+    home: '/direction/tableau-de-bord', forbidden: '/administration/utilisateurs', mobileRoute: '/direction/programmes',
   },
   {
     role: 'AUDITEUR', roleLabel: 'Auditeur', email: 'qualification-auditeur@fodip.local', portal: 'auditeur',
-    home: '/auditeur/tableau-de-bord', forbidden: '/partenaire/financements',
+    home: '/auditeur/tableau-de-bord', forbidden: '/partenaire/financements', mobileRoute: '/auditeur/programmes',
   },
   {
     role: 'PARTENAIRE_BANCAIRE', roleLabel: 'Partenaire bancaire', email: 'qualification-partenaire@fodip.local', portal: 'partenaire',
-    home: '/partenaire/financements', forbidden: '/direction/tableau-de-bord', canReadNotifications: false,
+    home: '/partenaire/financements', forbidden: '/direction/tableau-de-bord',
+    mobileRoute: '/partenaire/financements/[id]', canReadNotifications: false,
   },
   {
     role: 'SUPER_ADMIN', roleLabel: 'Super administrateur', email: 'qualification-admin@fodip.local', portal: 'administration',
-    home: '/administration/utilisateurs', forbidden: '/entrepreneur',
+    home: '/administration/tableau-de-bord', forbidden: '/entrepreneur', mobileRoute: '/administration/utilisateurs',
   },
 ];
 
@@ -164,12 +168,59 @@ async function login(page: Page, roleCase: RoleCase) {
   await expect(page).toHaveURL(pathPattern(roleCase.home));
 }
 
+async function expectAccountPageVisuals(page: Page, routeLabel: string) {
+  const headings = page.getByRole('heading', { level: 1 });
+  await expect(headings.first()).toBeVisible();
+  await expect(headings, `${routeLabel} must expose one clear page title`).toHaveCount(1);
+
+  const visual = await headings.first().evaluate((heading) => {
+    const style = window.getComputedStyle(heading);
+    const main = heading.closest('main');
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      mainWidth: main?.getBoundingClientRect().width ?? 0,
+      viewportWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+
+  const maxTitleSize = visual.viewportWidth <= 620 ? 34 : 42;
+  expect(
+    visual.fontSize,
+    `${routeLabel} H1 is too large for the institutional hierarchy (${visual.fontSize}px > ${maxTitleSize}px)`,
+  ).toBeLessThanOrEqual(maxTitleSize);
+  expect(visual.mainWidth, `${routeLabel} main content must stay inside the viewport`).toBeLessThanOrEqual(visual.viewportWidth + 1);
+  expect(
+    visual.scrollWidth,
+    `${routeLabel} must not create page-level horizontal overflow (${visual.scrollWidth}px > ${visual.viewportWidth}px)`,
+  ).toBeLessThanOrEqual(visual.viewportWidth + 1);
+}
+
 async function expectHealthyPage(page: Page, route: RouteCase, apiErrors: string[]) {
   const before = apiErrors.length;
   await page.goto(route.sample);
   await expect(page).toHaveURL(pathPattern(route.expected ?? route.sample));
-  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+
+  await expectAccountPageVisuals(page, route.sample);
+
   expect(apiErrors.slice(before), `${route.sample} returned failing API responses`).toEqual([]);
+}
+
+async function expectShellPrivacy(page: Page, roleCase: RoleCase) {
+  const shell = page.locator('[data-portal-context]').first();
+  await expect(shell).toHaveCount(1);
+
+  const sidebar = shell.locator('aside').first();
+  const topbar = shell.locator('header').first();
+  await expect(sidebar).toHaveCount(1);
+  await expect(topbar).toHaveCount(1);
+
+  const sidebarText = (await sidebar.textContent()) ?? '';
+  const topbarText = (await topbar.textContent()) ?? '';
+  expect(sidebarText, 'The sidebar must never expose the authenticated email').not.toContain(roleCase.email);
+  expect(topbarText, 'The top bar must never expose the authenticated email').not.toContain(roleCase.email);
+  await expect(sidebar.getByText(roleCase.role, { exact: true })).toHaveCount(0);
+  await expect(topbar.getByText(roleCase.role, { exact: true })).toHaveCount(0);
 }
 
 test.describe('Exhaustive route and role qualification', () => {
@@ -228,6 +279,7 @@ test.describe('Exhaustive route and role qualification', () => {
       test.setTimeout(120_000);
 
       await login(page, roleCase);
+      await expectShellPrivacy(page, roleCase);
 
       const apiErrors: string[] = [];
       page.on('response', (response) => {
@@ -239,8 +291,16 @@ test.describe('Exhaustive route and role qualification', () => {
 
       const isMobileQualification = testInfo.project.name === 'Pixel 7' || testInfo.project.name === 'iPhone 14';
       const routes = isMobileQualification
-        ? PORTAL_ROUTES[roleCase.portal].filter((route) => (route.expected ?? route.sample) === roleCase.home)
+        ? PORTAL_ROUTES[roleCase.portal].filter((route) =>
+            (route.expected ?? route.sample) === roleCase.home || route.source === roleCase.mobileRoute)
         : PORTAL_ROUTES[roleCase.portal];
+
+      if (isMobileQualification) {
+        const mobileNav = page.locator('nav[aria-label^="Navigation mobile"]');
+        await expect(mobileNav).toBeVisible();
+        await expect(mobileNav.locator(':scope > a, :scope > button')).toHaveCount(4);
+        await expect(mobileNav.getByRole('button', { name: 'Plus de navigation' })).toBeVisible();
+      }
 
       for (const route of routes) await expectHealthyPage(page, route, apiErrors);
 
@@ -249,17 +309,20 @@ test.describe('Exhaustive route and role qualification', () => {
       await expect(page.getByRole('heading', { name: 'Mon profil' })).toBeVisible();
       await expect(page.getByTestId('profile-email')).toHaveText(roleCase.email);
       await expect(page.getByTestId('profile-roles')).toContainText(roleCase.roleLabel);
+      await expectAccountPageVisuals(page, '/profil');
 
       if (roleCase.canReadNotifications !== false) {
         await page.goto('/notifications');
         await expect(page).toHaveURL(/\/notifications$/);
         await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+        await expectAccountPageVisuals(page, '/notifications');
       }
 
       if (!isMobileQualification) {
         await page.goto('/mes-donnees');
         await expect(page).toHaveURL(/\/mes-donnees$/);
         await expect(page.getByRole('heading', { name: 'Mes données personnelles' })).toBeVisible();
+        await expectAccountPageVisuals(page, '/mes-donnees');
       }
 
       expect(apiErrors, `${roleCase.role} must not receive failing API responses on authorized/shared pages`).toEqual([]);

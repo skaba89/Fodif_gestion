@@ -70,7 +70,7 @@ function LoginFormInner({
 }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const oidcToken = searchParams.get('oidc_token');
+  const oidcContinuation = searchParams.get('oidc') === 'continue';
   const sessionExpired = searchParams.get('reason') === 'session-expired';
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
@@ -81,8 +81,8 @@ function LoginFormInner({
   const [challenge, setChallenge] = useState('');
   const [secret, setSecret] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(() => Boolean(oidcToken));
-  const [checkingSession, setCheckingSession] = useState(() => !oidcToken);
+  const [loading, setLoading] = useState(() => oidcContinuation);
+  const [checkingSession, setCheckingSession] = useState(() => !oidcContinuation);
   const [existingSessionHome, setExistingSessionHome] = useState<string | null>(null);
 
   async function postJson(path: string, body: unknown): Promise<SessionResponse> {
@@ -176,8 +176,9 @@ function LoginFormInner({
   }
 
   useEffect(() => {
-    if (oidcToken) {
-      postJson('/api/session/oidc/finish', { token: oidcToken })
+    if (oidcContinuation) {
+      window.history.replaceState(null, '', '/connexion');
+      postJson('/api/session/oidc/finish', {})
         .then(async (data) => {
           if (data.mfaSetupRequired && data.mfaChallenge && data.secret) {
             setChallenge(data.mfaChallenge);
@@ -367,11 +368,11 @@ function LoginFormInner({
           <h2>Financer la croissance des PME guinéennes avec rigueur, transparence et impact.</h2>
           <p>Une même chaîne de confiance, de la demande au décaissement puis au suivi du remboursement et des emplois créés.</p>
         </div>
-        <dl className={premium.trustStats}>
-          <div><dt>PME financées</dt><dd>200+</dd></div>
-          <div><dt>GNF décaissés</dt><dd>45 Mds</dd></div>
-          <div><dt>Couverture</dt><dd>8 régions</dd></div>
-        </dl>
+        <ul className={premium.trustList} aria-label="Garanties de la plateforme">
+          <li><strong>Accès contrôlés</strong><span>Chaque compte est limité aux espaces et actions autorisés.</span></li>
+          <li><strong>Traçabilité</strong><span>Les opérations sensibles restent journalisées pour le contrôle.</span></li>
+          <li><strong>Authentification renforcée</strong><span>La double authentification s’applique lorsqu’elle est requise pour le compte.</span></li>
+        </ul>
         <p className={premium.panelFoot}>Dossier → Instruction → Décision → Financement → Suivi</p>
       </aside>
     </main>

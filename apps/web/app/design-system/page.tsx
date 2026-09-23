@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import ThemeToggle from '../_shared/ThemeToggle';
 import portal from '../entrepreneur/portal.module.css';
 import SharedUiShowcase from './SharedUiShowcase';
@@ -33,6 +34,8 @@ const componentNames = [
 ];
 
 export default function DesignSystemPage() {
+  if (process.env.APP_ENV === 'PROD') notFound();
+
   return (
     <div className={ds.shell}>
       <a href="#main-content" className="skip-link">Aller au contenu principal</a>
@@ -46,7 +49,7 @@ export default function DesignSystemPage() {
           <p className={portal.eyebrow}>FODIP Digital 2030 — système produit unifié</p>
           <h1 className={portal.title}>Design system institutionnel</h1>
           <p className={portal.lead}>
-            La plateforme applique un langage visuel d’institution financière numérique : 60 % ivoire, 30 % surfaces blanches et 10 % vert profond/or, avec une typographie display expressive, des chiffres financiers tabulaires et des primitives SVG sans dépendance graphique lourde.
+            La plateforme applique un langage visuel d’institution financière numérique sobre, avec des surfaces claires, un vert institutionnel, un accent or limité aux actions importantes, une typographie Public Sans compacte et des chiffres financiers tabulaires.
           </p>
         </div>
 
@@ -88,12 +91,12 @@ export default function DesignSystemPage() {
         <section id="typographie" className={ds.section}>
           <h2>Typographie &amp; données</h2>
           <p className={ds.sectionLead}>
-            <strong>Public Sans</strong> reste la fonte du corps, des formulaires et de la navigation. <strong>Bricolage Grotesque</strong> est réservée aux titres h1/h2, KPI et chiffres clés afin de créer un contraste institutionnel plus mémorable sans compromettre la lisibilité métier.
+            <strong>Public Sans</strong> est la fonte unique du produit pour le corps, les formulaires, la navigation, les titres et les KPI. La hiérarchie repose sur la taille, le poids et l’espacement plutôt que sur une seconde police décorative.
           </p>
           <div className={ds.typeSpecimen}><p className={portal.eyebrow}>Surtitre institutionnel</p><span className={ds.typeMeta}>Public Sans · caption 0,7 rem · capitales espacées</span></div>
-          <div className={ds.typeSpecimen}><h1 className={portal.title} style={{ margin: 0 }}>Financer avec confiance.</h1><span className={ds.typeMeta}>Bricolage Grotesque · display 800 · tracking serré</span></div>
+          <div className={ds.typeSpecimen}><h1 className={portal.title} style={{ margin: 0 }}>Financer avec confiance.</h1><span className={ds.typeMeta}>Public Sans · titre compact · hiérarchie institutionnelle</span></div>
           <div className={ds.typeSpecimen}><p className={portal.lead} style={{ margin: 0 }}>Le corps privilégie la lisibilité des informations métier, y compris sur un écran Android modeste et sous connectivité instable.</p><span className={ds.typeMeta}>Public Sans · corps ≥ 0,8 rem</span></div>
-          <div className={ds.typeSpecimen}><strong data-kpi-value style={{ fontSize: 'var(--kpi-size)' }}>45 000 000 000 GNF</strong><span className={ds.typeMeta}>Bricolage Grotesque · chiffres tabulaires · KPI exécutif</span></div>
+          <div className={ds.typeSpecimen}><strong data-kpi-value style={{ fontSize: 'var(--kpi-size)' }}>45 000 000 000 GNF</strong><span className={ds.typeMeta}>Public Sans · chiffres tabulaires · KPI exécutif</span></div>
         </section>
 
         <section id="catalogue" className={ds.section}>

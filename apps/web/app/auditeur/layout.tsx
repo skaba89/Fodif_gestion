@@ -4,6 +4,7 @@ import { AccountMenu } from '../_shared/AccountMenu';
 const navItems = [
   { label: 'Supervision', href: '/auditeur/tableau-de-bord' },
   { label: 'Programmes', href: '/auditeur/programmes' },
+  { label: 'Notifications', href: '/notifications' },
   { label: 'Mes données', href: '/mes-donnees' },
 ];
 

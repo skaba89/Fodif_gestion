@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import Breadcrumbs from '../../_shared/Breadcrumbs';
 import ConfirmDialog from '../../_shared/ConfirmDialog';
 import portal from '../../entrepreneur/portal.module.css';
 import styles from './administration.module.css';
@@ -12,7 +13,7 @@ type User = {
   id: string; email: string; nom: string; prenom?: string; actif: boolean; mfaRequired: boolean; roles: string[];
   entrepriseId?: string | null; raisonSociale?: string;
   partenaireBancaireId?: string | null; partenaireRaisonSociale?: string; lastLoginAt?: string | null;
-  anonymizedAt?: string | null;
+  anonymizedAt?: string | null; mfaEnrolled: boolean;
 };
 
 const emptyForm = { email: '', nom: '', prenom: '', password: '', roles: ['AGENT_FODIP'], entrepriseId: '', partenaireBancaireId: '', mfaRequired: false };
@@ -42,6 +43,7 @@ export default function UsersAdministrationPage() {
   const [enterpriseForm, setEnterpriseForm] = useState(emptyEnterpriseForm);
   const [partnerBankForm, setPartnerBankForm] = useState(emptyPartnerBankForm);
   const [pendingAnonymize, setPendingAnonymize] = useState<User | null>(null);
+  const [pendingMfaReset, setPendingMfaReset] = useState<User | null>(null);
 
   const load = useCallback(async () => {
     const [usersResponse, rolesResponse, enterprisesResponse, partnerBanksResponse] = await Promise.all([
@@ -120,17 +122,29 @@ export default function UsersAdministrationPage() {
     setMessage(`Compte ${user.email} anonymisé.`); await load();
   }
 
+  async function resetMfa(user: User, reason: string) {
+    setMessage('');
+    const response = await fetch(`/api/administration/users/${user.id}/reset-mfa`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reason }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) return setMessage(responseMessage(body, 'Réinitialisation MFA impossible'));
+    setMessage(`MFA réinitialisé pour ${user.email}. Toutes ses sessions ont été révoquées ; un nouvel enrôlement sera exigé.`);
+    await load();
+  }
+
   const activeUsers = users.filter((user) => user.actif).length;
   const mfaUsers = users.filter((user) => user.mfaRequired).length;
 
   return <main className={`${portal.main} ${styles.adminPage}`}>
+    <Breadcrumbs items={[{ label: 'Administration', href: '/administration/tableau-de-bord' }, { label: 'Utilisateurs et rôles' }]} />
     <div className={styles.pageHeader}>
       <div className={styles.headerCopy}>
         <p className={portal.eyebrow}>Super administration</p>
         <h1 className={portal.title}>Utilisateurs et rôles</h1>
         <p className={portal.lead}>Créez les PME et banques partenaires, puis les comptes utilisateurs et leurs périmètres. La désactivation de son propre compte et du dernier super-administrateur est interdite.</p>
       </div>
-      <span className={styles.securityBadge}><span className={styles.securityDot} aria-hidden="true" />Accès SUPER_ADMIN · actions journalisées</span>
+      <span className={styles.securityBadge}><span className={styles.securityDot} aria-hidden="true" />Accès d’administration renforcé · actions journalisées</span>
     </div>
 
     <section className={styles.statsGrid} aria-label="Synthèse de l’administration">
@@ -198,8 +212,9 @@ export default function UsersAdministrationPage() {
         <div><h2>Comptes existants</h2><p>Pilotez les rôles, périmètres, états de compte et exigences MFA depuis une vue consolidée.</p></div>
         <div className={`${portal.field} ${styles.searchField}`}><label htmlFor="search">Rechercher un compte</label><input id="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nom ou email" /></div>
       </div>
-      <div className={styles.tableScroller}><table className={portal.table}><thead><tr><th>Utilisateur</th><th>Rôles</th><th>Entreprise PME</th><th>Banque partenaire</th><th>Dernière connexion</th><th>Actif</th><th>MFA exigé</th><th>Action</th><th>Droits des personnes</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}>
+      <div className={styles.tableScroller}><table className={portal.table}><thead><tr><th>Utilisateur</th><th>Dernier accès</th><th>Rôles</th><th>Entreprise PME</th><th>Banque partenaire</th><th>Actif</th><th>MFA exigé</th><th>Actions</th><th>Droits des personnes</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}>
         <td><div className={styles.userIdentity}><span className={styles.userAvatar} aria-hidden="true">{userInitials(user)}</span><div><strong>{user.prenom} {user.nom}</strong><span className={styles.userEmail}>{user.email}</span></div></div></td>
+        <td className={styles.lastLoginCell}>{formatLastLogin(user.lastLoginAt)}</td>
         <td><select multiple value={user.roles} aria-label={`Rôles de ${user.email}`} onChange={(event) => {
           const nextRoles = Array.from(event.target.selectedOptions, (option) => option.value);
           patchLocal(user.id, {
@@ -210,10 +225,9 @@ export default function UsersAdministrationPage() {
         }}>{roles.map((role) => <option value={role.code} key={role.code}>{role.nom}</option>)}</select></td>
         <td><select value={user.entrepriseId ?? ''} disabled={!user.roles.includes('PME')} onChange={(event) => patchLocal(user.id, { entrepriseId: event.target.value || null })}><option value="">Aucune</option>{enterprises.map((enterprise) => <option key={enterprise.id} value={enterprise.id}>{enterprise.raisonSociale}</option>)}</select></td>
         <td><select value={user.partenaireBancaireId ?? ''} disabled={!user.roles.includes('PARTENAIRE_BANCAIRE')} onChange={(event) => patchLocal(user.id, { partenaireBancaireId: event.target.value || null })}><option value="">Aucune</option>{partnerBanks.map((bank) => <option key={bank.id} value={bank.id}>{bank.raisonSociale}</option>)}</select></td>
-        <td className={styles.lastLoginCell}>{formatLastLogin(user.lastLoginAt)}</td>
         <td className={styles.toggleCell}><input type="checkbox" checked={user.actif} onChange={(event) => patchLocal(user.id, { actif: event.target.checked })} aria-label={`Compte actif ${user.email}`} /></td>
         <td className={styles.toggleCell}><input type="checkbox" checked={user.mfaRequired} onChange={(event) => patchLocal(user.id, { mfaRequired: event.target.checked })} aria-label={`MFA ${user.email}`} /></td>
-        <td><button className={`${portal.secondary} ${styles.actionButton}`} type="button" onClick={() => save(user)}>Enregistrer</button></td>
+        <td><div className={styles.accountActions}><button className={`${portal.secondary} ${styles.actionButton}`} type="button" onClick={() => save(user)}>Enregistrer</button>{user.mfaEnrolled && <button className={`${portal.secondary} ${styles.actionButton}`} type="button" onClick={() => setPendingMfaReset(user)}>Réinitialiser MFA</button>}</div></td>
         <td><button className={`${portal.secondary} ${styles.dangerAction}`} type="button" onClick={() => setPendingAnonymize(user)} disabled={Boolean(user.anonymizedAt)}>{user.anonymizedAt ? 'Anonymisé' : 'Anonymiser'}</button></td>
       </tr>)}</tbody></table></div>
     </section>
@@ -222,6 +236,19 @@ export default function UsersAdministrationPage() {
       <div className={styles.rbacHeader}><h2>Référentiel RBAC</h2><p>Consultez les rôles disponibles et les permissions directes associées.</p></div>
       <div className={styles.roleGrid}>{roles.map((role) => <details className={styles.roleDetails} key={role.code}><summary><strong>{role.nom}</strong> · {role.code}</summary><div className={styles.roleBody}><p>{role.description}</p><p>{role.permissions.join(' · ') || 'Aucune permission directe'}</p></div></details>)}</div>
     </section>
+
+    <ConfirmDialog
+      open={Boolean(pendingMfaReset)}
+      title="Réinitialiser le MFA ?"
+      message={pendingMfaReset ? `Le secret MFA de ${pendingMfaReset.email} sera supprimé et toutes ses sessions seront révoquées. Le compte devra enrôler une nouvelle application d’authentification à sa prochaine connexion.` : ''}
+      confirmLabel="Réinitialiser le MFA"
+      danger
+      requireComment
+      commentLabel="Motif institutionnel (10 caractères minimum)"
+      commentMinLength={10}
+      onConfirm={(reason) => { const user = pendingMfaReset; setPendingMfaReset(null); if (user && reason) void resetMfa(user, reason); }}
+      onCancel={() => setPendingMfaReset(null)}
+    />
 
     <ConfirmDialog
       open={Boolean(pendingAnonymize)}

@@ -2,7 +2,14 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as OTPAuth from 'otpauth';
-import { decryptWithKey, deriveSecret, encryptWithKey, resolveJwtSecret } from '../../security-policy';
+import {
+  createPurposeKeyring,
+  decryptVersionedWithKeyring,
+  encryptVersionedWithKeyring,
+  PurposeKeyring,
+  resolveJwtSecret,
+  resolvePurposeSecret,
+} from '../../security-policy';
 import { AuthUserRecord, UsersRepository } from '../../users/users.repository';
 import { SessionTokenService } from '../session-token.service';
 
@@ -39,13 +46,14 @@ const TOTP_ISSUER = 'FODIP Digital 2030';
  *     POST /auth/mfa/confirm to finish enrollment.
  *  3. Otherwise a login challenge is returned: the client must submit one valid code via
  *     POST /auth/mfa/verify.
- * Both challenge tokens are short-lived, purpose-scoped JWTs signed with a key derived from
- * JWT_SECRET (never the main signing key), so they cannot be reused as a bearer access token.
+ * Both challenge tokens are short-lived, purpose-scoped JWTs signed with MFA_CHALLENGE_SECRET.
+ * TOTP seeds use the independent MFA_SECRET_ENCRYPTION_KEY and a versioned AES-GCM envelope.
+ * Legacy JWT-derived values remain readable only through the explicit migration keyring.
  */
 @Injectable()
 export class MfaService {
-  private readonly encryptionKey: Buffer;
-  private readonly challengeSecret: Buffer;
+  private readonly encryptionKeys: PurposeKeyring;
+  private readonly challengeKeys: PurposeKeyring;
 
   constructor(
     config: ConfigService,
@@ -53,15 +61,68 @@ export class MfaService {
     private readonly jwtService: JwtService,
     private readonly sessions: SessionTokenService,
   ) {
-    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV'));
-    this.encryptionKey = deriveSecret(jwtSecret, 'fodip-mfa-secret-encryption-v1');
-    this.challengeSecret = deriveSecret(jwtSecret, 'fodip-mfa-challenge-v1');
+    const nodeEnvironment = config.get<string>('NODE_ENV');
+    const appEnvironment = config.get<string>('APP_ENV');
+    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), nodeEnvironment);
+    const jwtPreviousSecret = config.get<string>('JWT_SECRET_PREVIOUS');
+    const legacyDataSecret = resolvePurposeSecret(
+      config.get<string>('LEGACY_DATA_ENCRYPTION_SECRET'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'LEGACY_DATA_ENCRYPTION_SECRET',
+      false,
+    );
+
+    const encryptionSecret = resolvePurposeSecret(
+      config.get<string>('MFA_SECRET_ENCRYPTION_KEY'),
+      jwtSecret,
+      nodeEnvironment,
+      appEnvironment,
+      'MFA_SECRET_ENCRYPTION_KEY',
+    );
+    const previousEncryptionSecret = resolvePurposeSecret(
+      config.get<string>('MFA_SECRET_ENCRYPTION_KEY_PREVIOUS'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'MFA_SECRET_ENCRYPTION_KEY_PREVIOUS',
+      false,
+    );
+    this.encryptionKeys = createPurposeKeyring(
+      encryptionSecret,
+      previousEncryptionSecret,
+      [legacyDataSecret, jwtSecret, jwtPreviousSecret],
+      'fodip-mfa-secret-encryption-v1',
+    );
+
+    const challengeSecret = resolvePurposeSecret(
+      config.get<string>('MFA_CHALLENGE_SECRET'),
+      jwtSecret,
+      nodeEnvironment,
+      appEnvironment,
+      'MFA_CHALLENGE_SECRET',
+    );
+    const previousChallengeSecret = resolvePurposeSecret(
+      config.get<string>('MFA_CHALLENGE_SECRET_PREVIOUS'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'MFA_CHALLENGE_SECRET_PREVIOUS',
+      false,
+    );
+    this.challengeKeys = createPurposeKeyring(
+      challengeSecret,
+      previousChallengeSecret,
+      [jwtSecret, jwtPreviousSecret],
+      'fodip-mfa-challenge-v1',
+    );
   }
 
   async beginChallenge(user: AuthUserRecord): Promise<MfaSetupChallenge | MfaLoginChallenge> {
     if (!user.mfaConfirmedAt) {
       const secret = user.mfaSecretEncrypted
-        ? decryptWithKey(user.mfaSecretEncrypted, this.encryptionKey)
+        ? decryptVersionedWithKeyring(user.mfaSecretEncrypted, this.encryptionKeys)
         : await this.enrollNewSecret(user.id);
       const totp = this.buildTotp(user.email, secret);
       return {
@@ -85,7 +146,7 @@ export class MfaService {
       throw new UnauthorizedException('Invalid verification code');
     }
 
-    const secret = decryptWithKey(user.mfaSecretEncrypted, this.encryptionKey);
+    const secret = decryptVersionedWithKeyring(user.mfaSecretEncrypted, this.encryptionKeys);
     await this.assertValidCodeAndConsume(user.id, user.email, secret, code);
     await this.users.confirmMfaSecret(user.id);
     return this.sessions.issue(user);
@@ -98,14 +159,14 @@ export class MfaService {
       throw new UnauthorizedException('Invalid verification code');
     }
 
-    const secret = decryptWithKey(user.mfaSecretEncrypted, this.encryptionKey);
+    const secret = decryptVersionedWithKeyring(user.mfaSecretEncrypted, this.encryptionKeys);
     await this.assertValidCodeAndConsume(user.id, user.email, secret, code);
     return this.sessions.issue(user);
   }
 
   private async enrollNewSecret(userId: string): Promise<string> {
     const secret = new OTPAuth.Secret({ size: 20 }).base32;
-    await this.users.setPendingMfaSecret(userId, encryptWithKey(secret, this.encryptionKey));
+    await this.users.setPendingMfaSecret(userId, encryptVersionedWithKeyring(secret, this.encryptionKeys));
     return secret;
   }
 
@@ -133,7 +194,7 @@ export class MfaService {
   private issueChallenge(userId: string, purpose: MfaChallengePurpose): Promise<string> {
     const payload: MfaChallengePayload = { sub: userId, purpose };
     return this.jwtService.signAsync(payload, {
-      secret: this.challengeSecret,
+      secret: this.challengeKeys.currentKey,
       expiresIn: CHALLENGE_TTL_SECONDS,
       audience: CHALLENGE_AUDIENCE,
       issuer: TOTP_ISSUER,
@@ -141,16 +202,18 @@ export class MfaService {
   }
 
   private async resolveChallenge(token: string, purpose: MfaChallengePurpose): Promise<string> {
-    try {
-      const payload = await this.jwtService.verifyAsync<MfaChallengePayload>(token, {
-        secret: this.challengeSecret,
-        audience: CHALLENGE_AUDIENCE,
-        issuer: TOTP_ISSUER,
-      });
-      if (payload.purpose !== purpose) throw new Error('purpose mismatch');
-      return payload.sub;
-    } catch {
-      throw new UnauthorizedException('Invalid or expired verification session');
+    for (const secret of Object.values(this.challengeKeys.keys)) {
+      try {
+        const payload = await this.jwtService.verifyAsync<MfaChallengePayload>(token, {
+          secret,
+          audience: CHALLENGE_AUDIENCE,
+          issuer: TOTP_ISSUER,
+        });
+        if (payload.purpose === purpose) return payload.sub;
+      } catch {
+        // Continue with the explicitly configured previous/legacy verification key.
+      }
     }
+    throw new UnauthorizedException('Invalid or expired verification session');
   }
 }

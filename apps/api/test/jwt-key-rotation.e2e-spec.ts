@@ -15,6 +15,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { resolveJwtSigningKeys } from '../src/security-policy';
+import { UsersRepository } from '../src/users/users.repository';
 
 const OLD_SECRET = 'old-jwt-secret-before-rotation-at-least-32-chars';
 const NEW_SECRET = 'new-jwt-secret-after-rotation-at-least-32-chars!';
@@ -30,7 +31,7 @@ function signWithSecret(secret: string): string {
     secret,
     signOptions: { issuer: 'fodip-digital-2030', audience: 'fodip-web', expiresIn: '15m', keyid: currentKid },
   });
-  return jwt.sign({ sub: 'user-1', email: 'pme@fodip.test', roles: ['PME'], permissions: [] });
+  return jwt.sign({ sub: 'user-1', email: 'pme@fodip.test', roles: ['PME'], permissions: [], sessionVersion: 1 });
 }
 
 async function bootApp(env: Record<string, string | undefined>): Promise<INestApplication> {
@@ -38,7 +39,10 @@ async function bootApp(env: Record<string, string | undefined>): Promise<INestAp
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(UsersRepository)
+    .useValue({ findSessionStateById: jest.fn().mockResolvedValue({ actif: true, sessionVersion: 1 }) })
+    .compile();
   const app = moduleRef.createNestApplication();
   app.setGlobalPrefix('api/v1');
   await app.init();
@@ -99,7 +103,7 @@ describe('JWT signing key rotation (real app, no database)', () => {
     // Signed with no `keyid` in the options at all - exactly what every token looked like before
     // this axis.
     const jwt = new JwtService({ secret: NEW_SECRET, signOptions: { issuer: 'fodip-digital-2030', audience: 'fodip-web', expiresIn: '15m' } });
-    const legacyToken = jwt.sign({ sub: 'user-1', email: 'pme@fodip.test', roles: ['PME'], permissions: [] });
+    const legacyToken = jwt.sign({ sub: 'user-1', email: 'pme@fodip.test', roles: ['PME'], permissions: [], sessionVersion: 1 });
 
     const response = await request(app.getHttpServer()).get('/api/v1/auth/me').set('Authorization', `Bearer ${legacyToken}`);
 

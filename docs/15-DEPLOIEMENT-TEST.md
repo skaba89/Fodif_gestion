@@ -2,7 +2,7 @@
 
 ## Objectif et périmètre
 
-Ce document décrit comment déployer un **environnement de test/démonstration** accessible sur
+Ce document décrit comment déployer un **environnement de qualification** accessible sur
 Internet, sur des services gratuits ou à faible coût, sans attendre le choix d'un hébergeur
 institutionnel définitif (`docs/14-ROADMAP-SAAS-PREMIUM.md`, phase B7). Il n'est **pas** un plan
 de mise en production :
@@ -119,9 +119,11 @@ Le Blueprint a déjà créé `fodip-web`. Renseignez ses variables :
 | Variable | Valeur |
 |---|---|
 | `NODE_ENV` | `production` |
+| `APP_ENV` | `QUALIFICATION` (`PPD`/`PROD` activent le refus CSRF strict sans `Origin`) |
 | `API_BASE_URL` | l'URL Render de l'API (étape 3) |
 | `COOKIE_SECURE` | `true` — **obligatoire dès que le site est servi en HTTPS** (le cas sur Render/Netlify) ; à `false` le cookie de session n'est jamais envoyé par le navigateur et la connexion semble silencieusement échouer |
-| `DEMO_MODE` | `true` — affiche explicitement « données de démonstration » |
+| `SESSION_COOKIE_MAX_AGE_SECONDS` | `900`, aligné avec `JWT_ACCESS_TTL=15m` |
+| `DEMO_MODE` | `false` — les fixtures synthétiques restent strictement limitées au local et à la CI |
 
 ## Étape 6 — Reboucler les URLs
 

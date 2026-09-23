@@ -1,6 +1,5 @@
-/* Shared portal shell + components, used by every authenticated area (PME, Agent, Comité,
-   Direction, Administration, Notifications) and the login flow. Consumes the design tokens
-   defined in app/globals.css so a palette or radius change there re-themes every portal. */
+/* Shared legacy portal primitives used by several authenticated pages.
+   AppShell owns the application chrome; these classes remain as content-level building blocks. */
 
 .shell {
   min-height: 100vh;
@@ -50,7 +49,7 @@
   width: 38px;
   height: 38px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--accent-300), var(--accent-600));
+  background: var(--gold);
   color: var(--primary-800);
   font-weight: 900;
 }
@@ -133,9 +132,9 @@
 }
 
 .main {
-  width: min(1180px, calc(100% - 36px));
+  width: min(1380px, calc(100% - clamp(28px, 4vw, 64px)));
   margin: 0 auto;
-  padding: 36px 0 64px;
+  padding: clamp(28px, 3vw, 40px) 0 64px;
 }
 
 .eyebrow {
@@ -149,8 +148,8 @@
 
 .title {
   margin: 0;
-  font-size: clamp(1.8rem, 3vw, 2.7rem);
-  letter-spacing: -0.045em;
+  font-size: clamp(1.7rem, 2.6vw, 2.3rem);
+  letter-spacing: -0.024em;
 }
 
 .lead {
@@ -171,12 +170,12 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 .heroCard {
   padding: 26px;
-  background: linear-gradient(135deg, var(--primary-700), var(--primary-800));
+  background: var(--primary-800);
   color: white;
 }
 
@@ -187,8 +186,8 @@
 
 .heroCard h2 {
   margin: 0 0 10px;
-  font-size: clamp(1.5rem, 3vw, 2.2rem);
-  letter-spacing: -0.04em;
+  font-size: clamp(1.3rem, 2vw, 1.65rem);
+  letter-spacing: -0.018em;
 }
 
 .progress {
@@ -221,7 +220,7 @@
 .quick strong {
   display: block;
   margin-bottom: 6px;
-  font-size: 2rem;
+  font-size: 1.55rem;
 }
 
 .quick small {
@@ -247,7 +246,7 @@
   text-decoration: none;
   font-weight: 750;
   font-size: 0.88rem;
-  transition: filter var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+  transition: filter var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
 }
 
 .primary {
@@ -257,10 +256,6 @@
 
 .primary:hover:not(:disabled) {
   filter: brightness(1.06);
-}
-
-.primary:active:not(:disabled) {
-  transform: translateY(1px);
 }
 
 .primary:disabled {
@@ -278,7 +273,7 @@
 }
 
 .section {
-  margin-top: 30px;
+  margin-top: 26px;
 }
 
 .sectionHeader {
@@ -291,8 +286,8 @@
 
 .sectionHeader h2 {
   margin: 0;
-  font-size: 1.25rem;
-  letter-spacing: -0.025em;
+  font-size: 1.12rem;
+  letter-spacing: -0.016em;
 }
 
 .sectionHeader p {
@@ -385,6 +380,67 @@
   color: var(--muted);
   font-size: 0.84rem;
   line-height: 1.5;
+}
+
+.pmeSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.pmeSummary > div {
+  min-width: 0;
+  padding: 17px 18px 17px 0;
+}
+
+.pmeSummary > div + div {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+
+.pmeSummary dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.pmeSummary dd {
+  margin: 6px 0 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums lining-nums;
+  overflow-wrap: anywhere;
+}
+
+.pmeProgramList {
+  border-top: 1px solid var(--line);
+}
+
+.pmeProgramRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pmeProgramRow h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  letter-spacing: -0.018em;
+}
+
+.pmeProgramRow p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
 }
 
 .meta {
@@ -719,6 +775,20 @@
   .programs {
     grid-template-columns: 1fr 1fr;
   }
+
+  .pmeSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pmeSummary > div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .pmeSummary > div:nth-child(4) {
+    border-top: 1px solid var(--line);
+  }
 }
 
 @media (max-width: 620px) {
@@ -736,6 +806,26 @@
   .programs,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .pmeSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .pmeSummary > div,
+  .pmeSummary > div + div {
+    padding: 14px 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .pmeSummary > div:first-child {
+    border-top: 0;
+  }
+
+  .pmeProgramRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .fieldFull {

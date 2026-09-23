@@ -39,15 +39,17 @@ export class JsonLoggerService implements LoggerService {
     // Nest's own internal calls follow log(message, context) and error(message, stack, context):
     // the last argument is the context, and for errors a second-to-last stack may precede it.
     const context = optionalParams.length > 0 ? optionalParams[optionalParams.length - 1] : undefined;
-    const stack = level === 'error' && optionalParams.length > 1 ? optionalParams[optionalParams.length - 2] : undefined;
+    const suppliedStack = level === 'error' && optionalParams.length > 1 ? optionalParams[optionalParams.length - 2] : undefined;
+    const error = message instanceof Error ? message : undefined;
     const span = trace.getActiveSpan()?.spanContext();
 
     const entry = {
       timestamp: new Date().toISOString(),
       level,
-      message: typeof message === 'string' ? message : safeStringify(message),
+      message: error?.message ?? (typeof message === 'string' ? message : safeStringify(message)),
+      errorName: error?.name,
       context: typeof context === 'string' ? context : undefined,
-      stack: typeof stack === 'string' ? stack : undefined,
+      stack: typeof suppliedStack === 'string' ? suppliedStack : error?.stack,
       traceId: span?.traceId,
       spanId: span?.spanId,
     };

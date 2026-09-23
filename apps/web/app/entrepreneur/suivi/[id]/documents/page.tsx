@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { FormEvent, use, useCallback, useEffect, useState } from 'react';
+import Breadcrumbs from '../../../../_shared/Breadcrumbs';
+import { humanizeCode } from '../../../../_shared/displayLabels';
 import styles from '../../../portal.module.css';
 
 type Document = {
@@ -66,6 +68,7 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
   }
 
   return <main className={styles.main}>
+    <Breadcrumbs items={[{ label: 'PME', href: '/entrepreneur' }, { label: 'Mes dossiers', href: '/entrepreneur/suivi' }, { label: 'Documents' }]} />
     <p className={styles.eyebrow}>Pièces justificatives</p>
     <h1 className={styles.title}>Documents du dossier</h1>
     <p className={styles.lead}>Formats acceptés : PDF, JPG et PNG. Taille maximale : 10 Mo. Chaque fichier est contrôlé, stocké de manière privée et vérifié par checksum.</p>
@@ -84,13 +87,13 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
     <section className={`${styles.card} ${styles.tableCard} ${styles.section}`} tabIndex={0} role="region" aria-label="Tableau, défilement horizontal sur petit écran">
       <table className={styles.table}><thead><tr><th>Type</th><th>Fichier</th><th>Taille</th><th>Statut</th><th>Contrôle</th><th>Action</th></tr></thead>
         <tbody>{documents.map((document) => <tr key={document.id}>
-          <td>{document.typeDocument}</td>
+          <td>{humanizeCode(document.typeDocument)}</td>
           <td>
             <strong>{document.nomFichier}</strong>
             {document.supersededBy && <> <span className={styles.pillMuted}>Remplacé</span></>}
           </td>
           <td>{(Number(document.tailleOctets) / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} Ko</td>
-          <td><span className={styles.pill}>{document.statutVerification}</span></td>
+          <td><span className={styles.pill}>{humanizeCode(document.statutVerification)}</span></td>
           <td>{document.verificationComment ?? '—'}</td>
           <td><a className={styles.secondary} href={`/api/pme/documents/${document.id}/download`}>Télécharger</a></td>
         </tr>)}</tbody>

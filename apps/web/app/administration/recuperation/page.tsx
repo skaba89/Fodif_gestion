@@ -1,7 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Breadcrumbs from '../../_shared/Breadcrumbs';
 import ConfirmDialog from '../../_shared/ConfirmDialog';
+import { roleLabel } from '../../_shared/displayLabels';
 import portal from '../../entrepreneur/portal.module.css';
 
 type User = {
@@ -79,10 +81,11 @@ export default function AccountRecoveryPage() {
 
   return (
     <main className={portal.main}>
+      <Breadcrumbs items={[{ label: 'Administration', href: '/administration/tableau-de-bord' }, { label: 'Récupération comptes' }]} />
       <p className={portal.eyebrow}>Super administration</p>
       <h1 className={portal.title}>Récupération et suppression des comptes</h1>
       <p className={portal.lead}>
-        Réinitialisez un mot de passe sans connaître l’ancien, ou supprimez définitivement l’accès d’un utilisateur par anonymisation contrôlée. Les opérations sont réservées aux SUPER_ADMIN et journalisées.
+        Réinitialisez un mot de passe sans connaître l’ancien, ou supprimez définitivement l’accès d’un utilisateur par anonymisation contrôlée. Les opérations sont réservées aux super administrateurs et journalisées.
       </p>
 
       {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
@@ -101,7 +104,7 @@ export default function AccountRecoveryPage() {
               <select id="recovery-user" required value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
                 <option value="">Sélectionner un compte</option>
                 {users.filter((user) => !user.anonymizedAt).map((user) => (
-                  <option key={user.id} value={user.id}>{user.prenom ? `${user.prenom} ` : ''}{user.nom} · {user.email} · {user.roles.join(', ')}</option>
+                  <option key={user.id} value={user.id}>{user.prenom ? `${user.prenom} ` : ''}{user.nom} · {user.email} · {user.roles.map(roleLabel).join(', ')}</option>
                 ))}
               </select>
             </div>
@@ -133,7 +136,7 @@ export default function AccountRecoveryPage() {
             <tbody>{users.map((user) => (
               <tr key={user.id}>
                 <td><strong>{user.prenom} {user.nom}</strong><br /><small>{user.email}</small></td>
-                <td>{user.roles.join(' · ') || '—'}</td>
+                <td>{user.roles.map(roleLabel).join(' · ') || '—'}</td>
                 <td>{user.anonymizedAt ? 'Supprimé / anonymisé' : user.actif ? 'Actif' : 'Inactif'}</td>
                 <td>
                   <button className={portal.secondary} type="button" disabled={loading || Boolean(user.anonymizedAt)} onClick={() => setPendingDelete(user)}>
@@ -149,7 +152,7 @@ export default function AccountRecoveryPage() {
       <ConfirmDialog
         open={Boolean(pendingDelete)}
         title="Supprimer définitivement cet accès ?"
-        message={pendingDelete ? `Le compte ${pendingDelete.email} sera désactivé et anonymisé. Cette action est irréversible. La suppression de votre propre compte et du dernier SUPER_ADMIN reste interdite.` : ''}
+        message={pendingDelete ? `Le compte ${pendingDelete.email} sera désactivé et anonymisé. Cette action est irréversible. La suppression de votre propre compte et du dernier super administrateur reste interdite.` : ''}
         confirmLabel="Supprimer l’accès"
         danger
         onConfirm={() => { const user = pendingDelete; setPendingDelete(null); if (user) void deleteAccess(user); }}

@@ -5,6 +5,8 @@ import { FormEvent, use, useCallback, useEffect, useState } from 'react';
 import Breadcrumbs from '../../../_shared/Breadcrumbs';
 import Button from '../../../_shared/Button';
 import { DossierStatusBadge, RiskBadge } from '../../../_shared/StatusBadge';
+import { humanizeCode } from '../../../_shared/displayLabels';
+import { dossierStatusLabel } from '../../../_shared/dossierStatus';
 import portal from '../../../entrepreneur/portal.module.css';
 import styles from '../../../agent/agent.module.css';
 import committee from '../../comite.module.css';
@@ -84,6 +86,13 @@ export default function CommitteeApplicationPage({ params }: { params: Promise<{
     </div>
     {message && <div className={`${portal.notice} ${portal.section}`} role="status">{message}</div>}
 
+    <section className={committee.decisionBrief} aria-label="Synthèse avant décision">
+      <div><span>Montant demandé</span><strong>{formatAmount(dossier.montantDemande)}</strong></div>
+      <div><span>Apport personnel</span><strong>{formatAmount(dossier.apportPersonnel)}</strong></div>
+      <div><span>Pièces validées</span><strong>{verifiedDocuments}/{dossier.documents.length}</strong></div>
+      <div><span>Risque</span><strong>{dossier.score ? <RiskBadge level={dossier.score.niveauRisque} /> : 'Non évalué'}</strong></div>
+    </section>
+
     <div className={styles.detailGrid}>
       <section className={`${portal.card} ${styles.panel}`}>
         <h2>Entreprise et projet</h2>
@@ -123,11 +132,11 @@ export default function CommitteeApplicationPage({ params }: { params: Promise<{
       <section className={`${portal.card} ${styles.panel}`}>
         <h2>Pièces du dossier</h2>
         <p className={portal.lead}>{verifiedDocuments} pièce{verifiedDocuments > 1 ? 's' : ''} validée{verifiedDocuments > 1 ? 's' : ''} sur {dossier.documents.length} version{dossier.documents.length > 1 ? 's' : ''} courante{dossier.documents.length > 1 ? 's' : ''}.</p>
-        <div className={styles.history}>{dossier.documents.length ? dossier.documents.map((document) => <div className={styles.historyItem} key={document.id}><strong>{document.typeDocument} · {document.statutVerification}</strong><span>{document.nomFichier}</span></div>) : <p className={portal.lead}>Aucune pièce courante.</p>}</div>
+        <div className={styles.history}>{dossier.documents.length ? dossier.documents.map((document) => <div className={styles.historyItem} key={document.id}><strong>{humanizeCode(document.typeDocument)} · {humanizeCode(document.statutVerification)}</strong><span>{document.nomFichier}</span></div>) : <p className={portal.lead}>Aucune pièce courante.</p>}</div>
       </section>
       <section className={`${portal.card} ${styles.panel}`}>
         <h2>Chronologie d’instruction</h2>
-        <div className={styles.history}>{dossier.historique.length ? dossier.historique.map((event, index) => <div className={styles.historyItem} key={`${event.changedAt}-${index}`}><strong>{event.ancienStatut ? `${event.ancienStatut} → ` : ''}{event.nouveauStatut}</strong><span>{new Date(event.changedAt).toLocaleString('fr-FR')} · {event.acteurNom ?? 'Système'}</span>{event.commentaire ? <span>{event.commentaire}</span> : null}</div>) : <p className={portal.lead}>Aucune transition antérieure enregistrée.</p>}</div>
+        <div className={styles.history}>{dossier.historique.length ? dossier.historique.map((event, index) => <div className={styles.historyItem} key={`${event.changedAt}-${index}`}><strong title={event.ancienStatut ? `${event.ancienStatut} → ${event.nouveauStatut}` : event.nouveauStatut}>{event.ancienStatut ? `${dossierStatusLabel(event.ancienStatut)} → ` : ''}{dossierStatusLabel(event.nouveauStatut)}</strong><span>{new Date(event.changedAt).toLocaleString('fr-FR')} · {event.acteurNom ?? 'Système'}</span>{event.commentaire ? <span>{event.commentaire}</span> : null}</div>) : <p className={portal.lead}>Aucune transition antérieure enregistrée.</p>}</div>
       </section>
     </div>
 

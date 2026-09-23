@@ -1,14 +1,37 @@
 import { ConfigService } from '@nestjs/config';
 import { AdministrationRepository } from '../src/administration/administration.repository';
-import { decryptWithKey, deriveSecret, encryptWithKey } from '../src/security-policy';
+import {
+  createPurposeKeyring,
+  decryptVersionedWithKeyring,
+  deriveSecret,
+  encryptWithKey,
+} from '../src/security-policy';
 
 // Axe B5 (docs/14-ROADMAP-SAAS-PREMIUM.md): utilisateurs.telephone is encrypted at rest
 // (AES-256-GCM, see security-policy.js) rather than stored as plaintext.
 const JWT_SECRET = 'a-test-only-jwt-secret-at-least-32-chars-long';
 const config = { get: (key: string) => (key === 'JWT_SECRET' ? JWT_SECRET : 'test') } as unknown as ConfigService;
 const expectedKey = deriveSecret(JWT_SECRET, 'fodip-pii-telephone-encryption-v1');
+const expectedKeyring = createPurposeKeyring(
+  JWT_SECRET,
+  undefined,
+  [JWT_SECRET],
+  'fodip-pii-telephone-encryption-v1',
+);
 
 describe('AdministrationRepository', () => {
+  it('returns global account KPIs and a paginated administration-only audit journal', async () => {
+    const db = { query: jest.fn()
+      .mockResolvedValueOnce({ rows: [{ totalUsers: 8, activeUsers: 6, inactiveUsers: 2, mfaRequiredUsers: 4, neverLoggedInUsers: 3, anonymizedUsers: 1 }] })
+      .mockResolvedValueOnce({ rows: [{ enterprises: 2, partnerBanks: 1 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'log-1', action: 'CREATE_USER', total: 1 }] }) };
+    const repository = new AdministrationRepository(db as never, config);
+
+    await expect(repository.summary()).resolves.toEqual({ totalUsers: 8, activeUsers: 6, inactiveUsers: 2, mfaRequiredUsers: 4, neverLoggedInUsers: 3, anonymizedUsers: 1, enterprises: 2, partnerBanks: 1 });
+    await expect(repository.listAudit({ page: 1, limite: 25, action: 'CREATE_USER' })).resolves.toEqual({ items: [{ id: 'log-1', action: 'CREATE_USER' }], total: 1, page: 1, limite: 25 });
+    expect(db.query).toHaveBeenLastCalledWith(expect.stringContaining('log.action = ANY'), [expect.arrayContaining(['CREATE_USER', 'UPDATE_USER']), 'CREATE_USER', 25, 0]);
+  });
+
   it('decrypts telephone on listUsers, leaving accounts with no telephone as null', async () => {
     const encrypted = encryptWithKey('+224622000000', expectedKey);
     const db = {
@@ -49,7 +72,8 @@ describe('AdministrationRepository', () => {
     expect(insertCalls).toHaveLength(1);
     const telephoneParam = insertCalls[0][3] as string;
     expect(telephoneParam).not.toBe('+224622111111');
-    expect(decryptWithKey(telephoneParam, expectedKey)).toBe('+224622111111');
+    expect(telephoneParam).toMatch(/^v1:[0-9a-f]{8}:/);
+    expect(decryptVersionedWithKeyring(telephoneParam, expectedKeyring)).toBe('+224622111111');
 
     await repository.create('actor-1', {
       email: 'no-phone@fodip.local', nom: 'Test', passwordHash: 'hash', roles: ['AGENT_FODIP'], mfaRequired: false,
@@ -87,5 +111,38 @@ describe('AdministrationRepository', () => {
     expect(queries.some(({ text }) => text.includes("'CREATE_PARTNER_BANK'"))).toBe(true);
     expect(queries.some(({ text }) => text.includes("'ENTREPRISE'"))).toBe(true);
     expect(queries.some(({ text }) => text.includes("'PARTENAIRE_BANCAIRE'"))).toBe(true);
+  });
+
+  it('clears MFA material, revokes sessions and audits only non-secret recovery data', async () => {
+    const queries: Array<{ text: string; values: unknown[] }> = [];
+    const client = {
+      query: jest.fn((text: string, values: unknown[] = []) => {
+        queries.push({ text, values });
+        if (text.includes('SELECT anonymized_at')) return { rows: [{ anonymizedAt: null, mfaEnrolled: true }] };
+        return { rows: [], rowCount: 1 };
+      }),
+    };
+    const db = { transaction: (callback: (client: unknown) => unknown) => callback(client) };
+    const repository = new AdministrationRepository(db as never, config);
+
+    await expect(repository.resetMfa('admin-1', 'user-1', 'Téléphone professionnel perdu'))
+      .resolves.toEqual({ id: 'user-1', reenrollmentRequired: true });
+
+    expect(queries.some(({ text }) => text.includes('mfa_secret_encrypted = NULL'))).toBe(true);
+    expect(queries.some(({ text }) => text.includes('session_version = session_version + 1'))).toBe(true);
+    const audit = queries.find(({ text }) => text.includes('INSERT INTO audit_logs'))!;
+    expect(audit.values).toEqual(expect.arrayContaining(['admin-1', 'RESET_USER_MFA', 'user-1']));
+    expect(JSON.stringify(audit.values)).not.toContain('mfa_secret_encrypted');
+    expect(JSON.stringify(audit.values)).toContain('Téléphone professionnel perdu');
+  });
+
+  it('rejects self MFA reset before reading or mutating the target account', async () => {
+    const client = { query: jest.fn() };
+    const db = { transaction: (callback: (client: unknown) => unknown) => callback(client) };
+    const repository = new AdministrationRepository(db as never, config);
+
+    await expect(repository.resetMfa('admin-1', 'admin-1', 'Appareil remplacé'))
+      .resolves.toEqual({ error: 'SELF_MFA_RESET_FORBIDDEN' });
+    expect(client.query).not.toHaveBeenCalled();
   });
 });

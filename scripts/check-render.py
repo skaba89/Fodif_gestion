@@ -32,12 +32,15 @@ else:
         "BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_NOM", "BOOTSTRAP_ADMIN_PASSWORD",
         "STORAGE_ENDPOINT", "STORAGE_REGION", "STORAGE_BUCKET", "STORAGE_ACCESS_KEY",
         "STORAGE_SECRET_KEY", "WEB_BASE_URL",
+        "METRICS_TOKEN",
     }
     missing = sorted(required_api_env - set(api_env))
     if missing:
         errors.append(f"fodip-api: missing environment variables: {', '.join(missing)}")
     if api_env.get("APP_ENV", {}).get("value") != "QUALIFICATION":
         errors.append("fodip-api: Render/Neon must stay explicitly labelled APP_ENV=QUALIFICATION")
+    if not api_env.get("METRICS_TOKEN", {}).get("generateValue"):
+        errors.append("fodip-api: METRICS_TOKEN must be generated and never committed")
     command = api.get("dockerCommand", "")
     if command != "/bin/bash scripts/start-render.sh":
         errors.append("fodip-api: dockerCommand must invoke the quote-safe Render startup script")
@@ -62,6 +65,11 @@ else:
         ]
         expected_startup = [
             "set -euo pipefail",
+            'metrics_token="${METRICS_TOKEN:-}"',
+            'if (( ${#metrics_token} < 32 )); then',
+            'echo "FATAL: METRICS_TOKEN must contain at least 32 characters before starting fodip-api." >&2',
+            "exit 1",
+            "fi",
             "node scripts/run-migrations.js",
             "node scripts/bootstrap-super-admin.js",
             "exec node dist/main.js",
@@ -78,8 +86,8 @@ else:
     web_env = {item.get("key"): item for item in web.get("envVars", [])}
     if web_env.get("APP_ENV", {}).get("value") != "QUALIFICATION":
         errors.append("fodip-web: Render/Neon must stay explicitly labelled APP_ENV=QUALIFICATION")
-    if web_env.get("DEMO_MODE", {}).get("value") != "true":
-        errors.append("fodip-web: DEMO_MODE must remain true on the qualification environment")
+    if web_env.get("DEMO_MODE", {}).get("value") != "false":
+        errors.append("fodip-web: hosted environments must explicitly disable DEMO_MODE")
 
     web_start_script = Path("apps/web/scripts/start-web.sh")
     if not web_start_script.exists():
@@ -95,3 +103,60 @@ if errors:
     raise SystemExit(1)
 
 print("Render/Neon qualification Blueprint validated.")
+
+
+production_path = Path("render.production.yaml")
+production_errors = []
+if not production_path.exists():
+    production_errors.append("render.production.yaml is missing")
+else:
+    production = yaml.safe_load(production_path.read_text(encoding="utf-8")) or {}
+    production_services = {service.get("name"): service for service in production.get("services", [])}
+    expected_services = {"fodip-api-prod", "fodip-web-prod"}
+    if set(production_services) != expected_services:
+        production_errors.append("production Blueprint must contain only the dedicated API and web services")
+
+    for name in expected_services:
+        service = production_services.get(name, {})
+        if service.get("plan") == "free":
+            production_errors.append(f"{name}: free plan is forbidden in production")
+        if service.get("numInstances", 0) < 2:
+            production_errors.append(f"{name}: production requires at least two instances")
+        if service.get("autoDeployTrigger") != "checksPass":
+            production_errors.append(f"{name}: production deploys must wait for GitHub checks")
+        if service.get("branch") != "main":
+            production_errors.append(f"{name}: production must deploy only main")
+
+    production_api = production_services.get("fodip-api-prod", {})
+    production_api_env = {item.get("key"): item for item in production_api.get("envVars", [])}
+    required_production_secrets = {
+        "DATABASE_URL", "DATABASE_URL_UNPOOLED", "JWT_SECRET", "METRICS_TOKEN",
+        "PII_ENCRYPTION_KEY", "MFA_SECRET_ENCRYPTION_KEY", "MFA_CHALLENGE_SECRET",
+        "OIDC_FLOW_SECRET", "OIDC_DELIVERY_SECRET", "WEB_BASE_URL", "STORAGE_ENDPOINT",
+        "STORAGE_REGION", "STORAGE_BUCKET", "STORAGE_ACCESS_KEY", "STORAGE_SECRET_KEY",
+        "CLAMAV_HOST", "OIDC_ISSUER_URL", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET",
+        "OIDC_REDIRECT_URI",
+    }
+    missing = sorted(required_production_secrets - set(production_api_env))
+    if missing:
+        production_errors.append(f"fodip-api-prod: missing production variables: {', '.join(missing)}")
+    for forbidden in ("BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_PASSWORD"):
+        if forbidden in production_api_env:
+            production_errors.append(f"fodip-api-prod: {forbidden} must not persist in the production Blueprint")
+    if production_api_env.get("APP_ENV", {}).get("value") != "PROD":
+        production_errors.append("fodip-api-prod: APP_ENV must be PROD")
+
+    production_web = production_services.get("fodip-web-prod", {})
+    production_web_env = {item.get("key"): item for item in production_web.get("envVars", [])}
+    if production_web_env.get("APP_ENV", {}).get("value") != "PROD":
+        production_errors.append("fodip-web-prod: APP_ENV must be PROD")
+    if production_web_env.get("DEMO_MODE", {}).get("value") != "false":
+        production_errors.append("fodip-web-prod: DEMO_MODE must be false")
+    if production.get("previews", {}).get("generation") != "off":
+        production_errors.append("production Blueprint must not create preview environments")
+
+if production_errors:
+    print("\n".join(production_errors), file=sys.stderr)
+    raise SystemExit(1)
+
+print("Render national production Blueprint validated.")

@@ -11,5 +11,9 @@ import { NextResponse } from 'next/server';
  * "Données de démonstration" banner.
  */
 export async function GET() {
-  return NextResponse.json({ demoMode: process.env.DEMO_MODE === 'true' });
+  return NextResponse.json({
+    demoMode: process.env.DEMO_MODE === 'true',
+    environment: process.env.APP_ENV?.trim().toUpperCase() || 'UNKNOWN',
+    releaseSha: process.env.FODIP_RELEASE_SHA || process.env.RENDER_GIT_COMMIT || process.env.GITHUB_SHA || 'unknown',
+  }, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -5,6 +5,7 @@ import { AdministrationRepository } from './administration.repository';
 import { CreateEnterpriseDto } from './dto/create-enterprise.dto';
 import { CreatePartnerBankDto } from './dto/create-partner-bank.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ListAdministrationAuditDto } from './dto/list-administration-audit.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class AdministrationService {
   constructor(private readonly administration: AdministrationRepository) {}
 
   listUsers(search?: string) { return this.administration.listUsers(search); }
+  summary() { return this.administration.summary(); }
+  listAudit(query: ListAdministrationAuditDto) { return this.administration.listAudit(query); }
   listRoles() { return this.administration.listRoles(); }
   listEnterprises() { return this.administration.listEnterprises(); }
   listPartnerBanks() { return this.administration.listPartnerBanks(); }
@@ -82,6 +85,17 @@ export class AdministrationService {
     const result = await this.administration.resetPassword(actorId, id, await hash(password, 12));
     if ('error' in result) {
       if (result.error === 'NOT_FOUND') throw new NotFoundException('User not found');
+      if (result.error === 'ANONYMIZED_USER') throw new BadRequestException(result.error);
+      throw new BadRequestException(result.error);
+    }
+    return result;
+  }
+
+  async resetUserMfa(actorId: string, id: string, reason: string) {
+    const result = await this.administration.resetMfa(actorId, id, reason.trim());
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') throw new NotFoundException('User not found');
+      if (result.error === 'SELF_MFA_RESET_FORBIDDEN') throw new ForbiddenException(result.error);
       if (result.error === 'ANONYMIZED_USER') throw new BadRequestException(result.error);
       throw new BadRequestException(result.error);
     }

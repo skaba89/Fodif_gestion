@@ -49,9 +49,11 @@ async function login(page: Page, path: string, email: string, password: string):
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Mot de passe').fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
-  // No auto-wait built into a plain visibility check right after a click - the enrollment UI (or
-  // the redirect past it, for a non-privileged account like PME) needs a moment to render.
-  const enrolled = await page.getByText('double authentification').waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false);
+  // Detect the enrollment action itself, not generic MFA copy. The public login panel also explains
+  // that double authentication may apply, so matching that wording can falsely classify the normal
+  // login screen as the enrollment screen and then wait forever for a secret that is not rendered.
+  const enrollmentAction = page.getByRole('button', { name: 'Activer et se connecter' });
+  const enrolled = await enrollmentAction.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false);
   if (!enrolled) return undefined;
   const secret = (await page.locator('code').innerText()).trim();
   await page.getByLabel('Code à 6 chiffres').fill(codeFor(secret));
@@ -127,7 +129,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
     try {
       // --- 1. Accueil institutionnel ---
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: /Piloter le financement des PME guinéennes de la demande jusqu’à l’impact/ })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Gérer le cycle de financement d’une PME, du dépôt de la demande au suivi du remboursement/ })).toBeVisible();
       await expect(page.locator('a[href="/connexion"]', { hasText: 'Accéder à la plateforme' })).toBeVisible();
 
       // --- 2. Connexion Direction + 3. MFA ---
@@ -184,6 +186,7 @@ test.describe('Scénario de démonstration Direction générale', () => {
 
       const scoringForm = page.locator('form').filter({ has: page.getByRole('button', { name: 'Calculer et enregistrer' }) });
       const noteInputs = scoringForm.getByRole('spinbutton');
+      await expect(noteInputs).toHaveCount(4);
       for (const input of await noteInputs.all()) await input.fill('80');
       await scoringForm.getByRole('button', { name: 'Calculer et enregistrer' }).click();
       await expect(page.getByText('Scoring calculé et enregistré.')).toBeVisible();

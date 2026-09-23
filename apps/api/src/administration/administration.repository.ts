@@ -3,7 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import { PoolClient } from 'pg';
 import { canDeactivateUser, requiresMfa } from '../admin-policy';
 import { DatabaseService } from '../database/database.service';
-import { decryptWithKey, deriveSecret, encryptWithKey, resolveJwtSecret } from '../security-policy';
+import { ADMINISTRATION_AUDIT_ACTIONS, ListAdministrationAuditDto } from './dto/list-administration-audit.dto';
+import {
+  createPurposeKeyring,
+  decryptVersionedWithKeyring,
+  encryptVersionedWithKeyring,
+  PurposeKeyring,
+  resolveJwtSecret,
+  resolvePurposeSecret,
+} from '../security-policy';
 
 type UserWrite = {
   email: string; nom: string; prenom?: string; telephone?: string; passwordHash: string;
@@ -18,17 +26,48 @@ type PartnerBankWrite = { code: string; raisonSociale: string };
 
 @Injectable()
 export class AdministrationRepository {
-  private readonly piiEncryptionKey: Buffer;
+  private readonly piiEncryptionKeys: PurposeKeyring;
 
   constructor(private readonly db: DatabaseService, config: ConfigService) {
-    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV'));
-    this.piiEncryptionKey = deriveSecret(jwtSecret, 'fodip-pii-telephone-encryption-v1');
+    const nodeEnvironment = config.get<string>('NODE_ENV');
+    const appEnvironment = config.get<string>('APP_ENV');
+    const jwtSecret = resolveJwtSecret(config.get<string>('JWT_SECRET'), nodeEnvironment);
+    const currentSecret = resolvePurposeSecret(
+      config.get<string>('PII_ENCRYPTION_KEY'),
+      jwtSecret,
+      nodeEnvironment,
+      appEnvironment,
+      'PII_ENCRYPTION_KEY',
+    );
+    const previousSecret = resolvePurposeSecret(
+      config.get<string>('PII_ENCRYPTION_KEY_PREVIOUS'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'PII_ENCRYPTION_KEY_PREVIOUS',
+      false,
+    );
+    const legacyDataSecret = resolvePurposeSecret(
+      config.get<string>('LEGACY_DATA_ENCRYPTION_SECRET'),
+      '',
+      nodeEnvironment,
+      appEnvironment,
+      'LEGACY_DATA_ENCRYPTION_SECRET',
+      false,
+    );
+    this.piiEncryptionKeys = createPurposeKeyring(
+      currentSecret,
+      previousSecret,
+      [legacyDataSecret, jwtSecret, config.get<string>('JWT_SECRET_PREVIOUS')],
+      'fodip-pii-telephone-encryption-v1',
+    );
   }
 
   async listUsers(search?: string) {
     const result = await this.db.query<{ telephone: string | null; [key: string]: unknown }>(
       `SELECT utilisateur.id, utilisateur.email, utilisateur.nom, utilisateur.prenom, utilisateur.telephone,
         utilisateur.actif, utilisateur.mfa_required AS "mfaRequired",
+        (utilisateur.mfa_secret_encrypted IS NOT NULL) AS "mfaEnrolled",
         utilisateur.last_login_at AS "lastLoginAt", utilisateur.created_at AS "createdAt",
         utilisateur.anonymized_at AS "anonymizedAt",
         COALESCE(ARRAY_AGG(DISTINCT role.code) FILTER (WHERE role.code IS NOT NULL), '{}') AS roles,
@@ -53,8 +92,44 @@ export class AdministrationRepository {
     return { items, total: result.rowCount };
   }
 
+  async summary() {
+    const result = await this.db.query(
+      `SELECT
+        COUNT(*)::INT AS "totalUsers",
+        COUNT(*) FILTER (WHERE actif = TRUE)::INT AS "activeUsers",
+        COUNT(*) FILTER (WHERE actif = FALSE)::INT AS "inactiveUsers",
+        COUNT(*) FILTER (WHERE mfa_required = TRUE)::INT AS "mfaRequiredUsers",
+        COUNT(*) FILTER (WHERE actif = TRUE AND last_login_at IS NULL)::INT AS "neverLoggedInUsers",
+        COUNT(*) FILTER (WHERE anonymized_at IS NOT NULL)::INT AS "anonymizedUsers"
+       FROM utilisateurs`,
+    );
+    const organizations = await this.db.query(
+      `SELECT
+        (SELECT COUNT(*)::INT FROM entreprises WHERE deleted_at IS NULL) AS "enterprises",
+        (SELECT COUNT(*)::INT FROM partenaires_bancaires WHERE actif = TRUE) AS "partnerBanks"`,
+    );
+    return { ...result.rows[0], ...organizations.rows[0] };
+  }
+
+  async listAudit(query: ListAdministrationAuditDto) {
+    const offset = (query.page - 1) * query.limite;
+    const result = await this.db.query(
+      `SELECT log.id, log.action, log.entity_type AS "entityType", log.entity_id AS "entityId",
+        log.created_at AS "createdAt", actor.email AS "actorEmail",
+        actor.nom AS "actorNom", actor.prenom AS "actorPrenom", COUNT(*) OVER()::INT AS "total"
+       FROM audit_logs log
+       LEFT JOIN utilisateurs actor ON actor.id = log.utilisateur_id
+       WHERE log.action = ANY($1::text[]) AND ($2::text IS NULL OR log.action = $2)
+       ORDER BY log.created_at DESC LIMIT $3 OFFSET $4`,
+      [ADMINISTRATION_AUDIT_ACTIONS, query.action ?? null, query.limite, offset],
+    );
+    const total = Number(result.rows[0]?.total ?? 0);
+    const items = result.rows.map(({ total: _total, ...item }) => item);
+    return { items, total, page: query.page, limite: query.limite };
+  }
+
   private decryptTelephone(value: string | null): string | null {
-    return value ? decryptWithKey(value, this.piiEncryptionKey) : null;
+    return value ? decryptVersionedWithKeyring(value, this.piiEncryptionKeys) : null;
   }
 
   async listPartnerBanks() {
@@ -142,7 +217,7 @@ export class AdministrationRepository {
         `INSERT INTO utilisateurs (email, nom, prenom, telephone, password_hash, actif, mfa_required, partenaire_bancaire_id)
          VALUES (LOWER($1), $2, $3, $4, $5, TRUE, $6, $7) RETURNING id`,
         [input.email.trim(), input.nom.trim(), input.prenom?.trim() || null,
-          telephone ? encryptWithKey(telephone, this.piiEncryptionKey) : null,
+          telephone ? encryptVersionedWithKeyring(telephone, this.piiEncryptionKeys) : null,
           input.passwordHash, mfaRequired, input.partenaireBancaireId ?? null],
       );
       const id = inserted.rows[0].id;
@@ -202,6 +277,7 @@ export class AdministrationRepository {
       await client.query(
         `UPDATE utilisateurs SET actif = COALESCE($2, actif),
           mfa_required = $3,
+          session_version = session_version + 1,
           partenaire_bancaire_id = CASE WHEN $4 THEN $5::uuid ELSE partenaire_bancaire_id END,
           updated_at = NOW() WHERE id = $1`,
         [id, input.actif ?? null, mfaRequired, input.partenaireBancaireId !== undefined, input.partenaireBancaireId ?? null],
@@ -227,11 +303,38 @@ export class AdministrationRepository {
       if (target.rows[0].anonymizedAt) return { error: 'ANONYMIZED_USER' } as const;
 
       await client.query(
-        `UPDATE utilisateurs SET password_hash = $2, actif = TRUE, updated_at = NOW() WHERE id = $1`,
+        `UPDATE utilisateurs SET password_hash = $2, actif = TRUE,
+          session_version = session_version + 1, updated_at = NOW() WHERE id = $1`,
         [id, passwordHash],
       );
       await this.audit(client, actorId, 'RESET_USER_PASSWORD', id, null, { passwordReset: true, reactivated: true });
       return { id };
+    });
+  }
+
+  async resetMfa(actorId: string, id: string, reason: string) {
+    return this.db.transaction(async (client) => {
+      if (actorId === id) return { error: 'SELF_MFA_RESET_FORBIDDEN' } as const;
+      const target = await client.query<{ anonymizedAt: Date | null; mfaEnrolled: boolean }>(
+        `SELECT anonymized_at AS "anonymizedAt",
+          (mfa_secret_encrypted IS NOT NULL) AS "mfaEnrolled"
+         FROM utilisateurs WHERE id = $1 FOR UPDATE`,
+        [id],
+      );
+      if (!target.rows[0]) return { error: 'NOT_FOUND' } as const;
+      if (target.rows[0].anonymizedAt) return { error: 'ANONYMIZED_USER' } as const;
+
+      await client.query(
+        `UPDATE utilisateurs
+         SET mfa_secret_encrypted = NULL, mfa_confirmed_at = NULL, mfa_last_used_step = NULL,
+           session_version = session_version + 1, updated_at = NOW()
+         WHERE id = $1`,
+        [id],
+      );
+      await this.audit(client, actorId, 'RESET_USER_MFA', id,
+        { mfaEnrolled: target.rows[0].mfaEnrolled },
+        { mfaEnrolled: false, sessionsRevoked: true, reason });
+      return { id, reenrollmentRequired: true };
     });
   }
 
