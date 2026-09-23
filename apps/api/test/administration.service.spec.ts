@@ -99,6 +99,26 @@ describe('AdministrationService', () => {
       .rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('refuses to persist a stale enterprise scope when a user is moved off the PME role', async () => {
+    const repository = { update: jest.fn() } as unknown as AdministrationRepository;
+    const service = new AdministrationService(repository);
+
+    await expect(service.updateUser('admin', 'user-1', {
+      roles: ['AGENT_FODIP'], entrepriseId: 'company-id',
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses to persist a stale partner bank scope when a user is moved off the PARTENAIRE_BANCAIRE role', async () => {
+    const repository = { update: jest.fn() } as unknown as AdministrationRepository;
+    const service = new AdministrationService(repository);
+
+    await expect(service.updateUser('admin', 'user-1', {
+      roles: ['AGENT_FODIP'], partenaireBancaireId: 'bank-id',
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
   it('maps repository protections to safe HTTP errors', async () => {
     const protectedRepository = {
       update: jest.fn().mockResolvedValue({ error: 'PROTECTED_SUPER_ADMIN' }),

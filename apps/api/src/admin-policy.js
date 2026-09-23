@@ -15,8 +15,12 @@ function normalizeRoleCodes(roles) {
 function validateUserScope(roles, entrepriseId, partenaireBancaireId) {
   const normalized = normalizeRoleCodes(roles);
   if (normalized.length === 0) return 'At least one role is required';
-  if (normalized.includes('PME') && !entrepriseId) return 'PME_ENTERPRISE_SCOPE_REQUIRED';
-  if (normalized.includes('PARTENAIRE_BANCAIRE') && !partenaireBancaireId) return 'PARTENAIRE_BANK_SCOPE_REQUIRED';
+  const isPme = normalized.includes('PME');
+  const isPartnerBank = normalized.includes('PARTENAIRE_BANCAIRE');
+  if (isPme && !entrepriseId) return 'PME_ENTERPRISE_SCOPE_REQUIRED';
+  if (isPartnerBank && !partenaireBancaireId) return 'PARTENAIRE_BANK_SCOPE_REQUIRED';
+  if (!isPme && entrepriseId) return 'PME_ENTERPRISE_SCOPE_NOT_ALLOWED';
+  if (!isPartnerBank && partenaireBancaireId) return 'PARTENAIRE_BANK_SCOPE_NOT_ALLOWED';
   return null;
 }
 

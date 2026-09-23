@@ -18,6 +18,13 @@ test('requires a partner bank scope for a PARTENAIRE_BANCAIRE account (axe D1)',
   assert.equal(validateUserScope(['PARTENAIRE_BANCAIRE'], null, 'bank-id'), null);
 });
 
+test('rejects a stale enterprise or partner bank scope left over from a previous role', () => {
+  assert.equal(validateUserScope(['AGENT_FODIP'], 'company-id', null), 'PME_ENTERPRISE_SCOPE_NOT_ALLOWED');
+  assert.equal(validateUserScope(['AGENT_FODIP'], null, 'bank-id'), 'PARTENAIRE_BANK_SCOPE_NOT_ALLOWED');
+  assert.equal(validateUserScope(['PME'], 'company-id', 'bank-id'), 'PARTENAIRE_BANK_SCOPE_NOT_ALLOWED');
+  assert.equal(validateUserScope(['AGENT_FODIP'], null, null), null);
+});
+
 test('identifies privileged roles requiring MFA', () => {
   assert.equal(requiresMfa(['DIRECTION_FODIP']), true);
   assert.equal(requiresMfa(['PME']), false);
