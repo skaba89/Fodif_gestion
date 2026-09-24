@@ -44,10 +44,13 @@ function actorLabel(log: AuditLog): string {
   return fullName || log.actorEmail || 'Système';
 }
 
+const EMPTY_AUDIT_FILTERS = { entityType: '', entityId: '', actorSearch: '', dateFrom: '', dateTo: '' };
+type AuditFilters = typeof EMPTY_AUDIT_FILTERS;
+
 export default function AuditeurDashboardPage() {
   const [financings, setFinancings] = useState<FinancingsResult>({ items: [], total: 0, page: 1, limite: 25 });
   const [logs, setLogs] = useState<AuditResult>({ items: [], total: 0, page: 1, limite: 25 });
-  const [entityType, setEntityType] = useState('');
+  const [auditFilters, setAuditFilters] = useState<AuditFilters>(EMPTY_AUDIT_FILTERS);
   const [message, setMessage] = useState('');
 
   const loadFinancings = useCallback((page: number) => {
@@ -58,15 +61,19 @@ export default function AuditeurDashboardPage() {
     }).catch((error) => setMessage(error.message));
   }, []);
 
-  const loadLogs = useCallback((page: number, filterEntityType = entityType) => {
+  const loadLogs = useCallback((page: number, filters = auditFilters) => {
     const query = new URLSearchParams({ page: String(page) });
-    if (filterEntityType) query.set('entityType', filterEntityType);
+    if (filters.entityType) query.set('entityType', filters.entityType);
+    if (filters.entityId) query.set('entityId', filters.entityId);
+    if (filters.actorSearch) query.set('actorSearch', filters.actorSearch);
+    if (filters.dateFrom) query.set('dateFrom', new Date(filters.dateFrom).toISOString());
+    if (filters.dateTo) query.set('dateTo', new Date(filters.dateTo).toISOString());
     fetch(`/api/auditeur/journal?${query}`, { cache: 'no-store' }).then(async (response) => {
       const body = await response.json();
       if (!response.ok) throw new Error(body?.message ?? 'Chargement du journal impossible');
       setLogs(body);
     }).catch((error) => setMessage(error.message));
-  }, [entityType]);
+  }, [auditFilters]);
 
   useEffect(() => { loadFinancings(1); loadLogs(1); }, [loadFinancings, loadLogs]);
 
@@ -77,10 +84,18 @@ export default function AuditeurDashboardPage() {
   }
 
   function resetAuditFilters() {
-    setEntityType('');
+    setAuditFilters(EMPTY_AUDIT_FILTERS);
     setMessage('');
-    loadLogs(1, '');
+    loadLogs(1, EMPTY_AUDIT_FILTERS);
   }
+
+  const drillDownToFinancing = useCallback((financingId: string) => {
+    const filters = { ...EMPTY_AUDIT_FILTERS, entityId: financingId };
+    setAuditFilters(filters);
+    setMessage('');
+    loadLogs(1, filters);
+    document.getElementById('journal-audit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [loadLogs]);
 
   const committed = financings.items.reduce((sum, item) => sum + item.montantAccorde, 0);
   const disbursed = financings.items.reduce((sum, item) => sum + item.montantDecaisse, 0);
@@ -98,7 +113,16 @@ export default function AuditeurDashboardPage() {
     { key: 'rembourse', header: 'Remboursé', render: (item) => `${item.montantRembourse.toLocaleString('fr-FR')} GNF` },
     { key: 'impaye', header: 'Impayé', render: (item) => `${item.impaye.toLocaleString('fr-FR')} GNF` },
     { key: 'statut', header: 'Statut', render: (item) => <GenericStatusBadge status={item.statut} /> },
-  ], []);
+    {
+      key: 'audit',
+      header: 'Audit',
+      render: (item) => (
+        <Button type="button" className={portal.secondary} onClick={() => drillDownToFinancing(item.id)}>
+          Voir le journal
+        </Button>
+      ),
+    },
+  ], [drillDownToFinancing]);
 
   const auditColumns = useMemo<ResponsiveColumn<AuditLog>[]>(() => [
     { key: 'date', header: 'Date', render: (log) => formatDate(log.createdAt) },
@@ -147,7 +171,7 @@ export default function AuditeurDashboardPage() {
       <Pagination page={financings.page} limite={financings.limite} total={financings.total} onChange={loadFinancings} buttonClassName={portal.secondary} rowClassName={portal.buttonRow} />
     </section>
 
-    <section className={portal.section}>
+    <section className={portal.section} id="journal-audit">
       <div className={portal.sectionHeader}>
         <div>
           <h2>Journal d’audit</h2>
@@ -156,16 +180,54 @@ export default function AuditeurDashboardPage() {
       </div>
       <form onSubmit={filterLogs}>
         <FilterBar
-          activeCount={Number(Boolean(entityType))}
+          activeCount={Object.values(auditFilters).filter(Boolean).length}
           onReset={resetAuditFilters}
           actions={<Button type="submit">Appliquer le filtre</Button>}
           ariaLabel="Filtres du journal d’audit"
         >
           <FilterField label="Type d’entité" htmlFor="entityType">
-            <select id="entityType" value={entityType} onChange={(event) => setEntityType(event.target.value)}>
+            <select
+              id="entityType"
+              value={auditFilters.entityType}
+              onChange={(event) => setAuditFilters((prev) => ({ ...prev, entityType: event.target.value }))}
+            >
               <option value="">Toutes les entités</option>
               {ENTITY_TYPES.map((type) => <option key={type} value={type}>{ENTITY_LABELS[type] ?? humanizeCode(type)}</option>)}
             </select>
+          </FilterField>
+          <FilterField label="Identifiant d’entité" htmlFor="entityId">
+            <input
+              id="entityId"
+              type="text"
+              placeholder="UUID du dossier, financement…"
+              value={auditFilters.entityId}
+              onChange={(event) => setAuditFilters((prev) => ({ ...prev, entityId: event.target.value }))}
+            />
+          </FilterField>
+          <FilterField label="Acteur" htmlFor="actorSearch">
+            <input
+              id="actorSearch"
+              type="text"
+              placeholder="Nom, prénom ou email"
+              value={auditFilters.actorSearch}
+              onChange={(event) => setAuditFilters((prev) => ({ ...prev, actorSearch: event.target.value }))}
+            />
+          </FilterField>
+          <FilterField label="Depuis le" htmlFor="dateFrom">
+            <input
+              id="dateFrom"
+              type="date"
+              value={auditFilters.dateFrom}
+              onChange={(event) => setAuditFilters((prev) => ({ ...prev, dateFrom: event.target.value }))}
+            />
+          </FilterField>
+          <FilterField label="Jusqu’au" htmlFor="dateTo">
+            <input
+              id="dateTo"
+              type="date"
+              value={auditFilters.dateTo}
+              onChange={(event) => setAuditFilters((prev) => ({ ...prev, dateTo: event.target.value }))}
+            />
           </FilterField>
         </FilterBar>
       </form>
