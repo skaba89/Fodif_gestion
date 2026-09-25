@@ -29,6 +29,13 @@ function userInitials(user: User) {
   return initials || user.email[0]?.toUpperCase() || 'U';
 }
 
+function formatLastLogin(lastLoginAt?: string | null) {
+  if (!lastLoginAt) return 'Jamais connecté';
+  const date = new Date(lastLoginAt);
+  if (Number.isNaN(date.getTime())) return 'Jamais connecté';
+  return date.toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 export default function UsersAdministrationPage() {
   const [users, setUsers] = useState<User[]>([]); const [roles, setRoles] = useState<Role[]>([]);
   const [enterprises, setEnterprises] = useState<Enterprise[]>([]); const [partnerBanks, setPartnerBanks] = useState<PartnerBank[]>([]);
@@ -207,8 +214,15 @@ export default function UsersAdministrationPage() {
       </div>
       <div className={styles.tableScroller}><table className={portal.table}><thead><tr><th>Utilisateur</th><th>Dernier accès</th><th>Rôles</th><th>Entreprise PME</th><th>Banque partenaire</th><th>Actif</th><th>MFA exigé</th><th>Actions</th><th>Droits des personnes</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}>
         <td><div className={styles.userIdentity}><span className={styles.userAvatar} aria-hidden="true">{userInitials(user)}</span><div><strong>{user.prenom} {user.nom}</strong><span className={styles.userEmail}>{user.email}</span></div></div></td>
-        <td>{user.lastLoginAt ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(user.lastLoginAt)) : 'Jamais connecté'}</td>
-        <td><select multiple value={user.roles} aria-label={`Rôles de ${user.email}`} onChange={(event) => patchLocal(user.id, { roles: Array.from(event.target.selectedOptions, (option) => option.value) })}>{roles.map((role) => <option value={role.code} key={role.code}>{role.nom}</option>)}</select></td>
+        <td className={styles.lastLoginCell}>{formatLastLogin(user.lastLoginAt)}</td>
+        <td><select multiple value={user.roles} aria-label={`Rôles de ${user.email}`} onChange={(event) => {
+          const nextRoles = Array.from(event.target.selectedOptions, (option) => option.value);
+          patchLocal(user.id, {
+            roles: nextRoles,
+            entrepriseId: nextRoles.includes('PME') ? user.entrepriseId : null,
+            partenaireBancaireId: nextRoles.includes('PARTENAIRE_BANCAIRE') ? user.partenaireBancaireId : null,
+          });
+        }}>{roles.map((role) => <option value={role.code} key={role.code}>{role.nom}</option>)}</select></td>
         <td><select value={user.entrepriseId ?? ''} disabled={!user.roles.includes('PME')} onChange={(event) => patchLocal(user.id, { entrepriseId: event.target.value || null })}><option value="">Aucune</option>{enterprises.map((enterprise) => <option key={enterprise.id} value={enterprise.id}>{enterprise.raisonSociale}</option>)}</select></td>
         <td><select value={user.partenaireBancaireId ?? ''} disabled={!user.roles.includes('PARTENAIRE_BANCAIRE')} onChange={(event) => patchLocal(user.id, { partenaireBancaireId: event.target.value || null })}><option value="">Aucune</option>{partnerBanks.map((bank) => <option key={bank.id} value={bank.id}>{bank.raisonSociale}</option>)}</select></td>
         <td className={styles.toggleCell}><input type="checkbox" checked={user.actif} onChange={(event) => patchLocal(user.id, { actif: event.target.checked })} aria-label={`Compte actif ${user.email}`} /></td>

@@ -301,6 +301,12 @@
   min-height: 70px;
 }
 
+.lastLoginCell {
+  white-space: nowrap;
+  color: var(--muted, #64748b);
+  font-size: 0.9em;
+}
+
 .toggleCell {
   text-align: center;
 }

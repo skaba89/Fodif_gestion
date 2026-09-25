@@ -17,9 +17,18 @@ export class AuditRepository {
        LEFT JOIN utilisateurs actor ON actor.id = log.utilisateur_id
        WHERE ($1::VARCHAR IS NULL OR log.entity_type = $1)
          AND ($2::VARCHAR IS NULL OR log.action = $2)
+         AND ($3::UUID IS NULL OR log.entity_id = $3)
+         AND ($4::VARCHAR IS NULL OR actor.email ILIKE '%' || $4 || '%'
+              OR actor.nom ILIKE '%' || $4 || '%' OR actor.prenom ILIKE '%' || $4 || '%')
+         AND ($5::TIMESTAMPTZ IS NULL OR log.created_at >= $5)
+         AND ($6::TIMESTAMPTZ IS NULL OR log.created_at <= $6)
        ORDER BY log.created_at DESC
-       LIMIT $3 OFFSET $4`,
-      [query.entityType ?? null, query.action ?? null, query.limite, offset],
+       LIMIT $7 OFFSET $8`,
+      [
+        query.entityType ?? null, query.action ?? null, query.entityId ?? null,
+        query.actorSearch ?? null, query.dateFrom ?? null, query.dateTo ?? null,
+        query.limite, offset,
+      ],
     );
     const total = Number(result.rows[0]?.total ?? 0);
     const items = result.rows.map(({ total: _total, ...item }) => item);
