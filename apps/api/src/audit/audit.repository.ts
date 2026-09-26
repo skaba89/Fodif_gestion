@@ -34,4 +34,24 @@ export class AuditRepository {
     const items = result.rows.map(({ total: _total, ...item }) => item);
     return { items, total, page: query.page, limite: query.limite };
   }
+
+  // "preuve chronologique d'un dossier" (issue #142): every audit_logs row directly tied to the
+  // dossier (DOSSIER_FINANCEMENT/DOSSIER_DOCUMENT, entity_id = dossierId) plus the FINANCEMENT
+  // creation event carrying dossierId in new_values — same join trick as
+  // FinancingsRepository.findById()'s own audit subquery, one level up the chain.
+  async dossierAuditTrail(dossierId: string) {
+    const result = await this.db.query(
+      `SELECT log.id, log.action, log.entity_type AS "entityType", log.entity_id AS "entityId",
+        log.old_values AS "oldValues", log.new_values AS "newValues", log.created_at AS "createdAt",
+        actor.id AS "actorId", actor.email AS "actorEmail", actor.nom AS "actorNom", actor.prenom AS "actorPrenom"
+       FROM audit_logs log
+       LEFT JOIN utilisateurs actor ON actor.id = log.utilisateur_id
+       WHERE log.entity_type IN ('DOSSIER_FINANCEMENT', 'DOSSIER_DOCUMENT', 'FINANCEMENT')
+         AND (log.entity_id = $1 OR log.new_values->>'dossierId' = $1::text)
+       ORDER BY log.created_at DESC
+       LIMIT 100`,
+      [dossierId],
+    );
+    return result.rows;
+  }
 }
