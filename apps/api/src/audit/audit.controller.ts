@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { RequireRoles } from '../common/decorators/roles.decorator';
@@ -15,13 +15,19 @@ import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
 @ApiTags('audit')
 @ApiBearerAuth()
 @RequireRoles('AUDITEUR', 'SUPER_ADMIN')
-@Controller('audit/logs')
+@Controller('audit')
 export class AuditController {
   constructor(private readonly audit: AuditService) {}
 
-  @Get()
+  @Get('logs')
   @RequirePermissions('audit.read')
   list(@Query() query: ListAuditLogsDto) {
     return this.audit.list(query);
+  }
+
+  @Get('dossiers/:id')
+  @RequirePermissions('audit.read')
+  dossier(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.audit.dossier(id);
   }
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Breadcrumbs from '../../_shared/Breadcrumbs';
 import Button from '../../_shared/Button';
@@ -12,7 +13,7 @@ import portal from '../../entrepreneur/portal.module.css';
 import styles from '../../agent/agent.module.css';
 
 type Financing = {
-  id: string; numeroFinancement: string; numeroDossier: string; raisonSociale: string; region?: string;
+  id: string; dossierId: string; numeroFinancement: string; numeroDossier: string; raisonSociale: string; region?: string;
   montantAccorde: number; montantDecaisse: number; montantRembourse: number; impaye: number; statut: string;
 };
 type FinancingsResult = { items: Financing[]; total: number; page: number; limite: number };
@@ -23,7 +24,10 @@ type AuditLog = {
 };
 type AuditResult = { items: AuditLog[]; total: number; page: number; limite: number };
 
-const ENTITY_TYPES = ['DOSSIER_FINANCEMENT', 'DOSSIER_DOCUMENT', 'FINANCEMENT', 'DECAISSEMENT', 'REMBOURSEMENT', 'SUIVI_IMPACT', 'UTILISATEUR'];
+const ENTITY_TYPES = [
+  'DOSSIER_FINANCEMENT', 'DOSSIER_DOCUMENT', 'FINANCEMENT', 'DECAISSEMENT', 'REMBOURSEMENT',
+  'SUIVI_IMPACT', 'UTILISATEUR', 'MOUVEMENT_BANCAIRE', 'RAPPROCHEMENT_BANCAIRE',
+];
 const ENTITY_LABELS: Record<string, string> = {
   DOSSIER_FINANCEMENT: 'Dossier de financement',
   DOSSIER_DOCUMENT: 'Document de dossier',
@@ -32,6 +36,8 @@ const ENTITY_LABELS: Record<string, string> = {
   REMBOURSEMENT: 'Remboursement',
   SUIVI_IMPACT: 'Suivi d’impact',
   UTILISATEUR: 'Utilisateur',
+  MOUVEMENT_BANCAIRE: 'Mouvement bancaire',
+  RAPPROCHEMENT_BANCAIRE: 'Rapprochement bancaire',
 };
 
 function formatDate(value: string): string {
@@ -44,7 +50,7 @@ function actorLabel(log: AuditLog): string {
   return fullName || log.actorEmail || 'Système';
 }
 
-const EMPTY_AUDIT_FILTERS = { entityType: '', entityId: '', actorSearch: '', dateFrom: '', dateTo: '' };
+const EMPTY_AUDIT_FILTERS = { entityType: '', entityId: '', action: '', actorSearch: '', dateFrom: '', dateTo: '' };
 type AuditFilters = typeof EMPTY_AUDIT_FILTERS;
 
 export default function AuditeurDashboardPage() {
@@ -65,6 +71,7 @@ export default function AuditeurDashboardPage() {
     const query = new URLSearchParams({ page: String(page) });
     if (filters.entityType) query.set('entityType', filters.entityType);
     if (filters.entityId) query.set('entityId', filters.entityId);
+    if (filters.action) query.set('action', filters.action);
     if (filters.actorSearch) query.set('actorSearch', filters.actorSearch);
     if (filters.dateFrom) query.set('dateFrom', new Date(filters.dateFrom).toISOString());
     if (filters.dateTo) query.set('dateTo', new Date(filters.dateTo).toISOString());
@@ -117,9 +124,13 @@ export default function AuditeurDashboardPage() {
       key: 'audit',
       header: 'Audit',
       render: (item) => (
-        <Button type="button" className={portal.secondary} onClick={() => drillDownToFinancing(item.id)}>
-          Voir le journal
-        </Button>
+        <div className={portal.buttonRow}>
+          <Link className={portal.secondary} href={`/auditeur/dossiers/${item.dossierId}`}>Voir le dossier</Link>
+          <Link className={portal.secondary} href={`/auditeur/financements/${item.id}`}>Voir le détail</Link>
+          <Button type="button" className={portal.secondary} onClick={() => drillDownToFinancing(item.id)}>
+            Voir le journal
+          </Button>
+        </div>
       ),
     },
   ], [drillDownToFinancing]);
@@ -131,7 +142,17 @@ export default function AuditeurDashboardPage() {
     {
       key: 'entite',
       header: 'Entité',
-      render: (log) => <>{ENTITY_LABELS[log.entityType] ?? humanizeCode(log.entityType)}{log.entityId ? <><br /><span title={log.entityId}>ID {log.entityId.slice(0, 8)}…</span></> : null}</>,
+      render: (log) => {
+        const label = ENTITY_LABELS[log.entityType] ?? humanizeCode(log.entityType);
+        const idSuffix = log.entityId ? <><br /><span title={log.entityId}>ID {log.entityId.slice(0, 8)}…</span></> : null;
+        if (log.entityId && log.entityType === 'DOSSIER_FINANCEMENT') {
+          return <><Link href={`/auditeur/dossiers/${log.entityId}`}>{label}</Link>{idSuffix}</>;
+        }
+        if (log.entityId && log.entityType === 'FINANCEMENT') {
+          return <><Link href={`/auditeur/financements/${log.entityId}`}>{label}</Link>{idSuffix}</>;
+        }
+        return <>{label}{idSuffix}</>;
+      },
     },
   ], []);
 
@@ -202,6 +223,15 @@ export default function AuditeurDashboardPage() {
               placeholder="UUID du dossier, financement…"
               value={auditFilters.entityId}
               onChange={(event) => setAuditFilters((prev) => ({ ...prev, entityId: event.target.value }))}
+            />
+          </FilterField>
+          <FilterField label="Action" htmlFor="action">
+            <input
+              id="action"
+              type="text"
+              placeholder="Ex. APPLICATION_REVIEW, CREATE_REPAYMENT…"
+              value={auditFilters.action}
+              onChange={(event) => setAuditFilters((prev) => ({ ...prev, action: event.target.value }))}
             />
           </FilterField>
           <FilterField label="Acteur" htmlFor="actorSearch">

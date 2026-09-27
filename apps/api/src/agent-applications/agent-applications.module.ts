@@ -6,5 +6,6 @@ import { AgentApplicationsService } from './agent-applications.service';
 @Module({
   controllers: [AgentApplicationsController],
   providers: [AgentApplicationsRepository, AgentApplicationsService],
+  exports: [AgentApplicationsRepository],
 })
 export class AgentApplicationsModule {}
