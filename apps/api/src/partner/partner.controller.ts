@@ -37,6 +37,19 @@ export class PartnerController {
     return this.partner.list(request.user, query);
   }
 
+  // Placed before ':id' so Nest's routing doesn't try to parse "dashboard"/"operations" as a UUID.
+  @Get('dashboard')
+  @RequirePermissions('partner.application.read')
+  dashboard(@Req() request: AuthenticatedRequest) {
+    return this.partner.dashboard(request.user);
+  }
+
+  @Get('operations')
+  @RequirePermissions('partner.application.read')
+  operations(@Req() request: AuthenticatedRequest, @Query() query: ListPartnerFinancingsDto) {
+    return this.partner.operations(request.user, query);
+  }
+
   @Get(':id')
   @RequirePermissions('partner.application.read')
   get(@Req() request: AuthenticatedRequest, @Param('id', new ParseUUIDPipe()) id: string) {

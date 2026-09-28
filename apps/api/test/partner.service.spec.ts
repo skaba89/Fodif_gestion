@@ -73,4 +73,35 @@ describe('PartnerService', () => {
     await expect(service.createRepayment(bankUser, 'f1', { echeanceId: 'not-e1', montant: 10, datePaiement: '2026-09-10' }))
       .rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('rejects a dashboard/operations call from an account without a partner bank scope', async () => {
+    const service = new PartnerService({} as never, idempotency as never);
+    await expect(service.dashboard(scopelessUser)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.operations(scopelessUser, { page: 1, limite: 25 })).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('scopes the dashboard aggregate to the caller own partner id and normalizes numeric fields', async () => {
+    const repository = { dashboard: jest.fn().mockResolvedValue({
+      financements: '3', montantAccorde: '3000', montantDecaisse: '1500', montantRembourse: '500', impayes: '200',
+      echeancesAVenir: [{ id: 'e1', resteAPayer: '100' }],
+    }) };
+    const service = new PartnerService(repository as never, idempotency as never);
+
+    const dashboard = await service.dashboard(bankUser);
+    expect(repository.dashboard).toHaveBeenCalledWith('bank-1');
+    expect(dashboard.financements).toBe(3);
+    expect(dashboard.montantDecaisse).toBe(1500);
+    expect(dashboard.echeancesAVenir[0].resteAPayer).toBe(100);
+  });
+
+  it('scopes the operations history to the caller own partner id and normalizes numeric fields', async () => {
+    const repository = { operations: jest.fn().mockResolvedValue({
+      items: [{ id: 'log1', newValues: { montant: '300' } }], total: 1, page: 1, limite: 25,
+    }) };
+    const service = new PartnerService(repository as never, idempotency as never);
+
+    const operations = await service.operations(bankUser, { page: 1, limite: 25 });
+    expect(repository.operations).toHaveBeenCalledWith('bank-1', { page: 1, limite: 25 });
+    expect(operations.items[0].newValues.montant).toBe(300);
+  });
 });

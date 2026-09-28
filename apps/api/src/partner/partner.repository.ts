@@ -22,6 +22,7 @@ export class PartnerRepository {
 
   async list(partnerId: string, query: ListPartnerFinancingsDto) {
     const offset = (query.page - 1) * query.limite;
+    const search = query.search?.trim() || null;
     const result = await this.db.query(
       `SELECT financement.id, financement.numero_financement AS "numeroFinancement",
         financement.dossier_id AS "dossierId", dossier.numero_dossier AS "numeroDossier",
@@ -34,7 +35,88 @@ export class PartnerRepository {
        JOIN dossiers_financement dossier ON dossier.id = financement.dossier_id
        JOIN entreprises entreprise ON entreprise.id = financement.entreprise_id
        WHERE ${PARTNER_SCOPE}
+         AND ($4::text IS NULL OR financement.numero_financement ILIKE '%' || $4 || '%'
+              OR dossier.numero_dossier ILIKE '%' || $4 || '%' OR entreprise.raison_sociale ILIKE '%' || $4 || '%')
+         AND ($5::date IS NULL OR financement.date_debut >= $5)
+         AND ($6::date IS NULL OR financement.date_debut <= $6)
        ORDER BY financement.updated_at DESC
+       LIMIT $2 OFFSET $3`,
+      [partnerId, query.limite, offset, search, query.dateFrom ?? null, query.dateTo ?? null],
+    );
+    const total = Number(result.rows[0]?.total ?? 0);
+    const items = result.rows.map(({ total: _total, ...item }) => item);
+    return { items, total, page: query.page, limite: query.limite };
+  }
+
+  /**
+   * Full-scope aggregates for the partner's dashboard (issue #142: "tableau de bord partenaire").
+   * Unlike the page-scoped KPIs computed client-side on `list()`'s current page, this always
+   * covers the whole PARTNER_SCOPE regardless of pagination, so the numbers don't silently change
+   * with the number of items per page.
+   */
+  async dashboard(partnerId: string) {
+    // Reuses analytics.vw_financing_performance (database/006_analytics_read_model.sql) - one
+    // pre-aggregated row per financement (montant_decaisse/montant_du/montant_rembourse/impaye) -
+    // rather than re-deriving the same totals with ad hoc joins, so a partner's dashboard numbers
+    // never drift from how Direction's own cockpit computes the identical metrics.
+    const totals = await this.db.query<{
+      financements: string; montantAccorde: string; montantDecaisse: string; montantRembourse: string; impayes: string;
+    }>(
+      `SELECT COUNT(*)::text AS financements,
+        COALESCE(SUM(performance.montant_accorde), 0) AS "montantAccorde",
+        COALESCE(SUM(performance.montant_decaisse), 0) AS "montantDecaisse",
+        COALESCE(SUM(performance.montant_rembourse), 0) AS "montantRembourse",
+        COALESCE(SUM(performance.impaye), 0) AS impayes
+       FROM analytics.vw_financing_performance performance
+       JOIN financements financement ON financement.id = performance.financement_id
+       WHERE ${PARTNER_SCOPE}`,
+      [partnerId],
+    );
+    const upcoming = await this.db.query<{
+      id: string; numeroEcheance: number; dateEcheance: string; resteAPayer: string;
+      numeroFinancement: string; raisonSociale: string;
+    }>(
+      `SELECT echeance.id, echeance.numero_echeance AS "numeroEcheance", echeance.date_echeance AS "dateEcheance",
+        GREATEST(echeance.montant_total_du - COALESCE(SUM(remboursement.montant_paye), 0), 0) AS "resteAPayer",
+        financement.id AS "financementId", financement.numero_financement AS "numeroFinancement",
+        entreprise.raison_sociale AS "raisonSociale"
+       FROM echeances echeance
+       JOIN financements financement ON financement.id = echeance.financement_id
+       JOIN entreprises entreprise ON entreprise.id = financement.entreprise_id
+       LEFT JOIN remboursements remboursement ON remboursement.echeance_id = echeance.id
+       WHERE ${PARTNER_SCOPE} AND echeance.statut <> 'PAYEE' AND echeance.date_echeance >= CURRENT_DATE
+       GROUP BY echeance.id, financement.id, entreprise.raison_sociale
+       HAVING GREATEST(echeance.montant_total_du - COALESCE(SUM(remboursement.montant_paye), 0), 0) > 0
+       ORDER BY echeance.date_echeance ASC
+       LIMIT 10`,
+      [partnerId],
+    );
+    return { ...totals.rows[0], echeancesAVenir: upcoming.rows };
+  }
+
+  /**
+   * "Historique des opérations du partenaire" (issue #142): every decaissement/remboursement this
+   * partner has itself declared through this API (PARTNER_DECLARE_DISBURSEMENT/
+   * PARTNER_DECLARE_REPAYMENT - see #audit in createDisbursement/createRepayment above, which is
+   * the only place these two actions are ever written). Filtered on the `partenaireId` recorded at
+   * declaration time, not on the financing's *current* PARTNER_SCOPE - a financing later
+   * reassigned to a different correspondent bank must not erase this partner's own history of what
+   * it actually declared while it still held that financing.
+   */
+  async operations(partnerId: string, query: ListPartnerFinancingsDto) {
+    const offset = (query.page - 1) * query.limite;
+    const result = await this.db.query(
+      `SELECT log.id, log.action, log.entity_type AS "entityType", log.entity_id AS "entityId",
+        log.new_values AS "newValues", log.created_at AS "createdAt",
+        financement.id AS "financementId", financement.numero_financement AS "numeroFinancement",
+        entreprise.raison_sociale AS "raisonSociale",
+        COUNT(*) OVER()::INT AS "total"
+       FROM audit_logs log
+       JOIN financements financement ON financement.id::text = log.new_values->>'financementId'
+       JOIN entreprises entreprise ON entreprise.id = financement.entreprise_id
+       WHERE log.action IN ('PARTNER_DECLARE_DISBURSEMENT', 'PARTNER_DECLARE_REPAYMENT')
+         AND log.new_values->>'partenaireId' = $1::text
+       ORDER BY log.created_at DESC
        LIMIT $2 OFFSET $3`,
       [partnerId, query.limite, offset],
     );

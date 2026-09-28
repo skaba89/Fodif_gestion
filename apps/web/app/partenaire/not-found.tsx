@@ -5,7 +5,7 @@ export default function NotFound() {
     <EmptyState
       title="Page introuvable"
       message="Cette page n'existe pas ou a été déplacée."
-      actionHref="/partenaire/financements"
+      actionHref="/partenaire/tableau-de-bord"
       actionLabel="Retour à l'accueil"
     />
   );

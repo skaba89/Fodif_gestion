@@ -82,7 +82,7 @@ export default function PartnerFinancingDetailPage({ params }: { params: Promise
   const openInstallments = financing.installments.filter((item) => item.resteAPayer > 0);
 
   return <main className={portal.main}>
-    <Breadcrumbs items={[{ label: 'Partenaire bancaire', href: '/partenaire/financements' }, { label: financing.numeroFinancement }]} />
+    <Breadcrumbs items={[{ label: 'Partenaire bancaire', href: '/partenaire/tableau-de-bord' }, { label: 'Portefeuille', href: '/partenaire/financements' }, { label: financing.numeroFinancement }]} />
     <p className={portal.eyebrow}>Exécution correspondante</p><h1 className={portal.title}>{financing.numeroFinancement}</h1>
     <p className={portal.lead}>{financing.raisonSociale} · {financing.numeroDossier} · <span className={portal.pill}>{humanizeCode(financing.statut)}</span></p>
     <div className={portal.buttonRow}><Link className={portal.secondary} href="/partenaire/financements">Retour au portefeuille</Link></div>

@@ -49,7 +49,7 @@ export const PORTAL_ACCESS: Record<PortalId, PortalAccessRule> = {
   },
   partenaire: {
     loginHref: LOGIN_HREF,
-    homeHref: '/partenaire/financements',
+    homeHref: '/partenaire/tableau-de-bord',
     allowedRoles: ['PARTENAIRE_BANCAIRE'],
   },
 };

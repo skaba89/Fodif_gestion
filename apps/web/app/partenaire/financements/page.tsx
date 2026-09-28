@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Breadcrumbs from '../../_shared/Breadcrumbs';
 import Button from '../../_shared/Button';
+import FilterBar, { FilterField } from '../../_shared/FilterBar';
 import KpiCard from '../../_shared/KpiCard';
 import Pagination from '../../_shared/Pagination';
 import ResponsiveTable, { type ResponsiveColumn } from '../../_shared/ResponsiveTable';
@@ -16,19 +17,39 @@ type Financing = {
 };
 type Result = { items: Financing[]; total: number; page: number; limite: number };
 
+const EMPTY_FILTERS = { search: '', dateFrom: '', dateTo: '' };
+type Filters = typeof EMPTY_FILTERS;
+
 export default function PartnerFinancingsPage() {
   const [result, setResult] = useState<Result>({ items: [], total: 0, page: 1, limite: 25 });
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [message, setMessage] = useState('');
 
-  const load = useCallback((page: number) => {
-    fetch(`/api/partenaire/financements?page=${page}`, { cache: 'no-store' }).then(async (response) => {
+  const load = useCallback((page: number, applied = filters) => {
+    const query = new URLSearchParams({ page: String(page) });
+    if (applied.search) query.set('search', applied.search);
+    if (applied.dateFrom) query.set('dateFrom', applied.dateFrom);
+    if (applied.dateTo) query.set('dateTo', applied.dateTo);
+    fetch(`/api/partenaire/financements?${query}`, { cache: 'no-store' }).then(async (response) => {
       const body = await response.json();
       if (!response.ok) throw new Error(body?.message ?? 'Chargement impossible');
       setResult(body);
     }).catch((error) => setMessage(error.message));
-  }, []);
+  }, [filters]);
 
-  useEffect(() => { load(1); }, [load]);
+  useEffect(() => { load(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyFilters(event: FormEvent) {
+    event.preventDefault();
+    setMessage('');
+    load(1);
+  }
+
+  function resetFilters() {
+    setFilters(EMPTY_FILTERS);
+    setMessage('');
+    load(1, EMPTY_FILTERS);
+  }
 
   const pageAmount = result.items.reduce((sum, item) => sum + Number(item.montantAccorde), 0);
   const averageRate = result.items.length
@@ -54,7 +75,7 @@ export default function PartnerFinancingsPage() {
 
   return <main className={portal.main}>
     <Breadcrumbs items={[
-      { label: 'Partenaire bancaire', href: '/partenaire/financements' },
+      { label: 'Partenaire bancaire', href: '/partenaire/tableau-de-bord' },
       { label: 'Financements' },
     ]} />
     <p className={portal.eyebrow}>Portefeuille partenaire</p>
@@ -78,14 +99,48 @@ export default function PartnerFinancingsPage() {
           <p>Ouvrez un financement pour consulter son échéancier et les opérations disponibles selon vos droits.</p>
         </div>
       </div>
+      <form onSubmit={applyFilters}>
+        <FilterBar
+          activeCount={Object.values(filters).filter(Boolean).length}
+          onReset={resetFilters}
+          actions={<Button type="submit">Appliquer le filtre</Button>}
+          ariaLabel="Filtres du portefeuille partenaire"
+        >
+          <FilterField label="Recherche" htmlFor="search">
+            <input
+              id="search"
+              type="text"
+              placeholder="N° financement, N° dossier ou raison sociale"
+              value={filters.search}
+              onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
+            />
+          </FilterField>
+          <FilterField label="Début depuis le" htmlFor="dateFrom">
+            <input
+              id="dateFrom"
+              type="date"
+              value={filters.dateFrom}
+              onChange={(event) => setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))}
+            />
+          </FilterField>
+          <FilterField label="Début jusqu’au" htmlFor="dateTo">
+            <input
+              id="dateTo"
+              type="date"
+              value={filters.dateTo}
+              onChange={(event) => setFilters((prev) => ({ ...prev, dateTo: event.target.value }))}
+            />
+          </FilterField>
+        </FilterBar>
+      </form>
       <ResponsiveTable
         rows={result.items}
         columns={columns}
         rowKey={(item) => item.id}
         caption="Financements du partenaire bancaire"
-        emptyMessage="Aucun financement n’est actuellement rattaché à votre périmètre."
+        emptyMessage="Aucun financement ne correspond aux critères sélectionnés."
       />
     </section>
-    <Pagination page={result.page} limite={result.limite} total={result.total} onChange={load} buttonClassName={portal.secondary} rowClassName={portal.buttonRow} />
+    <Pagination page={result.page} limite={result.limite} total={result.total} onChange={(page) => load(page)} buttonClassName={portal.secondary} rowClassName={portal.buttonRow} />
   </main>;
 }

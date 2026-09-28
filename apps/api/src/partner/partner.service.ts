@@ -9,6 +9,7 @@ import { PartnerRepository } from './partner.repository';
 
 const numericKeys = new Set([
   'montantAccorde', 'tauxInteret', 'montant', 'capitalDu', 'interetDu', 'montantTotalDu', 'montantPaye', 'resteAPayer',
+  'financements', 'montantDecaisse', 'montantRembourse', 'impayes',
 ]);
 
 export interface PartnerFinancingDetail {
@@ -41,6 +42,14 @@ export class PartnerService {
 
   async list(user: AuthenticatedUser, query: ListPartnerFinancingsDto) {
     return normalize(await this.partner.list(this.partnerId(user), query));
+  }
+
+  async dashboard(user: AuthenticatedUser) {
+    return normalize(await this.partner.dashboard(this.partnerId(user)));
+  }
+
+  async operations(user: AuthenticatedUser, query: ListPartnerFinancingsDto) {
+    return normalize(await this.partner.operations(this.partnerId(user), query));
   }
 
   async get(user: AuthenticatedUser, id: string): Promise<PartnerFinancingDetail> {
