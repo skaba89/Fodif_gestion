@@ -203,4 +203,110 @@ describe('Partner bank portal (real PostgreSQL)', () => {
       })).rejects.toBeInstanceOf(BadRequestException);
     });
   });
+
+  // Issue #142 (Partenaire bancaire checklist): "portefeuille filtrable", "tableau de bord
+  // partenaire", "historique des opérations du partenaire" - all three reuse PARTNER_SCOPE, so
+  // the cross-bank isolation already proven above for list/get/createDisbursement is not
+  // re-verified line by line here; these specs focus on what is new: the filter predicates
+  // themselves, and that the dashboard/operations aggregates never leak another bank's numbers.
+  describe('list filters', () => {
+    it('search matches numero_financement, numero_dossier or raison_sociale', async () => {
+      const bank = await seedPartnerBank(integrationDb.pool);
+      const financing = await createRealFinancing(1_000_000);
+      await scopeAsCorrespondentBank(financing.id, bank.id);
+      const other = await createRealFinancing(500_000);
+      await scopeAsCorrespondentBank(other.id, bank.id);
+
+      const byNumber = await service.list(partnerUser(bank.id), { page: 1, limite: 25, search: financing.numeroFinancement as string });
+      expect((byNumber.items as unknown as Array<{ id: string }>).map((item) => item.id)).toEqual([financing.id]);
+
+      const byUnrelatedTerm = await service.list(partnerUser(bank.id), { page: 1, limite: 25, search: 'no-such-term-xyz' });
+      expect(byUnrelatedTerm.items).toHaveLength(0);
+    });
+
+    it('date range filters on date_debut', async () => {
+      const bank = await seedPartnerBank(integrationDb.pool);
+      const financing = await createRealFinancing(1_000_000); // date_debut: 2026-10-01 (createRealFinancing default)
+      await scopeAsCorrespondentBank(financing.id, bank.id);
+
+      const inRange = await service.list(partnerUser(bank.id), { page: 1, limite: 25, dateFrom: '2026-09-01', dateTo: '2026-10-31' });
+      expect((inRange.items as unknown as Array<{ id: string }>).map((item) => item.id)).toEqual([financing.id]);
+
+      const outOfRange = await service.list(partnerUser(bank.id), { page: 1, limite: 25, dateFrom: '2027-01-01' });
+      expect(outOfRange.items).toHaveLength(0);
+    });
+  });
+
+  describe('dashboard', () => {
+    it('aggregates the whole scope, not just one page, and never counts another bank', async () => {
+      const bankA = await seedPartnerBank(integrationDb.pool);
+      const bankB = await seedPartnerBank(integrationDb.pool);
+      const financingA1 = await createRealFinancing(1_000_000);
+      const financingA2 = await createRealFinancing(500_000);
+      const financingB = await createRealFinancing(2_000_000);
+      await scopeAsCorrespondentBank(financingA1.id, bankA.id);
+      await scopeAsCorrespondentBank(financingA2.id, bankA.id);
+      await scopeAsCorrespondentBank(financingB.id, bankB.id);
+
+      await service.createDisbursement(partnerUser(bankA.id), financingA1.id, {
+        montant: 300_000, dateEffective: '2026-10-05', referenceBancaire: 'REF-DASH-1',
+      });
+
+      const dashboard = await service.dashboard(partnerUser(bankA.id));
+      expect(dashboard.financements).toBe(2);
+      expect(dashboard.montantAccorde).toBe(1_500_000);
+      expect(dashboard.montantDecaisse).toBe(300_000);
+    });
+
+    it('lists upcoming unpaid installments sorted by due date, capped at 10', async () => {
+      const bank = await seedPartnerBank(integrationDb.pool);
+      const financing = await createRealFinancing(1_200_000, 3);
+      await scopeAsCorrespondentBank(financing.id, bank.id);
+
+      const dashboard = await service.dashboard(partnerUser(bank.id));
+      expect(dashboard.echeancesAVenir.length).toBeGreaterThan(0);
+      const dates = (dashboard.echeancesAVenir as Array<{ dateEcheance: string }>).map((item) => new Date(item.dateEcheance).getTime());
+      expect(dates).toEqual([...dates].sort((a, b) => a - b));
+    });
+  });
+
+  describe('operations', () => {
+    it('lists only the operations this partner itself declared', async () => {
+      const bankA = await seedPartnerBank(integrationDb.pool);
+      const bankB = await seedPartnerBank(integrationDb.pool);
+      const financingA = await createRealFinancing(1_000_000);
+      const financingB = await createRealFinancing(1_000_000);
+      await scopeAsCorrespondentBank(financingA.id, bankA.id);
+      await scopeAsCorrespondentBank(financingB.id, bankB.id);
+
+      await service.createDisbursement(partnerUser(bankA.id), financingA.id, {
+        montant: 200_000, dateEffective: '2026-10-05', referenceBancaire: 'REF-OPS-A',
+      });
+      await service.createDisbursement(partnerUser(bankB.id), financingB.id, {
+        montant: 300_000, dateEffective: '2026-10-06', referenceBancaire: 'REF-OPS-B',
+      });
+
+      const operationsOfA = await service.operations(partnerUser(bankA.id), { page: 1, limite: 25 });
+      expect(operationsOfA.items).toHaveLength(1);
+      expect((operationsOfA.items[0] as { financementId: string }).financementId).toBe(financingA.id);
+    });
+
+    it('still shows a partner its own past operation after the financing is reassigned to another bank', async () => {
+      const bankA = await seedPartnerBank(integrationDb.pool);
+      const bankC = await seedPartnerBank(integrationDb.pool);
+      const financing = await createRealFinancing(1_000_000);
+      await scopeAsCorrespondentBank(financing.id, bankA.id);
+
+      await service.createDisbursement(partnerUser(bankA.id), financing.id, {
+        montant: 150_000, dateEffective: '2026-10-05', referenceBancaire: 'REF-REASSIGN',
+      });
+
+      await scopeAsCorrespondentBank(financing.id, bankC.id);
+
+      const operationsOfA = await service.operations(partnerUser(bankA.id), { page: 1, limite: 25 });
+      expect(operationsOfA.items).toHaveLength(1);
+      const operationsOfC = await service.operations(partnerUser(bankC.id), { page: 1, limite: 25 });
+      expect(operationsOfC.items).toHaveLength(0);
+    });
+  });
 });
